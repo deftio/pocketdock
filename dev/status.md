@@ -2,7 +2,7 @@
 
 Tracking progress against the milestones defined in `plan/pocket-dock-plan.md`.
 
-## Current: M1 Complete
+## Current: M2 Complete
 
 ### M0 (Done)
 
@@ -46,13 +46,26 @@ Tracking progress against the milestones defined in `plan/pocket-dock-plan.md`.
 - [x] Unit tests: name gen, command build, properties, run/shutdown delegation, error paths, imports
 - [x] All linting passes (ruff, mypy --strict, bandit)
 
+### M2 (Done)
+
+- [x] `push_archive()` and `pull_archive()` in `_socket_client.py` for raw tar transfer
+- [x] `write_file()` — write text or binary content into the container
+- [x] `read_file()` — read file contents from the container
+- [x] `list_files()` — list directory contents inside the container
+- [x] `push()` — copy file/directory from host into the container
+- [x] `pull()` — copy file/directory from the container to the host
+- [x] Sync wrappers for all file operations in `Container`
+- [x] Integration tests: async + sync write/read, binary, nested paths, push/pull files/dirs, error paths
+- [x] Unit tests: tar packing/unpacking, mock-based delegation, error paths
+- [x] All linting passes (ruff, mypy --strict, bandit)
+
 ## Milestone Roadmap
 
 | M# | Feature | Version | Status |
 |----|---------|---------|--------|
 | M0 | Project scaffold + async socket client | 0.1.0 | **Done** |
 | M1 | Blocking run (sync + async facades) | 0.2.0 | **Done** |
-| M2 | File operations (push/pull via tar) | 0.3.0 | Not started |
+| M2 | File operations (push/pull via tar) | 0.3.0 | **Done** |
 | M3 | info() + resource limits | 0.4.0 | Not started |
 | M4 | Stream/detach/buffer/callbacks | 0.5.0 | Not started |
 | M5 | Sessions (persistent shells) | 0.6.0 | Not started |

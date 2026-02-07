@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-07
+
+### Added
+
+- `write_file()` — write text or binary content into the container via tar archive API
+- `read_file()` — read file contents from the container via tar archive API
+- `list_files()` — list directory contents inside the container
+- `push()` — copy a file or directory from the host into the container
+- `pull()` — copy a file or directory from the container to the host
+- `push_archive()` and `pull_archive()` in socket client for raw tar transfer
+- All methods available on both `AsyncContainer` (async) and `Container` (sync)
+
 ## [0.2.0] - 2026-02-07
 
 ### Added
