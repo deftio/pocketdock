@@ -1,0 +1,46 @@
+site_name: pocket-dock
+site_description: Portable, offline-first container sandboxes for LLM agents and dev workflows
+site_url: https://deftio.github.io/pocket-dock/
+repo_url: https://github.com/deftio/pocket-dock
+repo_name: deftio/pocket-dock
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.expand
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Concepts:
+      - Architecture: concepts/architecture.md
+      - Connection Model: concepts/connection-model.md
+  - Reference:
+      - API: reference/api.md
+      - Errors: reference/errors.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true

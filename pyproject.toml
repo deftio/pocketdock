@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pocket-dock"
-version = "0.0.0"
+version = "0.1.0"
 description = "Portable, offline-first container sandboxes for LLM agents and dev workflows"
 readme = "README.md"
 license = "BSD-2-Clause"
@@ -33,6 +33,20 @@ cli = [
     "tomli; python_version < '3.11'",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "ruff",
+    "mypy",
+    "bandit[toml]",
+    "pre-commit",
+    "check-manifest",
+    "pip-audit",
+    "mkdocs-material",
+]
+
 [project.scripts]
 pocket-dock = "pocket_dock.cli.main:cli [cli]"
 
@@ -49,7 +63,22 @@ line-length = 99
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["D1"]  # don't require docstrings on every function
+ignore = [
+    "D1",     # don't require docstrings on every function
+    "D203",   # conflicts with D211
+    "D213",   # conflicts with D212
+    "COM812", # conflicts with formatter
+    "N818",   # exception names follow spec conventions (ContainerNotFound, not ContainerNotFoundError)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # allow assert in tests
+    "S108",    # allow /tmp paths in tests
+    "PLC0415", # allow non-top-level imports in tests
+    "EM101",   # allow string literals in exceptions in tests
+    "PLR2004", # allow magic values in tests
+]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -62,16 +91,16 @@ warn_unused_configs = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "--cov=pocket_dock --cov-report=term-missing --cov-fail-under=100 -v"
+addopts = "--cov=pocket_dock --cov-report=term-missing -v"
 
 [tool.coverage.run]
 branch = true
 source = ["pocket_dock"]
 
 [tool.coverage.report]
-fail_under = 100
 show_missing = true
 exclude_lines = []  # explicitly empty — no exclusions allowed
+# fail_under is enforced in CI via --cov-fail-under=100
 
 [tool.bandit]
 exclude_dirs = ["tests"]

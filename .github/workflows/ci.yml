@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy --strict python/pocket_dock/
+      - run: uv run bandit -r python/pocket_dock/ -c pyproject.toml
+      - name: Check license headers
+        run: |
+          find python/pocket_dock -name '*.py' | while read f; do
+            head -2 "$f" | grep -q 'SPDX-License-Identifier: BSD-2-Clause' || \
+              (echo "Missing license header: $f" && exit 1)
+          done
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install ${{ matrix.python-version }}
+      - run: uv sync --dev --python ${{ matrix.python-version }}
+      - run: systemctl --user start podman.socket
+      - run: podman build -t pocket-dock/minimal images/minimal/
+      - run: uv run pytest --cov-fail-under=100
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --dev
+      - run: uv run mkdocs build --strict
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --dev
+      - run: uv run pip-audit

@@ -1,0 +1,43 @@
+"""Shared fixtures for pocket-dock tests."""
+
+from __future__ import annotations
+
+import os
+import pathlib
+
+import pytest
+
+
+def _find_socket() -> str | None:
+    """Detect an available container engine socket."""
+    explicit = os.environ.get("POCKET_DOCK_SOCKET")
+    if explicit and pathlib.Path(explicit).exists():
+        return explicit
+
+    xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    candidates = [
+        pathlib.Path(xdg) / "podman" / "podman.sock",
+        pathlib.Path("/run/podman/podman.sock"),
+        pathlib.Path("/var/run/docker.sock"),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
+SOCKET_PATH = _find_socket()
+HAS_ENGINE = SOCKET_PATH is not None
+
+requires_engine = pytest.mark.skipif(
+    not HAS_ENGINE,
+    reason="No container engine socket found (Podman or Docker)",
+)
+
+
+@pytest.fixture
+def socket_path() -> str:
+    """Return the detected socket path, or skip the test."""
+    if SOCKET_PATH is None:
+        pytest.skip("No container engine socket found")
+    return SOCKET_PATH
