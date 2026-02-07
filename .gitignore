@@ -47,3 +47,5 @@ site/
 # Environment / secrets
 .env
 .env.*
+
+.claude
