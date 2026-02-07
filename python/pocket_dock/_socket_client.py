@@ -1,0 +1,466 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) deftio llc
+
+"""Async HTTP-over-Unix-socket client for Podman/Docker.
+
+Each function opens its own connection to the Unix socket, performs the
+HTTP request, and closes the connection.  This is the connection-per-operation
+model: Unix sockets are free, and isolation prevents streaming from blocking
+other operations.
+
+Uses unversioned Docker-compatible API paths (``/containers/create``, not
+``/v4.0.0/libpod/...``) for Podman + Docker compatibility.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import pathlib
+import time
+from typing import Any
+
+from pocket_dock._stream import DemuxResult, demux_stream
+from pocket_dock.errors import (
+    ContainerNotFound,
+    ContainerNotRunning,
+    ImageNotFound,
+    SocketCommunicationError,
+    SocketConnectionError,
+)
+from pocket_dock.types import ExecResult
+
+# ---------------------------------------------------------------------------
+# Socket detection
+# ---------------------------------------------------------------------------
+
+
+def detect_socket() -> str | None:
+    """Auto-detect an available container engine socket.
+
+    Detection order:
+    1. ``POCKET_DOCK_SOCKET`` env var
+    2. Podman rootless: ``$XDG_RUNTIME_DIR/podman/podman.sock``
+    3. Podman system: ``/run/podman/podman.sock``
+    4. Docker: ``/var/run/docker.sock``
+
+    Returns:
+        The path to the first socket found, or ``None``.
+
+    """
+    explicit = os.environ.get("POCKET_DOCK_SOCKET")
+    if explicit and pathlib.Path(explicit).exists():
+        return explicit
+
+    xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    candidates = [
+        pathlib.Path(xdg) / "podman" / "podman.sock",
+        pathlib.Path("/run/podman/podman.sock"),
+        pathlib.Path("/var/run/docker.sock"),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Raw HTTP helpers
+# ---------------------------------------------------------------------------
+
+
+async def _open_connection(
+    socket_path: str,
+) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+    """Open an async connection to a Unix socket."""
+    try:
+        return await asyncio.open_unix_connection(socket_path)
+    except (OSError, ConnectionRefusedError) as exc:
+        raise SocketConnectionError(socket_path, str(exc)) from exc
+
+
+async def _send_request(
+    writer: asyncio.StreamWriter,
+    method: str,
+    path: str,
+    body: bytes | None = None,
+    content_type: str = "application/json",
+) -> None:
+    """Write an HTTP/1.1 request to the writer."""
+    lines = [
+        f"{method} {path} HTTP/1.1",
+        "Host: localhost",
+    ]
+    if body is not None:
+        lines.append(f"Content-Type: {content_type}")
+        lines.append(f"Content-Length: {len(body)}")
+    lines.append("Connection: close")
+    lines.append("")
+    lines.append("")
+
+    header_bytes = "\r\n".join(lines).encode("ascii")
+    writer.write(header_bytes)
+    if body is not None:
+        writer.write(body)
+    await writer.drain()
+
+
+async def _read_status_line(reader: asyncio.StreamReader) -> int:
+    """Read the HTTP status line and return the status code."""
+    line = await reader.readline()
+    if not line:
+        msg = "empty response"
+        raise SocketCommunicationError(msg)
+    parts = line.decode("ascii", errors="replace").split(None, 2)
+    if len(parts) < 2:  # noqa: PLR2004
+        msg = f"malformed status line: {line!r}"
+        raise SocketCommunicationError(msg)
+    return int(parts[1])
+
+
+async def _read_headers(reader: asyncio.StreamReader) -> dict[str, str]:
+    """Read HTTP headers until the blank line."""
+    headers: dict[str, str] = {}
+    while True:
+        line = await reader.readline()
+        stripped = line.strip()
+        if not stripped:
+            break
+        decoded = stripped.decode("ascii", errors="replace")
+        if ":" in decoded:
+            key, value = decoded.split(":", 1)
+            headers[key.strip().lower()] = value.strip()
+    return headers
+
+
+async def _read_body(
+    reader: asyncio.StreamReader,
+    headers: dict[str, str],
+) -> bytes:
+    """Read the HTTP response body, handling Content-Length and chunked TE."""
+    if headers.get("transfer-encoding", "").lower() == "chunked":
+        return await _read_chunked(reader)
+
+    content_length_str = headers.get("content-length")
+    if content_length_str is not None:
+        length = int(content_length_str)
+        return await _read_exact_body(reader, length)
+
+    # No Content-Length, no chunked: read until EOF
+    parts: list[bytes] = []
+    while True:
+        chunk = await reader.read(65536)
+        if not chunk:
+            break
+        parts.append(chunk)
+    return b"".join(parts)
+
+
+async def _read_exact_body(reader: asyncio.StreamReader, length: int) -> bytes:
+    """Read exactly ``length`` bytes from the reader."""
+    data = b""
+    while len(data) < length:
+        chunk = await reader.read(length - len(data))
+        if not chunk:
+            break
+        data += chunk
+    return data
+
+
+async def _read_chunked(reader: asyncio.StreamReader) -> bytes:
+    """Read a chunked transfer-encoded body."""
+    parts: list[bytes] = []
+    while True:
+        size_line = await reader.readline()
+        size_str = size_line.strip().decode("ascii", errors="replace")
+        if not size_str:
+            continue
+        chunk_size = int(size_str, 16)
+        if chunk_size == 0:
+            await reader.readline()  # trailing \r\n
+            break
+        chunk_data = await _read_exact_body(reader, chunk_size)
+        parts.append(chunk_data)
+        await reader.readline()  # trailing \r\n after chunk
+    return b"".join(parts)
+
+
+async def _request(
+    socket_path: str,
+    method: str,
+    path: str,
+    body: dict[str, Any] | None = None,
+) -> tuple[int, bytes]:
+    """Make an HTTP request and return (status_code, response_body).
+
+    Opens a new connection per call.
+    """
+    reader, writer = await _open_connection(socket_path)
+    try:
+        body_bytes = json.dumps(body).encode("utf-8") if body is not None else None
+        await _send_request(writer, method, path, body_bytes)
+
+        status = await _read_status_line(reader)
+        headers = await _read_headers(reader)
+        response_body = await _read_body(reader, headers)
+    except SocketConnectionError:
+        raise
+    except (OSError, asyncio.IncompleteReadError) as exc:
+        raise SocketCommunicationError(str(exc)) from exc
+    else:
+        return status, response_body
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+
+async def _request_stream(
+    socket_path: str,
+    method: str,
+    path: str,
+    body: dict[str, Any] | None = None,
+) -> tuple[int, asyncio.StreamReader, asyncio.StreamWriter]:
+    """Make an HTTP request and return (status, reader, writer) for streaming.
+
+    The caller is responsible for closing the writer.
+    """
+    reader, writer = await _open_connection(socket_path)
+    try:
+        body_bytes = json.dumps(body).encode("utf-8") if body is not None else None
+        await _send_request(writer, method, path, body_bytes)
+
+        status = await _read_status_line(reader)
+        _headers = await _read_headers(reader)
+    except Exception:
+        writer.close()
+        await writer.wait_closed()
+        raise
+    else:
+        return status, reader, writer
+
+
+# ---------------------------------------------------------------------------
+# Error mapping
+# ---------------------------------------------------------------------------
+
+
+def _check_container_response(
+    status: int,
+    body: bytes,
+    container_id: str,
+) -> None:
+    """Raise appropriate errors based on HTTP status codes."""
+    if status < 400:  # noqa: PLR2004
+        return
+    if status == 404:  # noqa: PLR2004
+        raise ContainerNotFound(container_id)
+    if status == 409:  # noqa: PLR2004
+        raise ContainerNotRunning(container_id)
+    msg = f"HTTP {status}: {body.decode('utf-8', errors='replace')}"
+    raise SocketCommunicationError(msg)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+
+async def ping(socket_path: str) -> str:
+    """Ping the container engine.
+
+    Returns:
+        ``"OK"`` on success.
+
+    """
+    status, body = await _request(socket_path, "GET", "/_ping")
+    if status != 200:  # noqa: PLR2004
+        msg = f"ping failed: HTTP {status}"
+        raise SocketCommunicationError(msg)
+    return body.decode("ascii").strip()
+
+
+async def create_container(
+    socket_path: str,
+    image: str,
+    command: list[str] | None = None,
+    labels: dict[str, str] | None = None,
+) -> str:
+    """Create a container and return its ID.
+
+    Args:
+        socket_path: Path to the container engine Unix socket.
+        image: Image name to use.
+        command: Command to run (default: image CMD).
+        labels: OCI labels to attach.
+
+    Returns:
+        The container ID (full hex string).
+
+    """
+    payload: dict[str, Any] = {"Image": image}
+    if command is not None:
+        payload["Cmd"] = command
+    if labels is not None:
+        payload["Labels"] = labels
+
+    status, body = await _request(socket_path, "POST", "/containers/create", payload)
+
+    if status == 404:  # noqa: PLR2004
+        raise ImageNotFound(image)
+    if status >= 400:  # noqa: PLR2004
+        msg = f"create failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
+        raise SocketCommunicationError(msg)
+
+    data = json.loads(body)
+    return str(data["Id"])
+
+
+async def start_container(socket_path: str, container_id: str) -> None:
+    """Start a created container."""
+    status, body = await _request(socket_path, "POST", f"/containers/{container_id}/start")
+    # 204 = success, 304 = already started
+    if status not in (204, 304):
+        _check_container_response(status, body, container_id)
+
+
+async def stop_container(socket_path: str, container_id: str, timeout: int = 10) -> None:
+    """Stop a running container."""
+    status, body = await _request(
+        socket_path, "POST", f"/containers/{container_id}/stop?t={timeout}"
+    )
+    # 204 = success, 304 = already stopped
+    if status not in (204, 304):
+        _check_container_response(status, body, container_id)
+
+
+async def remove_container(
+    socket_path: str,
+    container_id: str,
+    *,
+    force: bool = False,
+) -> None:
+    """Remove a container."""
+    force_param = "true" if force else "false"
+    status, body = await _request(
+        socket_path,
+        "DELETE",
+        f"/containers/{container_id}?force={force_param}",
+    )
+    if status not in (200, 204):
+        _check_container_response(status, body, container_id)
+
+
+async def inspect_container(socket_path: str, container_id: str) -> dict[str, Any]:
+    """Inspect a container, returning its full JSON state."""
+    status, body = await _request(socket_path, "GET", f"/containers/{container_id}/json")
+    _check_container_response(status, body, container_id)
+    return json.loads(body)  # type: ignore[no-any-return]
+
+
+async def exec_command(
+    socket_path: str,
+    container_id: str,
+    command: list[str],
+    max_output: int = 10 * 1024 * 1024,
+) -> ExecResult:
+    """Execute a command inside a running container.
+
+    This performs three HTTP calls:
+    1. Create exec instance (``POST /containers/{id}/exec``)
+    2. Start exec and read multiplexed stream (``POST /exec/{id}/start``)
+    3. Inspect exec to get exit code (``GET /exec/{id}/json``)
+
+    Args:
+        socket_path: Path to the container engine Unix socket.
+        container_id: Container to exec into.
+        command: Command and arguments.
+        max_output: Maximum bytes to accumulate.
+
+    Returns:
+        ExecResult with exit code, stdout, stderr, and timing info.
+
+    """
+    start_time = time.monotonic()
+
+    # Step 1: Create exec instance
+    exec_id = await _exec_create(socket_path, container_id, command)
+
+    # Step 2: Start exec and read stream
+    demux_result = await _exec_start(socket_path, exec_id, max_output)
+
+    # Step 3: Get exit code
+    exit_code = await _exec_inspect_exit_code(socket_path, exec_id)
+
+    duration_ms = (time.monotonic() - start_time) * 1000
+
+    return ExecResult(
+        exit_code=exit_code,
+        stdout=demux_result.stdout_text(),
+        stderr=demux_result.stderr_text(),
+        duration_ms=duration_ms,
+        truncated=demux_result.truncated,
+    )
+
+
+async def _exec_create(
+    socket_path: str,
+    container_id: str,
+    command: list[str],
+) -> str:
+    """Create an exec instance and return its ID."""
+    payload = {
+        "AttachStdout": True,
+        "AttachStderr": True,
+        "Cmd": command,
+    }
+    status, body = await _request(
+        socket_path,
+        "POST",
+        f"/containers/{container_id}/exec",
+        payload,
+    )
+    if status == 404:  # noqa: PLR2004
+        raise ContainerNotFound(container_id)
+    if status == 409:  # noqa: PLR2004
+        raise ContainerNotRunning(container_id)
+    if status >= 400:  # noqa: PLR2004
+        msg = f"exec create failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
+        raise SocketCommunicationError(msg)
+
+    data = json.loads(body)
+    return str(data["Id"])
+
+
+async def _exec_start(
+    socket_path: str,
+    exec_id: str,
+    max_output: int,
+) -> DemuxResult:
+    """Start an exec instance and read the multiplexed stream."""
+    payload = {"Detach": False, "Tty": False}
+    status, reader, writer = await _request_stream(
+        socket_path,
+        "POST",
+        f"/exec/{exec_id}/start",
+        payload,
+    )
+    try:
+        if status >= 400:  # noqa: PLR2004
+            rest = await reader.read(65536)
+            msg = f"exec start failed: HTTP {status}: {rest.decode('utf-8', errors='replace')}"
+            raise SocketCommunicationError(msg)
+        return await demux_stream(reader, max_output)
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+
+async def _exec_inspect_exit_code(socket_path: str, exec_id: str) -> int:
+    """Inspect an exec instance and return its exit code."""
+    status, body = await _request(socket_path, "GET", f"/exec/{exec_id}/json")
+    if status >= 400:  # noqa: PLR2004
+        msg = f"exec inspect failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
+        raise SocketCommunicationError(msg)
+    data = json.loads(body)
+    return int(data["ExitCode"])
