@@ -1,0 +1,77 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) deftio llc
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pocket-dock"
+version = "0.0.0"
+description = "Portable, offline-first container sandboxes for LLM agents and dev workflows"
+readme = "README.md"
+license = "BSD-2-Clause"
+requires-python = ">=3.10"
+authors = [{ name = "deftio llc" }]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.optional-dependencies]
+cli = [
+    "click",
+    "rich",
+    "PyYAML",
+    "tomli; python_version < '3.11'",
+]
+
+[project.scripts]
+pocket-dock = "pocket_dock.cli.main:cli [cli]"
+
+# ---------------------------------------------------------------------------
+# Tool configuration
+# ---------------------------------------------------------------------------
+
+[tool.hatch.build.targets.wheel]
+packages = ["python/pocket_dock"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 99
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["D1"]  # don't require docstrings on every function
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--cov=pocket_dock --cov-report=term-missing --cov-fail-under=100 -v"
+
+[tool.coverage.run]
+branch = true
+source = ["pocket_dock"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+exclude_lines = []  # explicitly empty — no exclusions allowed
+
+[tool.bandit]
+exclude_dirs = ["tests"]
