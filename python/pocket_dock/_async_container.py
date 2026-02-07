@@ -10,7 +10,10 @@ facade that dispatches coroutines to a background event loop.
 from __future__ import annotations
 
 import contextlib
+import io
+import pathlib
 import secrets
+import tarfile
 from typing import TYPE_CHECKING
 
 from pocket_dock import _socket_client as sc
@@ -104,6 +107,112 @@ class AsyncContainer:
             max_output=max_output,
             timeout=t,
         )
+
+    async def write_file(self, path: str, content: str | bytes) -> None:
+        """Write a file into the container.
+
+        Creates parent directories as needed.
+
+        Args:
+            path: Absolute path inside the container.
+            content: File contents (str is encoded as UTF-8).
+
+        """
+        data = content.encode("utf-8") if isinstance(content, str) else content
+        dest_dir = str(pathlib.PurePosixPath(path).parent)
+        file_name = pathlib.PurePosixPath(path).name
+
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w") as tar:
+            info = tarfile.TarInfo(name=file_name)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+
+        await sc.push_archive(self._socket_path, self._container_id, dest_dir, buf.getvalue())
+
+    async def read_file(self, path: str) -> bytes:
+        """Read a file from the container.
+
+        Args:
+            path: Absolute path inside the container.
+
+        Returns:
+            The file contents as bytes.
+
+        """
+        tar_data = await sc.pull_archive(self._socket_path, self._container_id, path)
+        buf = io.BytesIO(tar_data)
+        with tarfile.open(fileobj=buf, mode="r") as tar:
+            for member in tar.getmembers():
+                if member.isfile():
+                    extracted = tar.extractfile(member)
+                    if extracted is not None:
+                        return extracted.read()
+        msg = f"no file found in archive for {path}"
+        raise FileNotFoundError(msg)
+
+    async def list_files(self, path: str = "/home/sandbox") -> list[str]:
+        """List directory contents inside the container.
+
+        Args:
+            path: Directory path inside the container.
+
+        Returns:
+            List of filenames (not full paths).
+
+        """
+        result = await self.run(f"ls -1a {path}")
+        if not result.ok:
+            msg = f"ls failed: {result.stderr.strip()}"
+            raise FileNotFoundError(msg)
+        return [f for f in result.stdout.strip().split("\n") if f and f not in (".", "..")]
+
+    async def push(self, src: str, dest: str) -> None:
+        """Copy a file or directory from the host into the container.
+
+        Args:
+            src: Path on the host filesystem.
+            dest: Destination path inside the container.
+
+        """
+        host_path = pathlib.Path(src)
+        if not host_path.exists():  # noqa: ASYNC240
+            msg = f"source path does not exist: {src}"
+            raise FileNotFoundError(msg)
+
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w") as tar:
+            if host_path.is_dir():  # noqa: ASYNC240
+                dest_name = pathlib.PurePosixPath(dest).name
+                tar.add(str(host_path), arcname=dest_name)
+            else:
+                tar.add(str(host_path), arcname=pathlib.PurePosixPath(dest).name)
+
+        dest_dir = str(pathlib.PurePosixPath(dest).parent)
+        await sc.push_archive(self._socket_path, self._container_id, dest_dir, buf.getvalue())
+
+    async def pull(self, src: str, dest: str) -> None:
+        """Copy a file or directory from the container to the host.
+
+        Args:
+            src: Path inside the container.
+            dest: Destination path on the host filesystem.
+
+        """
+        tar_data = await sc.pull_archive(self._socket_path, self._container_id, src)
+        dest_path = pathlib.Path(dest)
+        buf = io.BytesIO(tar_data)
+        with tarfile.open(fileobj=buf, mode="r") as tar:
+            members = tar.getmembers()
+            if len(members) == 1 and members[0].isfile():
+                extracted = tar.extractfile(members[0])
+                if extracted is not None:
+                    dest_path.parent.mkdir(parents=True, exist_ok=True)
+                    dest_path.write_bytes(extracted.read())  # noqa: ASYNC240
+                    return
+            # Directory or multiple files: extract all
+            dest_path.mkdir(parents=True, exist_ok=True)  # noqa: ASYNC240
+            tar.extractall(dest_path, filter="data")
 
     async def shutdown(self, *, force: bool = False) -> None:
         """Stop and remove the container.

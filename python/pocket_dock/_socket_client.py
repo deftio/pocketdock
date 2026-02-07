@@ -19,6 +19,7 @@ import json
 import os
 import pathlib
 import time
+import urllib.parse
 from typing import Any
 
 from pocket_dock._stream import DemuxResult, demux_stream
@@ -481,3 +482,93 @@ async def _exec_inspect_exit_code(socket_path: str, exec_id: str) -> int:
         raise SocketCommunicationError(msg)
     data = json.loads(body)
     return int(data["ExitCode"])
+
+
+# ---------------------------------------------------------------------------
+# Raw request (for binary bodies like tar archives)
+# ---------------------------------------------------------------------------
+
+
+async def _request_raw(
+    socket_path: str,
+    method: str,
+    path: str,
+    body: bytes | None = None,
+    content_type: str = "application/x-tar",
+) -> tuple[int, bytes]:
+    """Make an HTTP request with a raw byte body."""
+    reader, writer = await _open_connection(socket_path)
+    try:
+        await _send_request(writer, method, path, body, content_type=content_type)
+        status = await _read_status_line(reader)
+        headers = await _read_headers(reader)
+        response_body = await _read_body(reader, headers)
+    except SocketConnectionError:
+        raise
+    except (OSError, asyncio.IncompleteReadError) as exc:
+        raise SocketCommunicationError(str(exc)) from exc
+    else:
+        return status, response_body
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+
+# ---------------------------------------------------------------------------
+# Archive API (file push/pull)
+# ---------------------------------------------------------------------------
+
+
+async def push_archive(
+    socket_path: str,
+    container_id: str,
+    dest_path: str,
+    tar_data: bytes,
+) -> None:
+    """Upload a tar archive to the container.
+
+    Uses ``PUT /containers/{id}/archive?path={dest}``.
+
+    Args:
+        socket_path: Path to the container engine Unix socket.
+        container_id: Target container ID.
+        dest_path: Destination directory inside the container.
+        tar_data: Raw tar archive bytes.
+
+    """
+    encoded_path = urllib.parse.quote(dest_path, safe="")
+    status, body = await _request_raw(
+        socket_path,
+        "PUT",
+        f"/containers/{container_id}/archive?path={encoded_path}",
+        tar_data,
+    )
+    _check_container_response(status, body, container_id)
+
+
+async def pull_archive(
+    socket_path: str,
+    container_id: str,
+    src_path: str,
+) -> bytes:
+    """Download a tar archive from the container.
+
+    Uses ``GET /containers/{id}/archive?path={src}``.
+
+    Args:
+        socket_path: Path to the container engine Unix socket.
+        container_id: Source container ID.
+        src_path: Path inside the container to download.
+
+    Returns:
+        Raw tar archive bytes.
+
+    """
+    encoded_path = urllib.parse.quote(src_path, safe="")
+    status, body = await _request(
+        socket_path,
+        "GET",
+        f"/containers/{container_id}/archive?path={encoded_path}",
+    )
+    _check_container_response(status, body, container_id)
+    return body

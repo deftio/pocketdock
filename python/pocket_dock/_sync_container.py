@@ -117,6 +117,41 @@ class Container:
             self._ac.run(command, timeout=timeout, max_output=max_output, lang=lang),
         )
 
+    def write_file(self, path: str, content: str | bytes) -> None:
+        """Write a file into the container.
+
+        See :meth:`AsyncContainer.write_file` for full documentation.
+        """
+        self._lt.run(self._ac.write_file(path, content))
+
+    def read_file(self, path: str) -> bytes:
+        """Read a file from the container.
+
+        See :meth:`AsyncContainer.read_file` for full documentation.
+        """
+        return self._lt.run(self._ac.read_file(path))  # type: ignore[return-value]
+
+    def list_files(self, path: str = "/home/sandbox") -> list[str]:
+        """List directory contents inside the container.
+
+        See :meth:`AsyncContainer.list_files` for full documentation.
+        """
+        return self._lt.run(self._ac.list_files(path))  # type: ignore[return-value]
+
+    def push(self, src: str, dest: str) -> None:
+        """Copy a file or directory from the host into the container.
+
+        See :meth:`AsyncContainer.push` for full documentation.
+        """
+        self._lt.run(self._ac.push(src, dest))
+
+    def pull(self, src: str, dest: str) -> None:
+        """Copy a file or directory from the container to the host.
+
+        See :meth:`AsyncContainer.pull` for full documentation.
+        """
+        self._lt.run(self._ac.pull(src, dest))
+
     def shutdown(self, *, force: bool = False) -> None:
         """Stop and remove the container.
 
