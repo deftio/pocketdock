@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-07
+
+### Added
+
+- `AsyncContainer` class with async `run()`, `shutdown()`, and context manager
+- `Container` class (sync facade) with background event loop thread
+- `create_new_container()` factory function (sync in `pocket_dock`, async in `pocket_dock.async_`)
+- Blocking `run()` with configurable timeout and output capping
+- `lang` parameter for `run()` (e.g. `lang="python"` wraps command with `python3 -c`)
+- Timeout support in `exec_command` via `asyncio.wait_for`
+- Container labels (`pocket-dock.managed`, `pocket-dock.instance`) for discovery
+- Auto-generated container names (`pd-{8 hex}`)
+- Multiple independent containers from a single process
+- Thread-safe sync facade via `asyncio.run_coroutine_threadsafe`
+
 ## [0.1.0] - 2026-02-07
 
 ### Added
