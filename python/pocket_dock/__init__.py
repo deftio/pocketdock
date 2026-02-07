@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from pocket_dock._sync_container import Container, create_new_container
 from pocket_dock.errors import (
     ContainerError,
     ContainerGone,
@@ -18,6 +19,7 @@ from pocket_dock.errors import (
 from pocket_dock.types import ExecResult
 
 __all__ = [
+    "Container",
     "ContainerError",
     "ContainerGone",
     "ContainerNotFound",
@@ -29,4 +31,5 @@ __all__ = [
     "SocketCommunicationError",
     "SocketConnectionError",
     "SocketError",
+    "create_new_container",
 ]

@@ -363,6 +363,7 @@ async def exec_command(
     container_id: str,
     command: list[str],
     max_output: int = 10 * 1024 * 1024,
+    timeout: float | None = None,
 ) -> ExecResult:
     """Execute a command inside a running container.
 
@@ -376,6 +377,7 @@ async def exec_command(
         container_id: Container to exec into.
         command: Command and arguments.
         max_output: Maximum bytes to accumulate.
+        timeout: Maximum seconds to wait for the command. ``None`` = no limit.
 
     Returns:
         ExecResult with exit code, stdout, stderr, and timing info.
@@ -386,11 +388,25 @@ async def exec_command(
     # Step 1: Create exec instance
     exec_id = await _exec_create(socket_path, container_id, command)
 
-    # Step 2: Start exec and read stream
-    demux_result = await _exec_start(socket_path, exec_id, max_output)
+    # Step 2: Start exec and read stream (with optional timeout)
+    timed_out = False
+    try:
+        if timeout is not None:
+            demux_result = await asyncio.wait_for(
+                _exec_start(socket_path, exec_id, max_output),
+                timeout=timeout,
+            )
+        else:
+            demux_result = await _exec_start(socket_path, exec_id, max_output)
+    except TimeoutError:
+        timed_out = True
+        demux_result = DemuxResult()
 
-    # Step 3: Get exit code
-    exit_code = await _exec_inspect_exit_code(socket_path, exec_id)
+    # Step 3: Get exit code (skip if timed out — exec may still be running)
+    if timed_out:
+        exit_code = -1
+    else:
+        exit_code = await _exec_inspect_exit_code(socket_path, exec_id)
 
     duration_ms = (time.monotonic() - start_time) * 1000
 
@@ -399,6 +415,7 @@ async def exec_command(
         stdout=demux_result.stdout_text(),
         stderr=demux_result.stderr_text(),
         duration_ms=duration_ms,
+        timed_out=timed_out,
         truncated=demux_result.truncated,
     )
 
