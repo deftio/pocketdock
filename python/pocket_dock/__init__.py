@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version
+
 from pocket_dock._sync_container import Container, create_new_container
 from pocket_dock.errors import (
     ContainerError,
@@ -18,6 +20,14 @@ from pocket_dock.errors import (
 )
 from pocket_dock.types import ExecResult
 
+__version__ = version("pocket-dock")
+
+
+def get_version() -> str:
+    """Return the pocket-dock package version string."""
+    return __version__
+
+
 __all__ = [
     "Container",
     "ContainerError",
@@ -31,5 +41,7 @@ __all__ = [
     "SocketCommunicationError",
     "SocketConnectionError",
     "SocketError",
+    "__version__",
     "create_new_container",
+    "get_version",
 ]
