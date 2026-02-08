@@ -22,11 +22,15 @@ def _make_container() -> AsyncContainer:
 
 async def test_write_file_text_encodes_utf8() -> None:
     c = _make_container()
+    mock_run_result = ExecResult(exit_code=0)
 
-    with patch(
-        "pocket_dock._async_container.sc.push_archive",
-        new_callable=AsyncMock,
-    ) as mock_push:
+    with (
+        patch.object(c, "run", new_callable=AsyncMock, return_value=mock_run_result),
+        patch(
+            "pocket_dock._async_container.sc.push_archive",
+            new_callable=AsyncMock,
+        ) as mock_push,
+    ):
         await c.write_file("/tmp/hello.txt", "hello")
 
     mock_push.assert_called_once()
@@ -46,11 +50,15 @@ async def test_write_file_text_encodes_utf8() -> None:
 async def test_write_file_binary_passthrough() -> None:
     c = _make_container()
     payload = bytes(range(256))
+    mock_run_result = ExecResult(exit_code=0)
 
-    with patch(
-        "pocket_dock._async_container.sc.push_archive",
-        new_callable=AsyncMock,
-    ) as mock_push:
+    with (
+        patch.object(c, "run", new_callable=AsyncMock, return_value=mock_run_result),
+        patch(
+            "pocket_dock._async_container.sc.push_archive",
+            new_callable=AsyncMock,
+        ) as mock_push,
+    ):
         await c.write_file("/data/out.bin", payload)
 
     _, _, dest_dir, tar_data = mock_push.call_args[0]
@@ -65,11 +73,15 @@ async def test_write_file_binary_passthrough() -> None:
 
 async def test_write_file_nested_path() -> None:
     c = _make_container()
+    mock_run_result = ExecResult(exit_code=0)
 
-    with patch(
-        "pocket_dock._async_container.sc.push_archive",
-        new_callable=AsyncMock,
-    ) as mock_push:
+    with (
+        patch.object(c, "run", new_callable=AsyncMock, return_value=mock_run_result),
+        patch(
+            "pocket_dock._async_container.sc.push_archive",
+            new_callable=AsyncMock,
+        ) as mock_push,
+    ):
         await c.write_file("/a/b/c/file.txt", "nested")
 
     _, _, dest_dir, _ = mock_push.call_args[0]

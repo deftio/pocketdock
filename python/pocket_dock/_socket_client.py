@@ -221,8 +221,8 @@ async def _request_stream(
     method: str,
     path: str,
     body: dict[str, Any] | None = None,
-) -> tuple[int, asyncio.StreamReader, asyncio.StreamWriter]:
-    """Make an HTTP request and return (status, reader, writer) for streaming.
+) -> tuple[int, dict[str, str], asyncio.StreamReader, asyncio.StreamWriter]:
+    """Make an HTTP request and return (status, headers, reader, writer) for streaming.
 
     The caller is responsible for closing the writer.
     """
@@ -232,13 +232,13 @@ async def _request_stream(
         await _send_request(writer, method, path, body_bytes)
 
         status = await _read_status_line(reader)
-        _headers = await _read_headers(reader)
+        headers = await _read_headers(reader)
     except Exception:
         writer.close()
         await writer.wait_closed()
         raise
     else:
-        return status, reader, writer
+        return status, headers, reader, writer
 
 
 # ---------------------------------------------------------------------------
@@ -457,7 +457,7 @@ async def _exec_start(
 ) -> DemuxResult:
     """Start an exec instance and read the multiplexed stream."""
     payload = {"Detach": False, "Tty": False}
-    status, reader, writer = await _request_stream(
+    status, headers, reader, writer = await _request_stream(
         socket_path,
         "POST",
         f"/exec/{exec_id}/start",
@@ -468,6 +468,15 @@ async def _exec_start(
             rest = await reader.read(65536)
             msg = f"exec start failed: HTTP {status}: {rest.decode('utf-8', errors='replace')}"
             raise SocketCommunicationError(msg)
+
+        # Docker wraps the multiplexed stream in chunked transfer encoding;
+        # Podman sends the raw multiplexed stream directly.
+        if headers.get("transfer-encoding", "").lower() == "chunked":
+            raw = await _read_chunked(reader)
+            mem_reader = asyncio.StreamReader()
+            mem_reader.feed_data(raw)
+            mem_reader.feed_eof()
+            return await demux_stream(mem_reader, max_output)
         return await demux_stream(reader, max_output)
     finally:
         writer.close()
@@ -543,6 +552,9 @@ async def push_archive(
         f"/containers/{container_id}/archive?path={encoded_path}",
         tar_data,
     )
+    if status == 404:  # noqa: PLR2004
+        msg = f"destination path not found in container: {dest_path}"
+        raise FileNotFoundError(msg)
     _check_container_response(status, body, container_id)
 
 
@@ -563,6 +575,9 @@ async def pull_archive(
     Returns:
         Raw tar archive bytes.
 
+    Raises:
+        FileNotFoundError: If the path does not exist inside the container.
+
     """
     encoded_path = urllib.parse.quote(src_path, safe="")
     status, body = await _request(
@@ -570,5 +585,8 @@ async def pull_archive(
         "GET",
         f"/containers/{container_id}/archive?path={encoded_path}",
     )
+    if status == 404:  # noqa: PLR2004
+        msg = f"path not found in container: {src_path}"
+        raise FileNotFoundError(msg)
     _check_container_response(status, body, container_id)
     return body

@@ -122,6 +122,9 @@ class AsyncContainer:
         dest_dir = str(pathlib.PurePosixPath(path).parent)
         file_name = pathlib.PurePosixPath(path).name
 
+        # Ensure parent directory exists (Docker archive API returns 404 otherwise)
+        await self.run(f"mkdir -p {dest_dir}")
+
         buf = io.BytesIO()
         with tarfile.open(fileobj=buf, mode="w") as tar:
             info = tarfile.TarInfo(name=file_name)
@@ -180,13 +183,29 @@ class AsyncContainer:
             msg = f"source path does not exist: {src}"
             raise FileNotFoundError(msg)
 
+        def _reset_tar_info(info: tarfile.TarInfo) -> tarfile.TarInfo:
+            """Reset ownership and permissions for container compatibility."""
+            info.uid = 0
+            info.gid = 0
+            info.uname = "root"
+            info.gname = "root"
+            if info.isdir():
+                info.mode = 0o755
+            else:
+                info.mode = 0o644
+            return info
+
         buf = io.BytesIO()
         with tarfile.open(fileobj=buf, mode="w") as tar:
             if host_path.is_dir():  # noqa: ASYNC240
                 dest_name = pathlib.PurePosixPath(dest).name
-                tar.add(str(host_path), arcname=dest_name)
+                tar.add(str(host_path), arcname=dest_name, filter=_reset_tar_info)
             else:
-                tar.add(str(host_path), arcname=pathlib.PurePosixPath(dest).name)
+                tar.add(
+                    str(host_path),
+                    arcname=pathlib.PurePosixPath(dest).name,
+                    filter=_reset_tar_info,
+                )
 
         dest_dir = str(pathlib.PurePosixPath(dest).parent)
         await sc.push_archive(self._socket_path, self._container_id, dest_dir, buf.getvalue())
