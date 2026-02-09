@@ -532,6 +532,30 @@ async def test_remove_container_error() -> None:
 # --- _exec_create ---
 
 
+async def test_exec_create_404() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(404, b"not found"),
+        ),
+        pytest.raises(ContainerNotFound),
+    ):
+        await _exec_create("/tmp/s.sock", "cid", ["echo", "hi"])
+
+
+async def test_exec_create_409() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(409, b"not running"),
+        ),
+        pytest.raises(ContainerNotRunning),
+    ):
+        await _exec_create("/tmp/s.sock", "cid", ["echo", "hi"])
+
+
 async def test_exec_create_podman_500_container_state() -> None:
     with (
         patch(
