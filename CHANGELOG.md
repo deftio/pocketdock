@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-02-08
+
+### Added
+
+- `info()` — live container snapshot: status, uptime, memory, CPU, PIDs, processes, network
+- `reboot()` — restart in place; `reboot(fresh=True)` recreates with same config
+- `mem_limit` parameter for `create_new_container()` (e.g. `"256m"`, `"1g"`)
+- `cpu_percent` parameter for `create_new_container()` (e.g. `50` for 50% CPU cap)
+- `ContainerInfo` dataclass with 15 fields for container introspection
+- `get_container_stats()`, `get_container_top()`, `restart_container()` socket client endpoints
+- `_helpers.py` module with `format_bytes`, `parse_mem_limit`, `parse_iso_timestamp`, `compute_cpu_percent`
+- Resource limits via `HostConfig` (`Memory`, `NanoCpus`) in container creation
+- All new methods available on both `AsyncContainer` (async) and `Container` (sync)
+
 ## [0.3.0] - 2026-02-07
 
 ### Added
