@@ -286,6 +286,7 @@ async def create_container(
     image: str,
     command: list[str] | None = None,
     labels: dict[str, str] | None = None,
+    host_config: dict[str, Any] | None = None,
 ) -> str:
     """Create a container and return its ID.
 
@@ -294,6 +295,7 @@ async def create_container(
         image: Image name to use.
         command: Command to run (default: image CMD).
         labels: OCI labels to attach.
+        host_config: Docker-compatible ``HostConfig`` dict (resource limits, etc.).
 
     Returns:
         The container ID (full hex string).
@@ -304,6 +306,8 @@ async def create_container(
         payload["Cmd"] = command
     if labels is not None:
         payload["Labels"] = labels
+    if host_config is not None:
+        payload["HostConfig"] = host_config
 
     status, body = await _request(socket_path, "POST", "/containers/create", payload)
 
@@ -359,6 +363,53 @@ async def inspect_container(socket_path: str, container_id: str) -> dict[str, An
     return json.loads(body)  # type: ignore[no-any-return]
 
 
+async def get_container_stats(socket_path: str, container_id: str) -> dict[str, Any]:
+    """Fetch a one-shot stats snapshot for a container.
+
+    Uses ``GET /containers/{id}/stats?stream=false&one-shot=true``.
+    """
+    status, body = await _request(
+        socket_path,
+        "GET",
+        f"/containers/{container_id}/stats?stream=false&one-shot=true",
+    )
+    _check_container_response(status, body, container_id)
+    return json.loads(body)  # type: ignore[no-any-return]
+
+
+async def get_container_top(socket_path: str, container_id: str) -> dict[str, Any]:
+    """List running processes in a container.
+
+    Uses ``GET /containers/{id}/top``.
+    """
+    status, body = await _request(
+        socket_path,
+        "GET",
+        f"/containers/{container_id}/top",
+    )
+    _check_container_response(status, body, container_id)
+    return json.loads(body)  # type: ignore[no-any-return]
+
+
+async def restart_container(
+    socket_path: str,
+    container_id: str,
+    timeout: int = 10,
+) -> None:
+    """Restart a container.
+
+    Uses ``POST /containers/{id}/restart?t={timeout}``.
+    """
+    status, body = await _request(
+        socket_path,
+        "POST",
+        f"/containers/{container_id}/restart?t={timeout}",
+    )
+    # 204 = success
+    if status != 204:  # noqa: PLR2004
+        _check_container_response(status, body, container_id)
+
+
 async def exec_command(
     socket_path: str,
     container_id: str,
@@ -399,7 +450,7 @@ async def exec_command(
             )
         else:
             demux_result = await _exec_start(socket_path, exec_id, max_output)
-    except TimeoutError:
+    except (TimeoutError, asyncio.TimeoutError):
         timed_out = True
         demux_result = DemuxResult()
 
