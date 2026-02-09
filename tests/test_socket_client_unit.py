@@ -883,6 +883,34 @@ async def test_demux_chunked_stream_empty() -> None:
     assert frames == []
 
 
+async def test_demux_chunked_stream_zero_length_frame() -> None:
+    """Zero-length demux frame inside a chunk should be skipped."""
+    zero_frame = struct.pack(">BxxxI", 1, 0)  # stdout, 0 bytes
+    real_frame = _make_frame(1, b"after zero\n")
+    chunk = zero_frame + real_frame
+    body = _make_chunked_body(chunk)
+    reader = asyncio.StreamReader()
+    reader.feed_data(body)
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in _demux_chunked_stream(reader)]
+    assert frames == [(1, b"after zero\n")]
+
+
+async def test_demux_chunked_stream_empty_lines_between_chunks() -> None:
+    """Empty lines between chunk size lines should be skipped."""
+    frame = _make_frame(1, b"hello\n")
+    chunk_hex = f"{len(frame):x}\r\n".encode()
+    # Insert an empty line before the chunk size
+    body = b"\r\n" + chunk_hex + frame + b"\r\n" + b"0\r\n\r\n"
+    reader = asyncio.StreamReader()
+    reader.feed_data(body)
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in _demux_chunked_stream(reader)]
+    assert frames == [(1, b"hello\n")]
+
+
 # --- _exec_start_stream ---
 
 

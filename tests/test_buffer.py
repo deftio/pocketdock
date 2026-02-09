@@ -8,7 +8,6 @@ import threading
 from pocket_dock._buffer import BufferSnapshot, RingBuffer
 from pocket_dock._stream import STREAM_STDERR, STREAM_STDOUT
 
-
 # --- BufferSnapshot ---
 
 
