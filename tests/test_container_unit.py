@@ -13,13 +13,14 @@ import pytest
 from pocket_dock._async_container import (
     AsyncContainer,
     _build_command,
+    _build_host_config,
     _generate_name,
 )
 from pocket_dock._async_container import (
     create_new_container as async_factory,
 )
 from pocket_dock._sync_container import Container, _LoopThread
-from pocket_dock.errors import PodmanNotRunning
+from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
 from pocket_dock.types import ExecResult
 
 # --- Name generation ---
@@ -377,3 +378,365 @@ def test_loopthread_double_check_locking_race() -> None:
     finally:
         _LoopThread._instance = original_instance
         _LoopThread._lock = original_lock
+
+
+# --- _build_host_config ---
+
+
+def test_build_host_config_no_limits() -> None:
+    assert _build_host_config(0, 0) is None
+
+
+def test_build_host_config_mem_only() -> None:
+    hc = _build_host_config(256 * 1024 * 1024, 0)
+    assert hc is not None
+    assert hc["Memory"] == 256 * 1024 * 1024
+    assert "NanoCpus" not in hc
+
+
+def test_build_host_config_cpu_only() -> None:
+    hc = _build_host_config(0, 500_000_000)
+    assert hc is not None
+    assert hc["NanoCpus"] == 500_000_000
+    assert "Memory" not in hc
+
+
+def test_build_host_config_both() -> None:
+    hc = _build_host_config(128 * 1024**2, 250_000_000)
+    assert hc is not None
+    assert "Memory" in hc
+    assert "NanoCpus" in hc
+
+
+# --- AsyncContainer.info ---
+
+
+async def test_async_info_running() -> None:
+    ac = _make_container()
+    inspect_data = {
+        "Id": "cid",
+        "Created": "2026-01-01T00:00:00Z",
+        "State": {"Status": "running", "Running": True, "StartedAt": "2026-01-01T00:01:00Z"},
+        "Config": {"Image": "test-image"},
+        "NetworkSettings": {"IPAddress": "172.17.0.2"},
+    }
+    stats_data = {
+        "memory_stats": {"usage": 1024, "limit": 4096},
+        "pids_stats": {"current": 1},
+    }
+    top_data = {"Titles": ["PID"], "Processes": [["1"]]}
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc.inspect_container",
+            new_callable=AsyncMock,
+            return_value=inspect_data,
+        ),
+        patch(
+            "pocket_dock._async_container.sc.get_container_stats",
+            new_callable=AsyncMock,
+            return_value=stats_data,
+        ),
+        patch(
+            "pocket_dock._async_container.sc.get_container_top",
+            new_callable=AsyncMock,
+            return_value=top_data,
+        ),
+    ):
+        info = await ac.info()
+
+    assert info.status == "running"
+    assert info.pids == 1
+    assert info.network is True
+
+
+async def test_async_info_stopped() -> None:
+    ac = _make_container()
+    inspect_data = {
+        "Id": "cid",
+        "Created": "2026-01-01T00:00:00Z",
+        "State": {"Status": "exited", "Running": False},
+        "Config": {"Image": "test-image"},
+        "NetworkSettings": {"IPAddress": ""},
+    }
+
+    with patch(
+        "pocket_dock._async_container.sc.inspect_container",
+        new_callable=AsyncMock,
+        return_value=inspect_data,
+    ):
+        info = await ac.info()
+
+    assert info.status == "exited"
+    assert info.memory_usage == ""
+    assert info.pids == 0
+
+
+async def test_async_info_race_container_stops_during_stats() -> None:
+    ac = _make_container()
+    inspect_data = {
+        "Id": "cid",
+        "Created": "2026-01-01T00:00:00Z",
+        "State": {"Status": "running", "Running": True},
+        "Config": {"Image": "test-image"},
+        "NetworkSettings": {},
+    }
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc.inspect_container",
+            new_callable=AsyncMock,
+            return_value=inspect_data,
+        ),
+        patch(
+            "pocket_dock._async_container.sc.get_container_stats",
+            new_callable=AsyncMock,
+            side_effect=ContainerNotRunning("cid"),
+        ),
+        patch(
+            "pocket_dock._async_container.sc.get_container_top",
+            new_callable=AsyncMock,
+        ),
+    ):
+        info = await ac.info()
+
+    # Stats failed, but info should still return successfully
+    assert info.memory_usage == ""
+
+
+async def test_async_info_race_container_removed_during_stats() -> None:
+    ac = _make_container()
+    inspect_data = {
+        "Id": "cid",
+        "Created": "2026-01-01T00:00:00Z",
+        "State": {"Status": "running", "Running": True},
+        "Config": {"Image": "test-image"},
+        "NetworkSettings": {},
+    }
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc.inspect_container",
+            new_callable=AsyncMock,
+            return_value=inspect_data,
+        ),
+        patch(
+            "pocket_dock._async_container.sc.get_container_stats",
+            new_callable=AsyncMock,
+            side_effect=ContainerNotFound("cid"),
+        ),
+        patch(
+            "pocket_dock._async_container.sc.get_container_top",
+            new_callable=AsyncMock,
+        ),
+    ):
+        info = await ac.info()
+
+    assert info.memory_usage == ""
+
+
+# --- AsyncContainer.reboot ---
+
+
+async def test_async_reboot_simple() -> None:
+    ac = _make_container()
+
+    with patch(
+        "pocket_dock._async_container.sc.restart_container",
+        new_callable=AsyncMock,
+    ) as mock_restart:
+        await ac.reboot()
+
+    mock_restart.assert_called_once_with("/tmp/s.sock", "cid")
+
+
+async def test_async_reboot_fresh() -> None:
+    ac = AsyncContainer(
+        "old_cid",
+        "/tmp/s.sock",
+        name="pd-test",
+        image="test-image",
+        mem_limit_bytes=256 * 1024**2,
+        nano_cpus=500_000_000,
+    )
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="new_cid",
+        ) as mock_create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await ac.reboot(fresh=True)
+
+    assert ac.container_id == "new_cid"
+    # Verify resource limits are passed through
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["host_config"]["Memory"] == 256 * 1024**2
+    assert call_kwargs["host_config"]["NanoCpus"] == 500_000_000
+
+
+async def test_async_reboot_fresh_stop_already_stopped() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test", image="img")
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc.stop_container",
+            new_callable=AsyncMock,
+            side_effect=ContainerNotRunning("cid"),
+        ),
+        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="new_cid",
+        ),
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await ac.reboot(fresh=True)
+
+    assert ac.container_id == "new_cid"
+
+
+async def test_async_reboot_fresh_remove_already_gone() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test", image="img")
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch(
+            "pocket_dock._async_container.sc.remove_container",
+            new_callable=AsyncMock,
+            side_effect=ContainerNotFound("cid"),
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="new_cid",
+        ),
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await ac.reboot(fresh=True)
+
+    assert ac.container_id == "new_cid"
+
+
+# --- create_new_container with resource limits ---
+
+
+async def test_async_create_with_mem_limit() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as mock_create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        c = await async_factory(name="pd-mem", mem_limit="256m")
+
+    assert c.container_id == "deadbeef"
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["host_config"]["Memory"] == 256 * 1024**2
+
+
+async def test_async_create_with_cpu_percent() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as mock_create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        c = await async_factory(name="pd-cpu", cpu_percent=50)
+
+    assert c.container_id == "deadbeef"
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["host_config"]["NanoCpus"] == 500_000_000
+
+
+async def test_async_create_no_limits_no_host_config() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as mock_create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(name="pd-nolimits")
+
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["host_config"] is None
+
+
+# --- AsyncContainer new properties ---
+
+
+def test_async_container_new_properties() -> None:
+    ac = AsyncContainer(
+        "cid",
+        "/tmp/s.sock",
+        name="pd-test",
+        image="my-image",
+        mem_limit_bytes=100,
+        nano_cpus=200,
+    )
+    assert ac._image == "my-image"
+    assert ac._mem_limit_bytes == 100
+    assert ac._nano_cpus == 200
+
+
+# --- Sync Container.info and reboot ---
+
+
+def test_sync_info_delegates() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+
+    inspect_data = {
+        "Id": "cid",
+        "Created": "2026-01-01T00:00:00Z",
+        "State": {"Status": "exited", "Running": False},
+        "Config": {"Image": "test-image"},
+        "NetworkSettings": {"IPAddress": ""},
+    }
+
+    with patch(
+        "pocket_dock._async_container.sc.inspect_container",
+        new_callable=AsyncMock,
+        return_value=inspect_data,
+    ):
+        info = c.info()
+
+    assert info.status == "exited"
+
+
+def test_sync_reboot_delegates() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+
+    with patch(
+        "pocket_dock._async_container.sc.restart_container",
+        new_callable=AsyncMock,
+    ) as mock_restart:
+        c.reboot()
+
+    mock_restart.assert_called_once()

@@ -32,10 +32,13 @@ from pocket_dock._socket_client import (
     _send_request,
     create_container,
     detect_socket,
+    get_container_stats,
+    get_container_top,
     ping,
     pull_archive,
     push_archive,
     remove_container,
+    restart_container,
     start_container,
     stop_container,
 )
@@ -655,3 +658,133 @@ async def test_pull_archive_404() -> None:
         pytest.raises(FileNotFoundError, match="path not found"),
     ):
         await pull_archive("/tmp/s.sock", "cid", "/no/such/file")
+
+
+# --- get_container_stats ---
+
+
+async def test_get_container_stats_success() -> None:
+    stats_json = b'{"memory_stats":{"usage":1024}}'
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(200, stats_json),
+    ):
+        result = await get_container_stats("/tmp/s.sock", "cid")
+    assert result["memory_stats"]["usage"] == 1024
+
+
+async def test_get_container_stats_not_found() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(404, b"not found"),
+        ),
+        pytest.raises(ContainerNotFound),
+    ):
+        await get_container_stats("/tmp/s.sock", "cid")
+
+
+async def test_get_container_stats_not_running() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(409, b"not running"),
+        ),
+        pytest.raises(ContainerNotRunning),
+    ):
+        await get_container_stats("/tmp/s.sock", "cid")
+
+
+# --- get_container_top ---
+
+
+async def test_get_container_top_success() -> None:
+    top_json = b'{"Titles":["PID"],"Processes":[["1"]]}'
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(200, top_json),
+    ):
+        result = await get_container_top("/tmp/s.sock", "cid")
+    assert result["Titles"] == ["PID"]
+
+
+async def test_get_container_top_not_running() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(409, b"not running"),
+        ),
+        pytest.raises(ContainerNotRunning),
+    ):
+        await get_container_top("/tmp/s.sock", "cid")
+
+
+# --- restart_container ---
+
+
+async def test_restart_container_success() -> None:
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(204, b""),
+    ):
+        await restart_container("/tmp/s.sock", "cid")
+
+
+async def test_restart_container_not_found() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(404, b"not found"),
+        ),
+        pytest.raises(ContainerNotFound),
+    ):
+        await restart_container("/tmp/s.sock", "cid")
+
+
+async def test_restart_container_custom_timeout() -> None:
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(204, b""),
+    ) as mock_req:
+        await restart_container("/tmp/s.sock", "cid", timeout=30)
+    # Verify the timeout is in the URL
+    call_args = mock_req.call_args[0]
+    assert "t=30" in call_args[2]
+
+
+# --- create_container with host_config ---
+
+
+async def test_create_container_with_host_config() -> None:
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(201, b'{"Id": "abc123"}'),
+    ) as mock_req:
+        cid = await create_container(
+            "/tmp/s.sock",
+            "test-image",
+            host_config={"Memory": 256 * 1024 * 1024},
+        )
+    assert cid == "abc123"
+    payload = mock_req.call_args[0][3]
+    assert payload["HostConfig"]["Memory"] == 256 * 1024 * 1024
+
+
+async def test_create_container_no_host_config() -> None:
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(201, b'{"Id": "abc123"}'),
+    ) as mock_req:
+        await create_container("/tmp/s.sock", "test-image")
+    payload = mock_req.call_args[0][3]
+    assert "HostConfig" not in payload
