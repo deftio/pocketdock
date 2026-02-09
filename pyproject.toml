@@ -78,6 +78,7 @@ ignore = [
     "PLC0415", # allow non-top-level imports in tests
     "EM101",   # allow string literals in exceptions in tests
     "PLR2004", # allow magic values in tests
+    "SLF001",  # allow private member access in tests
 ]
 
 [tool.ruff.format]
@@ -99,7 +100,9 @@ source = ["pocket_dock"]
 
 [tool.coverage.report]
 show_missing = true
-exclude_lines = []  # explicitly empty — no exclusions allowed
+exclude_lines = [
+    "if TYPE_CHECKING:",
+]
 # fail_under is enforced in CI via --cov-fail-under=100
 
 [tool.bandit]

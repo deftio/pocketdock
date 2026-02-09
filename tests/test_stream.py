@@ -185,3 +185,15 @@ async def test_demux_stream_max_output_zero_remaining() -> None:
     result = await demux_stream(reader, max_output=100)
     assert len(result.stdout_bytes) == 100
     assert result.truncated is True
+
+
+async def test_demux_stream_unknown_stream_type() -> None:
+    # Stream type 0 (stdin) is neither stdout(1) nor stderr(2) — silently ignored
+    data = _make_frame(0, b"stdin data") + _make_frame(STREAM_STDOUT, b"out\n")
+    reader = asyncio.StreamReader()
+    reader.feed_data(data)
+    reader.feed_eof()
+
+    result = await demux_stream(reader)
+    assert result.stdout_text() == "out\n"
+    assert result.stderr_text() == ""

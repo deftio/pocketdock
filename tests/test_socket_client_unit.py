@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import os
+import struct
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 if TYPE_CHECKING:
     import pathlib
@@ -17,18 +18,33 @@ if TYPE_CHECKING:
 import pytest
 from pocket_dock._socket_client import (
     _check_container_response,
+    _exec_create,
+    _exec_inspect_exit_code,
+    _exec_start,
     _read_body,
     _read_chunked,
     _read_exact_body,
     _read_headers,
     _read_status_line,
+    _request,
+    _request_raw,
+    _request_stream,
     _send_request,
+    create_container,
     detect_socket,
+    ping,
+    pull_archive,
+    push_archive,
+    remove_container,
+    start_container,
+    stop_container,
 )
 from pocket_dock.errors import (
     ContainerNotFound,
     ContainerNotRunning,
+    ImageNotFound,
     SocketCommunicationError,
+    SocketConnectionError,
 )
 
 # -- detect_socket --
@@ -257,3 +273,385 @@ class _MockTransport(asyncio.Transport):
         self, _name: str, default: object = None
     ) -> object:
         return default
+
+
+def _make_mock_writer() -> MagicMock:
+    """Create a mock writer with close() and wait_closed()."""
+    writer = MagicMock()
+    writer.wait_closed = AsyncMock()
+    return writer
+
+
+# --- detect_socket candidate loop ---
+
+
+def test_detect_socket_finds_candidate(tmp_path: pathlib.Path) -> None:
+    sock = tmp_path / "podman" / "podman.sock"
+    sock.parent.mkdir()
+    sock.touch()
+    with patch.dict(os.environ, {"POCKET_DOCK_SOCKET": "", "XDG_RUNTIME_DIR": str(tmp_path)}):
+        result = detect_socket()
+    assert result == str(sock)
+
+
+# --- _read_headers edge cases ---
+
+
+async def test_read_headers_line_without_colon() -> None:
+    reader = asyncio.StreamReader()
+    reader.feed_data(b"MalformedHeader\r\nContent-Type: text/plain\r\n\r\n")
+    reader.feed_eof()
+    headers = await _read_headers(reader)
+    assert "content-type" in headers
+    assert len(headers) == 1
+
+
+# --- _read_chunked edge cases ---
+
+
+async def test_read_chunked_with_empty_line() -> None:
+    reader = asyncio.StreamReader()
+    reader.feed_data(b"\r\n3\r\nabc\r\n0\r\n\r\n")
+    reader.feed_eof()
+    body = await _read_chunked(reader)
+    assert body == b"abc"
+
+
+# --- _request error handling ---
+
+
+async def test_request_reraises_socket_connection_error() -> None:
+    mock_writer = _make_mock_writer()
+    mock_reader = asyncio.StreamReader()
+
+    with (
+        patch(
+            "pocket_dock._socket_client._open_connection",
+            new_callable=AsyncMock,
+            return_value=(mock_reader, mock_writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._send_request",
+            new_callable=AsyncMock,
+            side_effect=SocketConnectionError("/tmp/s.sock", "test"),
+        ),
+        pytest.raises(SocketConnectionError),
+    ):
+        await _request("/tmp/s.sock", "GET", "/test")
+
+
+async def test_request_wraps_oserror() -> None:
+    mock_writer = _make_mock_writer()
+    mock_reader = asyncio.StreamReader()
+
+    with (
+        patch(
+            "pocket_dock._socket_client._open_connection",
+            new_callable=AsyncMock,
+            return_value=(mock_reader, mock_writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._send_request",
+            new_callable=AsyncMock,
+            side_effect=OSError("broken pipe"),
+        ),
+        pytest.raises(SocketCommunicationError, match="broken pipe"),
+    ):
+        await _request("/tmp/s.sock", "GET", "/test")
+
+
+# --- _request_stream error handling ---
+
+
+async def test_request_stream_cleans_up_on_exception() -> None:
+    mock_writer = _make_mock_writer()
+    mock_reader = asyncio.StreamReader()
+
+    with (
+        patch(
+            "pocket_dock._socket_client._open_connection",
+            new_callable=AsyncMock,
+            return_value=(mock_reader, mock_writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._send_request",
+            new_callable=AsyncMock,
+            side_effect=OSError("connection reset"),
+        ),
+        pytest.raises(OSError, match="connection reset"),
+    ):
+        await _request_stream("/tmp/s.sock", "GET", "/test")
+
+    mock_writer.close.assert_called_once()
+    mock_writer.wait_closed.assert_awaited_once()
+
+
+# --- _request_raw error handling ---
+
+
+async def test_request_raw_reraises_socket_connection_error() -> None:
+    mock_writer = _make_mock_writer()
+    mock_reader = asyncio.StreamReader()
+
+    with (
+        patch(
+            "pocket_dock._socket_client._open_connection",
+            new_callable=AsyncMock,
+            return_value=(mock_reader, mock_writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._send_request",
+            new_callable=AsyncMock,
+            side_effect=SocketConnectionError("/tmp/s.sock", "test"),
+        ),
+        pytest.raises(SocketConnectionError),
+    ):
+        await _request_raw("/tmp/s.sock", "PUT", "/test", b"data")
+
+
+async def test_request_raw_wraps_oserror() -> None:
+    mock_writer = _make_mock_writer()
+    mock_reader = asyncio.StreamReader()
+
+    with (
+        patch(
+            "pocket_dock._socket_client._open_connection",
+            new_callable=AsyncMock,
+            return_value=(mock_reader, mock_writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._send_request",
+            new_callable=AsyncMock,
+            side_effect=OSError("write error"),
+        ),
+        pytest.raises(SocketCommunicationError, match="write error"),
+    ):
+        await _request_raw("/tmp/s.sock", "PUT", "/test", b"data")
+
+
+# --- ping ---
+
+
+async def test_ping_failure() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(500, b"error"),
+        ),
+        pytest.raises(SocketCommunicationError, match="ping failed"),
+    ):
+        await ping("/tmp/s.sock")
+
+
+# --- create_container ---
+
+
+async def test_create_container_no_command_no_labels() -> None:
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(201, b'{"Id": "abc123"}'),
+    ):
+        cid = await create_container("/tmp/s.sock", "test-image")
+    assert cid == "abc123"
+
+
+async def test_create_container_image_not_found() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(404, b"not found"),
+        ),
+        pytest.raises(ImageNotFound),
+    ):
+        await create_container("/tmp/s.sock", "no-such-image")
+
+
+async def test_create_container_generic_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(500, b"internal error"),
+        ),
+        pytest.raises(SocketCommunicationError, match="create failed"),
+    ):
+        await create_container("/tmp/s.sock", "test-image")
+
+
+# --- start_container ---
+
+
+async def test_start_container_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(500, b"error"),
+        ),
+        pytest.raises(SocketCommunicationError),
+    ):
+        await start_container("/tmp/s.sock", "cid")
+
+
+# --- stop_container ---
+
+
+async def test_stop_container_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(500, b"error"),
+        ),
+        pytest.raises(SocketCommunicationError),
+    ):
+        await stop_container("/tmp/s.sock", "cid")
+
+
+# --- remove_container ---
+
+
+async def test_remove_container_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(500, b"error"),
+        ),
+        pytest.raises(SocketCommunicationError),
+    ):
+        await remove_container("/tmp/s.sock", "cid")
+
+
+# --- _exec_create ---
+
+
+async def test_exec_create_podman_500_container_state() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(500, b"container state improper"),
+        ),
+        pytest.raises(ContainerNotRunning),
+    ):
+        await _exec_create("/tmp/s.sock", "cid", ["echo", "hi"])
+
+
+async def test_exec_create_generic_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(500, b"some other error"),
+        ),
+        pytest.raises(SocketCommunicationError, match="exec create failed"),
+    ):
+        await _exec_create("/tmp/s.sock", "cid", ["echo", "hi"])
+
+
+# --- _exec_start ---
+
+
+async def test_exec_start_error() -> None:
+    reader = asyncio.StreamReader()
+    reader.feed_data(b"error details")
+    reader.feed_eof()
+    mock_writer = _make_mock_writer()
+
+    with (
+        patch(
+            "pocket_dock._socket_client._request_stream",
+            new_callable=AsyncMock,
+            return_value=(500, {}, reader, mock_writer),
+        ),
+        pytest.raises(SocketCommunicationError, match="exec start failed"),
+    ):
+        await _exec_start("/tmp/s.sock", "exec123", 10 * 1024 * 1024)
+
+
+async def test_exec_start_non_chunked_stream() -> None:
+    reader = asyncio.StreamReader()
+    # stdout frame: type=1, 5 bytes
+    reader.feed_data(struct.pack(">BxxxI", 1, 5))
+    reader.feed_data(b"hello")
+    reader.feed_eof()
+    mock_writer = _make_mock_writer()
+
+    with patch(
+        "pocket_dock._socket_client._request_stream",
+        new_callable=AsyncMock,
+        return_value=(200, {}, reader, mock_writer),
+    ):
+        result = await _exec_start("/tmp/s.sock", "exec123", 10 * 1024 * 1024)
+
+    assert result.stdout_text() == "hello"
+
+
+async def test_exec_start_chunked_stream() -> None:
+    # Build chunked body containing a multiplexed stdout frame
+    frame = struct.pack(">BxxxI", 1, 3) + b"out"
+    chunk_hex = f"{len(frame):x}".encode()
+    chunked_body = chunk_hex + b"\r\n" + frame + b"\r\n0\r\n\r\n"
+
+    reader = asyncio.StreamReader()
+    reader.feed_data(chunked_body)
+    reader.feed_eof()
+    mock_writer = _make_mock_writer()
+
+    with patch(
+        "pocket_dock._socket_client._request_stream",
+        new_callable=AsyncMock,
+        return_value=(200, {"transfer-encoding": "chunked"}, reader, mock_writer),
+    ):
+        result = await _exec_start("/tmp/s.sock", "exec123", 10 * 1024 * 1024)
+
+    assert result.stdout_text() == "out"
+
+
+# --- _exec_inspect_exit_code ---
+
+
+async def test_exec_inspect_exit_code_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(500, b"inspect error"),
+        ),
+        pytest.raises(SocketCommunicationError, match="exec inspect failed"),
+    ):
+        await _exec_inspect_exit_code("/tmp/s.sock", "exec123")
+
+
+# --- push_archive ---
+
+
+async def test_push_archive_404() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request_raw",
+            new_callable=AsyncMock,
+            return_value=(404, b"not found"),
+        ),
+        pytest.raises(FileNotFoundError, match="destination path not found"),
+    ):
+        await push_archive("/tmp/s.sock", "cid", "/no/such/dir", b"tardata")
+
+
+# --- pull_archive ---
+
+
+async def test_pull_archive_404() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(404, b"not found"),
+        ),
+        pytest.raises(FileNotFoundError, match="path not found"),
+    ):
+        await pull_archive("/tmp/s.sock", "cid", "/no/such/file")

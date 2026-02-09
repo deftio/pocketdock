@@ -5,6 +5,8 @@ These tests do NOT require a running container engine.
 
 from __future__ import annotations
 
+import io
+import tarfile
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -246,3 +248,132 @@ def test_import_async_from_async_module() -> None:
 
     assert AsyncContainer is not None
     assert create_new_container is not None
+
+
+# --- AsyncContainer.read_file branch coverage ---
+
+
+def _make_container() -> AsyncContainer:
+    return AsyncContainer("cid", "/tmp/s.sock", name="pd-test")
+
+
+async def test_read_file_skips_non_file_members() -> None:
+    c = _make_container()
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        # Add a directory entry (non-file, will be skipped)
+        dir_info = tarfile.TarInfo(name="somedir")
+        dir_info.type = tarfile.DIRTYPE
+        tar.addfile(dir_info)
+        # Add the actual file
+        info = tarfile.TarInfo(name="data.txt")
+        content = b"hello"
+        info.size = len(content)
+        tar.addfile(info, io.BytesIO(content))
+
+    with patch(
+        "pocket_dock._async_container.sc.pull_archive",
+        new_callable=AsyncMock,
+        return_value=buf.getvalue(),
+    ):
+        result = await c.read_file("/tmp/data.txt")
+
+    assert result == b"hello"
+
+
+async def test_read_file_extractfile_returns_none() -> None:
+    c = _make_container()
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        info = tarfile.TarInfo(name="data.txt")
+        content = b"hello"
+        info.size = len(content)
+        tar.addfile(info, io.BytesIO(content))
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc.pull_archive",
+            new_callable=AsyncMock,
+            return_value=buf.getvalue(),
+        ),
+        patch("tarfile.TarFile.extractfile", return_value=None),
+        pytest.raises(FileNotFoundError, match="no file found"),
+    ):
+        await c.read_file("/tmp/data.txt")
+
+
+# --- AsyncContainer.pull branch: single file with extractfile returning None ---
+
+
+async def test_pull_single_file_extractfile_none() -> None:
+    c = _make_container()
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        info = tarfile.TarInfo(name="file.txt")
+        content = b"data"
+        info.size = len(content)
+        tar.addfile(info, io.BytesIO(content))
+
+    import tempfile
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc.pull_archive",
+            new_callable=AsyncMock,
+            return_value=buf.getvalue(),
+        ),
+        patch("tarfile.TarFile.extractfile", return_value=None),
+        tempfile.TemporaryDirectory() as tmpdir,
+    ):
+        import pathlib
+
+        dest = str(pathlib.Path(tmpdir) / "file.txt")
+        await c.pull("/container/file.txt", dest)
+        # Falls through to extractall since extractfile returned None
+        assert pathlib.Path(dest).is_dir()  # noqa: ASYNC240
+
+
+# --- _LoopThread coverage ---
+
+
+def test_loopthread_loop_property() -> None:
+    lt = _LoopThread.get()
+    assert lt.loop is not None
+    assert lt.loop.is_running()
+
+
+def test_loopthread_shutdown() -> None:
+    # Create a fresh instance (not the singleton) to test shutdown
+    fresh = _LoopThread()
+    assert fresh._thread.is_alive()
+    fresh._shutdown()
+    assert not fresh._thread.is_alive()
+
+
+def test_loopthread_double_check_locking_race() -> None:
+    original_instance = _LoopThread._instance
+    original_lock = _LoopThread._lock
+
+    class _SimulateRace:
+        """A mock lock that simulates another thread winning the race."""
+
+        def __enter__(self) -> _SimulateRace:  # noqa: PYI034
+            # Simulate: between the outer check and lock acquisition,
+            # another thread already created the singleton.
+            _LoopThread._instance = original_instance
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+    try:
+        _LoopThread._instance = None
+        _LoopThread._lock = _SimulateRace()  # type: ignore[assignment]
+        result = _LoopThread.get()
+        assert result is original_instance
+    finally:
+        _LoopThread._instance = original_instance
+        _LoopThread._lock = original_lock

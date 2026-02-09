@@ -443,7 +443,11 @@ async def _exec_create(
     if status == 409:  # noqa: PLR2004
         raise ContainerNotRunning(container_id)
     if status >= 400:  # noqa: PLR2004
-        msg = f"exec create failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
+        body_text = body.decode("utf-8", errors="replace")
+        # Podman returns 500 with "container state improper" for stopped containers
+        if "container state improper" in body_text:
+            raise ContainerNotRunning(container_id)
+        msg = f"exec create failed: HTTP {status}: {body_text}"
         raise SocketCommunicationError(msg)
 
     data = json.loads(body)
