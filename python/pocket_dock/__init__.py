@@ -18,7 +18,7 @@ from pocket_dock.errors import (
     SocketConnectionError,
     SocketError,
 )
-from pocket_dock.types import ExecResult
+from pocket_dock.types import ContainerInfo, ExecResult
 
 __version__ = version("pocket-dock")
 
@@ -32,6 +32,7 @@ __all__ = [
     "Container",
     "ContainerError",
     "ContainerGone",
+    "ContainerInfo",
     "ContainerNotFound",
     "ContainerNotRunning",
     "ExecResult",

@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from pocket_dock.types import ExecResult
+    from pocket_dock.types import ContainerInfo, ExecResult
 
 
 class _LoopThread:
@@ -117,6 +117,20 @@ class Container:
             self._ac.run(command, timeout=timeout, max_output=max_output, lang=lang),
         )
 
+    def info(self) -> ContainerInfo:
+        """Return a live snapshot of the container's state and resource usage.
+
+        See :meth:`AsyncContainer.info` for full documentation.
+        """
+        return self._lt.run(self._ac.info())  # type: ignore[return-value]
+
+    def reboot(self, *, fresh: bool = False) -> None:
+        """Restart the container.
+
+        See :meth:`AsyncContainer.reboot` for full documentation.
+        """
+        self._lt.run(self._ac.reboot(fresh=fresh))
+
     def write_file(self, path: str, content: str | bytes) -> None:
         """Write a file into the container.
 
@@ -176,11 +190,21 @@ def create_new_container(
     image: str = _DEFAULT_IMAGE,
     name: str | None = None,
     timeout: int = _DEFAULT_TIMEOUT,
+    mem_limit: str | None = None,
+    cpu_percent: int | None = None,
 ) -> Container:
     """Create and start a new container, returning a sync handle.
 
     See :func:`pocket_dock.async_.create_new_container` for argument docs.
     """
     lt = _LoopThread.get()
-    ac = lt.run(_async_create(image=image, name=name, timeout=timeout))
+    ac = lt.run(
+        _async_create(
+            image=image,
+            name=name,
+            timeout=timeout,
+            mem_limit=mem_limit,
+            cpu_percent=cpu_percent,
+        )
+    )
     return Container(ac, lt)  # type: ignore[arg-type]

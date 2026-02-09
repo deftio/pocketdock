@@ -9,20 +9,22 @@ facade that dispatches coroutines to a background event loop.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import io
 import pathlib
 import secrets
 import tarfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pocket_dock import _socket_client as sc
+from pocket_dock._helpers import build_container_info, parse_mem_limit
 from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from pocket_dock.types import ExecResult
+    from pocket_dock.types import ContainerInfo, ExecResult
 
 _DEFAULT_IMAGE = "pocket-dock/minimal"
 _DEFAULT_TIMEOUT = 30
@@ -41,6 +43,16 @@ def _build_command(command: str, lang: str | None) -> list[str]:
     return ["sh", "-c", command]
 
 
+def _build_host_config(mem_limit_bytes: int, nano_cpus: int) -> dict[str, Any] | None:
+    """Build a HostConfig dict for resource limits, or None if no limits set."""
+    hc: dict[str, Any] = {}
+    if mem_limit_bytes > 0:
+        hc["Memory"] = mem_limit_bytes
+    if nano_cpus > 0:
+        hc["NanoCpus"] = nano_cpus
+    return hc or None
+
+
 class AsyncContainer:
     """Async handle to a running container.
 
@@ -48,18 +60,24 @@ class AsyncContainer:
     Do not instantiate directly.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         container_id: str,
         socket_path: str,
         *,
         name: str,
+        image: str = "",
         timeout: int = _DEFAULT_TIMEOUT,
+        mem_limit_bytes: int = 0,
+        nano_cpus: int = 0,
     ) -> None:
         self._container_id = container_id
         self._socket_path = socket_path
         self._name = name
+        self._image = image
         self._timeout = timeout
+        self._mem_limit_bytes = mem_limit_bytes
+        self._nano_cpus = nano_cpus
         self._closed = False
 
     @property
@@ -107,6 +125,59 @@ class AsyncContainer:
             max_output=max_output,
             timeout=t,
         )
+
+    async def info(self) -> ContainerInfo:
+        """Return a live snapshot of the container's state and resource usage.
+
+        Makes 1-3 API calls depending on the container state: inspect always,
+        stats and top only when running.
+        """
+        inspect_data = await sc.inspect_container(self._socket_path, self._container_id)
+        stats_data: dict[str, object] | None = None
+        top_data: dict[str, object] | None = None
+
+        state = inspect_data.get("State", {})
+        if isinstance(state, dict) and state.get("Running"):
+            with contextlib.suppress(ContainerNotRunning, ContainerNotFound):
+                stats_data, top_data = await asyncio.gather(
+                    sc.get_container_stats(self._socket_path, self._container_id),
+                    sc.get_container_top(self._socket_path, self._container_id),
+                )
+
+        return build_container_info(inspect_data, stats_data, top_data, self._name)
+
+    async def reboot(self, *, fresh: bool = False) -> None:
+        """Restart the container.
+
+        Args:
+            fresh: If ``False`` (default), restart in place — preserves the
+                filesystem but kills all processes.  If ``True``, remove the
+                container and create a new one with the same image and config.
+
+        """
+        if not fresh:
+            await sc.restart_container(self._socket_path, self._container_id)
+            return
+
+        # Fresh reboot: remove old container, create new one
+        with contextlib.suppress(ContainerNotRunning, ContainerNotFound):
+            await sc.stop_container(self._socket_path, self._container_id)
+        with contextlib.suppress(ContainerNotFound):
+            await sc.remove_container(self._socket_path, self._container_id, force=True)
+
+        labels = {
+            "pocket-dock.managed": "true",
+            "pocket-dock.instance": self._name,
+        }
+        host_config = _build_host_config(self._mem_limit_bytes, self._nano_cpus)
+        self._container_id = await sc.create_container(
+            self._socket_path,
+            self._image or _DEFAULT_IMAGE,
+            command=["sleep", "infinity"],
+            labels=labels,
+            host_config=host_config,
+        )
+        await sc.start_container(self._socket_path, self._container_id)
 
     async def write_file(self, path: str, content: str | bytes) -> None:
         """Write a file into the container.
@@ -268,6 +339,8 @@ async def create_new_container(
     image: str = _DEFAULT_IMAGE,
     name: str | None = None,
     timeout: int = _DEFAULT_TIMEOUT,
+    mem_limit: str | None = None,
+    cpu_percent: int | None = None,
 ) -> AsyncContainer:
     """Create and start a new container, returning an async handle.
 
@@ -275,6 +348,8 @@ async def create_new_container(
         image: Container image to use.
         name: Container name. Auto-generated if ``None``.
         timeout: Default exec timeout in seconds.
+        mem_limit: Memory limit (e.g. ``"256m"``, ``"1g"``).
+        cpu_percent: CPU usage cap as a percentage (e.g. ``50`` for 50%).
 
     Returns:
         A running :class:`AsyncContainer`.
@@ -287,16 +362,21 @@ async def create_new_container(
     if socket_path is None:
         raise PodmanNotRunning
 
+    mem_limit_bytes = parse_mem_limit(mem_limit) if mem_limit is not None else 0
+    nano_cpus = cpu_percent * 10_000_000 if cpu_percent is not None else 0
+
     labels = {
         "pocket-dock.managed": "true",
         "pocket-dock.instance": name,
     }
+    host_config = _build_host_config(mem_limit_bytes, nano_cpus)
 
     container_id = await sc.create_container(
         socket_path,
         image,
         command=["sleep", "infinity"],
         labels=labels,
+        host_config=host_config,
     )
     await sc.start_container(socket_path, container_id)
 
@@ -304,5 +384,8 @@ async def create_new_container(
         container_id,
         socket_path,
         name=name,
+        image=image,
         timeout=timeout,
+        mem_limit_bytes=mem_limit_bytes,
+        nano_cpus=nano_cpus,
     )
