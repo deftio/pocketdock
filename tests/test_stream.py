@@ -11,6 +11,7 @@ from pocket_dock._stream import (
     STREAM_STDOUT,
     DemuxResult,
     demux_stream,
+    demux_stream_iter,
     parse_stream_header,
 )
 
@@ -197,3 +198,71 @@ async def test_demux_stream_unknown_stream_type() -> None:
     result = await demux_stream(reader)
     assert result.stdout_text() == "out\n"
     assert result.stderr_text() == ""
+
+
+# --- demux_stream_iter ---
+
+
+async def test_demux_stream_iter_single_frame() -> None:
+    data = _make_frame(STREAM_STDOUT, b"hello\n")
+    reader = asyncio.StreamReader()
+    reader.feed_data(data)
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in demux_stream_iter(reader)]
+    assert frames == [(STREAM_STDOUT, b"hello\n")]
+
+
+async def test_demux_stream_iter_mixed() -> None:
+    data = (
+        _make_frame(STREAM_STDOUT, b"out\n")
+        + _make_frame(STREAM_STDERR, b"err\n")
+        + _make_frame(STREAM_STDOUT, b"more\n")
+    )
+    reader = asyncio.StreamReader()
+    reader.feed_data(data)
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in demux_stream_iter(reader)]
+    assert len(frames) == 3
+    assert frames[0] == (STREAM_STDOUT, b"out\n")
+    assert frames[1] == (STREAM_STDERR, b"err\n")
+    assert frames[2] == (STREAM_STDOUT, b"more\n")
+
+
+async def test_demux_stream_iter_empty() -> None:
+    reader = asyncio.StreamReader()
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in demux_stream_iter(reader)]
+    assert frames == []
+
+
+async def test_demux_stream_iter_zero_length_frame_skipped() -> None:
+    zero_frame = struct.pack(">BxxxI", STREAM_STDOUT, 0)
+    data = zero_frame + _make_frame(STREAM_STDOUT, b"after\n")
+    reader = asyncio.StreamReader()
+    reader.feed_data(data)
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in demux_stream_iter(reader)]
+    assert frames == [(STREAM_STDOUT, b"after\n")]
+
+
+async def test_demux_stream_iter_partial_header_eof() -> None:
+    reader = asyncio.StreamReader()
+    reader.feed_data(b"\x01\x00\x00")
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in demux_stream_iter(reader)]
+    assert frames == []
+
+
+async def test_demux_stream_iter_partial_payload_eof() -> None:
+    header = struct.pack(">BxxxI", STREAM_STDOUT, 100)
+    reader = asyncio.StreamReader()
+    reader.feed_data(header + b"short")
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in demux_stream_iter(reader)]
+    assert frames == []

@@ -18,9 +18,11 @@ if TYPE_CHECKING:
 import pytest
 from pocket_dock._socket_client import (
     _check_container_response,
+    _demux_chunked_stream,
     _exec_create,
     _exec_inspect_exit_code,
     _exec_start,
+    _exec_start_stream,
     _read_body,
     _read_chunked,
     _read_exact_body,
@@ -812,3 +814,139 @@ async def test_create_container_no_host_config() -> None:
         await create_container("/tmp/s.sock", "test-image")
     payload = mock_req.call_args[0][3]
     assert "HostConfig" not in payload
+
+
+# --- _demux_chunked_stream ---
+
+
+def _make_frame(stream_type: int, data: bytes) -> bytes:
+    """Build a Docker stream multiplexed frame."""
+    return struct.pack(">BxxxI", stream_type, len(data)) + data
+
+
+def _make_chunked_body(*chunks: bytes) -> bytes:
+    """Build a chunked transfer-encoded body from raw data chunks."""
+    parts: list[bytes] = []
+    for chunk in chunks:
+        parts.append(f"{len(chunk):x}\r\n".encode())
+        parts.append(chunk)
+        parts.append(b"\r\n")
+    parts.append(b"0\r\n\r\n")
+    return b"".join(parts)
+
+
+async def test_demux_chunked_stream_single_frame() -> None:
+    frame = _make_frame(1, b"hello\n")
+    body = _make_chunked_body(frame)
+    reader = asyncio.StreamReader()
+    reader.feed_data(body)
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in _demux_chunked_stream(reader)]
+    assert frames == [(1, b"hello\n")]
+
+
+async def test_demux_chunked_stream_multiple_frames_in_one_chunk() -> None:
+    frame1 = _make_frame(1, b"out\n")
+    frame2 = _make_frame(2, b"err\n")
+    body = _make_chunked_body(frame1 + frame2)
+    reader = asyncio.StreamReader()
+    reader.feed_data(body)
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in _demux_chunked_stream(reader)]
+    assert len(frames) == 2
+    assert frames[0] == (1, b"out\n")
+    assert frames[1] == (2, b"err\n")
+
+
+async def test_demux_chunked_stream_frame_split_across_chunks() -> None:
+    frame = _make_frame(1, b"split data")
+    # Split the frame in the middle
+    mid = len(frame) // 2
+    body = _make_chunked_body(frame[:mid], frame[mid:])
+    reader = asyncio.StreamReader()
+    reader.feed_data(body)
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in _demux_chunked_stream(reader)]
+    assert frames == [(1, b"split data")]
+
+
+async def test_demux_chunked_stream_empty() -> None:
+    body = _make_chunked_body()  # just "0\r\n\r\n"
+    reader = asyncio.StreamReader()
+    reader.feed_data(b"0\r\n\r\n")
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in _demux_chunked_stream(reader)]
+    assert frames == []
+
+
+# --- _exec_start_stream ---
+
+
+async def test_exec_start_stream_podman_raw() -> None:
+    """Test streaming with Podman (raw multiplexed, no chunked TE)."""
+    frame = _make_frame(1, b"hello\n")
+    reader = asyncio.StreamReader()
+    reader.feed_data(frame)
+    reader.feed_eof()
+
+    mock_writer = MagicMock()
+    mock_writer.close = MagicMock()
+    mock_writer.wait_closed = AsyncMock()
+
+    with patch(
+        "pocket_dock._socket_client._request_stream",
+        new_callable=AsyncMock,
+        return_value=(200, {}, reader, mock_writer),
+    ):
+        gen, writer = await _exec_start_stream("/tmp/s.sock", "exec-id")
+        frames = [(st, p) async for st, p in gen]
+
+    assert frames == [(1, b"hello\n")]
+    assert writer is mock_writer
+
+
+async def test_exec_start_stream_docker_chunked() -> None:
+    """Test streaming with Docker (chunked transfer encoding)."""
+    frame = _make_frame(1, b"chunked hello\n")
+    body = _make_chunked_body(frame)
+    reader = asyncio.StreamReader()
+    reader.feed_data(body)
+    reader.feed_eof()
+
+    mock_writer = MagicMock()
+    mock_writer.close = MagicMock()
+    mock_writer.wait_closed = AsyncMock()
+
+    with patch(
+        "pocket_dock._socket_client._request_stream",
+        new_callable=AsyncMock,
+        return_value=(200, {"transfer-encoding": "chunked"}, reader, mock_writer),
+    ):
+        gen, writer = await _exec_start_stream("/tmp/s.sock", "exec-id")
+        frames = [(st, p) async for st, p in gen]
+
+    assert frames == [(1, b"chunked hello\n")]
+
+
+async def test_exec_start_stream_error_status() -> None:
+    reader = asyncio.StreamReader()
+    reader.feed_data(b"container not found")
+    reader.feed_eof()
+
+    mock_writer = MagicMock()
+    mock_writer.close = MagicMock()
+    mock_writer.wait_closed = AsyncMock()
+
+    with (
+        patch(
+            "pocket_dock._socket_client._request_stream",
+            new_callable=AsyncMock,
+            return_value=(404, {}, reader, mock_writer),
+        ),
+        pytest.raises(SocketCommunicationError, match="exec start failed"),
+    ):
+        await _exec_start_stream("/tmp/s.sock", "exec-id")
