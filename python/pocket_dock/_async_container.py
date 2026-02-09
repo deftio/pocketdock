@@ -15,13 +15,18 @@ import io
 import pathlib
 import secrets
 import tarfile
-from typing import TYPE_CHECKING, Any
+import time
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from pocket_dock import _socket_client as sc
+from pocket_dock._callbacks import CallbackRegistry
 from pocket_dock._helpers import build_container_info, parse_mem_limit
+from pocket_dock._process import AsyncExecStream, AsyncProcess
 from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from typing_extensions import Self
 
     from pocket_dock.types import ContainerInfo, ExecResult
@@ -79,6 +84,9 @@ class AsyncContainer:
         self._mem_limit_bytes = mem_limit_bytes
         self._nano_cpus = nano_cpus
         self._closed = False
+        self._callbacks = CallbackRegistry()
+        self._active_streams: list[AsyncExecStream] = []
+        self._active_processes: list[AsyncProcess] = []
 
     @property
     def container_id(self) -> str:
@@ -95,29 +103,104 @@ class AsyncContainer:
         """Human-readable container name (e.g. ``pd-a1b2c3d4``)."""
         return self._name
 
+    @overload
     async def run(
         self,
         command: str,
         *,
+        stream: Literal[True],
+        timeout: float | None = ...,
+        max_output: int = ...,
+        lang: str | None = ...,
+    ) -> AsyncExecStream: ...
+
+    @overload
+    async def run(
+        self,
+        command: str,
+        *,
+        detach: Literal[True],
+        timeout: float | None = ...,
+        max_output: int = ...,
+        lang: str | None = ...,
+    ) -> AsyncProcess: ...
+
+    @overload
+    async def run(
+        self,
+        command: str,
+        *,
+        timeout: float | None = ...,
+        max_output: int = ...,
+        lang: str | None = ...,
+    ) -> ExecResult: ...
+
+    @overload
+    async def run(
+        self,
+        command: str,
+        *,
+        stream: bool,
+        detach: bool,
+        timeout: float | None = ...,
+        max_output: int = ...,
+        lang: str | None = ...,
+    ) -> ExecResult | AsyncExecStream | AsyncProcess: ...
+
+    async def run(  # noqa: PLR0913
+        self,
+        command: str,
+        *,
+        stream: bool = False,
+        detach: bool = False,
         timeout: float | None = None,
         max_output: int = _DEFAULT_MAX_OUTPUT,
         lang: str | None = None,
-    ) -> ExecResult:
-        """Execute a command inside the container and return the result.
+    ) -> ExecResult | AsyncExecStream | AsyncProcess:
+        """Execute a command inside the container.
 
         Args:
             command: The command string to execute.
+            stream: If ``True``, return an async iterator of ``StreamChunk``.
+            detach: If ``True``, return a ``Process`` handle.
             timeout: Max seconds to wait. ``None`` uses the container default.
             max_output: Maximum bytes to accumulate before truncating.
             lang: Language shorthand (e.g. ``"python"``). Default runs via
                 ``sh -c``.
 
         Returns:
-            An :class:`~pocket_dock.types.ExecResult`.
+            ``ExecResult``, ``AsyncExecStream``, or ``AsyncProcess``.
 
         """
-        t = timeout if timeout is not None else self._timeout
+        if stream and detach:
+            msg = "stream and detach are mutually exclusive"
+            raise ValueError(msg)
+
         cmd = _build_command(command, lang)
+
+        if stream:
+            exec_id = await sc._exec_create(  # noqa: SLF001
+                self._socket_path, self._container_id, cmd
+            )
+            gen, writer = await sc._exec_start_stream(  # noqa: SLF001
+                self._socket_path, exec_id
+            )
+            obj = AsyncExecStream(exec_id, gen, writer, self._socket_path, time.monotonic())
+            self._active_streams.append(obj)
+            return obj
+
+        if detach:
+            exec_id = await sc._exec_create(  # noqa: SLF001
+                self._socket_path, self._container_id, cmd
+            )
+            gen, writer = await sc._exec_start_stream(  # noqa: SLF001
+                self._socket_path, exec_id
+            )
+            proc = AsyncProcess(exec_id, self, gen, writer, self._callbacks)
+            self._active_processes.append(proc)
+            return proc
+
+        t = timeout if timeout is not None else self._timeout
         return await sc.exec_command(
             self._socket_path,
             self._container_id,
@@ -304,6 +387,18 @@ class AsyncContainer:
             dest_path.mkdir(parents=True, exist_ok=True)  # noqa: ASYNC240
             tar.extractall(dest_path, filter="data")
 
+    def on_stdout(self, fn: Callable[..., object]) -> None:
+        """Register a callback for stdout data from detached processes."""
+        self._callbacks.on_stdout(fn)
+
+    def on_stderr(self, fn: Callable[..., object]) -> None:
+        """Register a callback for stderr data from detached processes."""
+        self._callbacks.on_stderr(fn)
+
+    def on_exit(self, fn: Callable[..., object]) -> None:
+        """Register a callback for process exit from detached processes."""
+        self._callbacks.on_exit(fn)
+
     async def shutdown(self, *, force: bool = False) -> None:
         """Stop and remove the container.
 
@@ -314,6 +409,17 @@ class AsyncContainer:
         if self._closed:
             return
         self._closed = True
+
+        # Clean up active streams
+        for s in self._active_streams:
+            await s._close()  # noqa: SLF001
+        self._active_streams.clear()
+
+        # Clean up active processes
+        for p in self._active_processes:
+            await p._cancel()  # noqa: SLF001
+        self._active_processes.clear()
+
         if force:
             await sc.remove_container(self._socket_path, self._container_id, force=True)
         else:

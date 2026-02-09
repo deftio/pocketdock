@@ -20,9 +20,20 @@ import os
 import pathlib
 import time
 import urllib.parse
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from pocket_dock._stream import DemuxResult, demux_stream
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+from pocket_dock._stream import (
+    HEADER_SIZE as _DEMUX_HEADER_SIZE,
+)
+from pocket_dock._stream import (
+    DemuxResult,
+    demux_stream,
+    demux_stream_iter,
+    parse_stream_header,
+)
 from pocket_dock.errors import (
     ContainerNotFound,
     ContainerNotRunning,
@@ -536,6 +547,71 @@ async def _exec_start(
     finally:
         writer.close()
         await writer.wait_closed()
+
+
+async def _exec_start_stream(
+    socket_path: str,
+    exec_id: str,
+) -> tuple[AsyncGenerator[tuple[int, bytes], None], asyncio.StreamWriter]:
+    """Start an exec and return a (frame_generator, writer) pair for streaming.
+
+    The caller must close the writer when done.  Handles both Docker (chunked
+    transfer encoding) and Podman (raw multiplexed stream).
+    """
+    payload = {"Detach": False, "Tty": False}
+    status, headers, reader, writer = await _request_stream(
+        socket_path,
+        "POST",
+        f"/exec/{exec_id}/start",
+        payload,
+    )
+    if status >= 400:  # noqa: PLR2004
+        rest = await reader.read(65536)
+        writer.close()
+        await writer.wait_closed()
+        msg = f"exec start failed: HTTP {status}: {rest.decode('utf-8', errors='replace')}"
+        raise SocketCommunicationError(msg)
+
+    is_chunked = headers.get("transfer-encoding", "").lower() == "chunked"
+    if is_chunked:
+        gen: AsyncGenerator[tuple[int, bytes], None] = _demux_chunked_stream(reader)
+    else:
+        gen = demux_stream_iter(reader)
+    return gen, writer
+
+
+async def _demux_chunked_stream(
+    reader: asyncio.StreamReader,
+) -> AsyncGenerator[tuple[int, bytes], None]:
+    """Parse multiplexed frames from a chunked transfer-encoded stream.
+
+    HTTP chunk boundaries may not align with demux frame boundaries, so we
+    accumulate unchunked data and parse complete frames from it.
+    """
+    buf = bytearray()
+    while True:
+        size_line = await reader.readline()
+        size_str = size_line.strip().decode("ascii", errors="replace")
+        if not size_str:
+            continue
+        chunk_size = int(size_str, 16)
+        if chunk_size == 0:
+            await reader.readline()  # trailing CRLF
+            break
+        chunk_data = await _read_exact_body(reader, chunk_size)
+        await reader.readline()  # trailing CRLF after chunk
+        buf.extend(chunk_data)
+
+        # Parse all complete demux frames from the accumulated buffer
+        while len(buf) >= _DEMUX_HEADER_SIZE:
+            stream_type, payload_length = parse_stream_header(bytes(buf[:_DEMUX_HEADER_SIZE]))
+            total_frame = _DEMUX_HEADER_SIZE + payload_length
+            if len(buf) < total_frame:
+                break
+            payload = bytes(buf[_DEMUX_HEADER_SIZE:total_frame])
+            del buf[:total_frame]
+            if payload_length > 0:
+                yield stream_type, payload
 
 
 async def _exec_inspect_exit_code(socket_path: str, exec_id: str) -> int:

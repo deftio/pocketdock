@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import io
 import tarfile
-from unittest.mock import AsyncMock, patch
+from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pocket_dock._async_container import (
@@ -19,9 +20,14 @@ from pocket_dock._async_container import (
 from pocket_dock._async_container import (
     create_new_container as async_factory,
 )
-from pocket_dock._sync_container import Container, _LoopThread
+from pocket_dock._process import AsyncExecStream, AsyncProcess
+from pocket_dock._stream import STREAM_STDOUT
+from pocket_dock._sync_container import Container, SyncExecStream, SyncProcess, _LoopThread
 from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
 from pocket_dock.types import ExecResult
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 # --- Name generation ---
 
@@ -740,3 +746,635 @@ def test_sync_reboot_delegates() -> None:
         c.reboot()
 
     mock_restart.assert_called_once()
+
+
+# --- Helpers for stream/detach tests ---
+
+
+async def _gen_from_list(
+    items: list[tuple[int, bytes]],
+) -> AsyncGenerator[tuple[int, bytes], None]:
+    for item in items:
+        yield item
+
+
+def _mock_writer() -> MagicMock:
+    writer = MagicMock()
+    writer.close = MagicMock()
+    writer.wait_closed = AsyncMock()
+    return writer
+
+
+# --- run(stream=True) ---
+
+
+async def test_async_run_stream_returns_exec_stream() -> None:
+    ac = _make_container()
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"hello")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        stream = await ac.run("echo hello", stream=True)
+        assert isinstance(stream, AsyncExecStream)
+        chunks = [chunk async for chunk in stream]
+
+    assert len(chunks) == 1
+    assert chunks[0].data == "hello"
+    assert stream in ac._active_streams
+
+
+# --- run(detach=True) ---
+
+
+async def test_async_run_detach_returns_process() -> None:
+    ac = _make_container()
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"out")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = await ac.run("echo out", detach=True)
+        assert isinstance(proc, AsyncProcess)
+        result = await proc.wait()
+
+    assert result.stdout == "out"
+    assert proc in ac._active_processes
+
+
+# --- stream + detach raises ValueError ---
+
+
+async def test_async_run_stream_and_detach_raises() -> None:
+    ac = _make_container()
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        await ac.run("echo x", stream=True, detach=True)
+
+
+# --- Callback registration ---
+
+
+async def test_async_on_stdout_callback() -> None:
+    ac = _make_container()
+    captured: list[str] = []
+    ac.on_stdout(lambda _c, data: captured.append(data))
+
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"hello")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = await ac.run("echo hello", detach=True)
+        await proc.wait()
+
+    assert "hello" in captured
+
+
+async def test_async_on_stderr_callback() -> None:
+    ac = _make_container()
+    captured: list[str] = []
+    ac.on_stderr(lambda _c, data: captured.append(data))
+
+    from pocket_dock._stream import STREAM_STDERR
+
+    writer = _mock_writer()
+    frames = [(STREAM_STDERR, b"err")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = await ac.run("echo err >&2", detach=True)
+        await proc.wait()
+
+    assert "err" in captured
+
+
+async def test_async_on_exit_callback() -> None:
+    ac = _make_container()
+    exit_codes: list[int] = []
+    ac.on_exit(lambda _c, code: exit_codes.append(code))
+
+    writer = _mock_writer()
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list([]), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=42,
+        ),
+    ):
+        proc = await ac.run("exit 42", detach=True)
+        await proc.wait()
+
+    assert exit_codes == [42]
+
+
+# --- shutdown cleans up streams and processes ---
+
+
+async def test_async_shutdown_cleans_up_streams() -> None:
+    ac = _make_container()
+    writer = _mock_writer()
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list([]), writer),
+        ),
+    ):
+        await ac.run("echo x", stream=True)
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+    ):
+        await ac.shutdown()
+
+    assert len(ac._active_streams) == 0
+    writer.close.assert_called_once()
+
+
+async def test_async_shutdown_cleans_up_processes() -> None:
+    ac = _make_container()
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"x")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = await ac.run("echo x", detach=True)
+        await proc.wait()
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+    ):
+        await ac.shutdown()
+
+    assert len(ac._active_processes) == 0
+
+
+# --- Sync SyncExecStream ---
+
+
+async def test_sync_exec_stream_iteration() -> None:
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"hi")]
+
+    with patch(
+        "pocket_dock._socket_client._exec_inspect_exit_code",
+        new_callable=AsyncMock,
+        return_value=0,
+    ):
+        async_stream = AsyncExecStream("eid", _gen_from_list(frames), writer, "/tmp/s.sock", 0.0)
+        lt = _LoopThread.get()
+        sync_stream = SyncExecStream(async_stream, lt)
+        chunks = list(sync_stream)
+
+    assert len(chunks) == 1
+    assert chunks[0].data == "hi"
+    assert sync_stream.result.exit_code == 0
+
+
+# --- Sync SyncProcess (tested via Container.run(detach=True)) ---
+
+
+def test_sync_process_basic() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"hello")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = c.run("echo hello", detach=True)
+        assert proc.id == "eid"
+        result = proc.wait()
+
+    assert result.exit_code == 0
+    assert result.stdout == "hello"
+    snap = proc.peek()
+    assert snap.stdout == "hello"
+
+
+def test_sync_process_read_drains() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"data")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = c.run("echo data", detach=True)
+        proc.wait()
+
+    snap = proc.read()
+    assert snap.stdout == "data"
+    snap2 = proc.read()
+    assert snap2.stdout == ""
+
+
+def test_sync_process_buffer_props() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"x" * 100)]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = c.run("echo x", detach=True)
+        proc.wait()
+
+    assert proc.buffer_overflow is False
+    assert proc.buffer_size > 0
+
+
+def test_sync_process_is_running() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    writer = _mock_writer()
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list([]), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = c.run("true", detach=True)
+        proc.wait()
+
+    assert proc.is_running() is False
+
+
+def test_sync_process_kill() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    writer = _mock_writer()
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list([]), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = c.run("true", detach=True)
+        proc.wait()
+        # Kill on already-finished process is no-op
+        proc.kill()
+
+
+# --- Sync Container.run(stream=True) and Container.run(detach=True) ---
+
+
+def test_sync_container_run_stream() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"hi")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        stream = c.run("echo hi", stream=True)
+        assert isinstance(stream, SyncExecStream)
+        chunks = list(stream)
+
+    assert len(chunks) == 1
+    assert chunks[0].data == "hi"
+
+
+def test_sync_container_run_detach() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"out")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = c.run("echo out", detach=True)
+        assert isinstance(proc, SyncProcess)
+        result = proc.wait()
+
+    assert result.stdout == "out"
+
+
+# --- Sync Container callback delegation ---
+
+
+def test_sync_container_on_stdout() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    captured: list[str] = []
+    c.on_stdout(lambda _c, data: captured.append(data))
+
+    writer = _mock_writer()
+    frames = [(STREAM_STDOUT, b"hello")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = c.run("echo hello", detach=True)
+        proc.wait()
+
+    assert "hello" in captured
+
+
+def test_sync_container_on_stderr() -> None:
+    from pocket_dock._stream import STREAM_STDERR
+
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    captured: list[str] = []
+    c.on_stderr(lambda _c, data: captured.append(data))
+
+    writer = _mock_writer()
+    frames = [(STREAM_STDERR, b"err")]
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list(frames), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=0,
+        ),
+    ):
+        proc = c.run("echo err >&2", detach=True)
+        proc.wait()
+
+    assert "err" in captured
+
+
+def test_sync_container_on_exit() -> None:
+    ac = _make_container()
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    exit_codes: list[int] = []
+    c.on_exit(lambda _c, code: exit_codes.append(code))
+
+    writer = _mock_writer()
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(_gen_from_list([]), writer),
+        ),
+        patch(
+            "pocket_dock._socket_client._exec_inspect_exit_code",
+            new_callable=AsyncMock,
+            return_value=7,
+        ),
+    ):
+        proc = c.run("exit 7", detach=True)
+        proc.wait()
+
+    assert exit_codes == [7]
+
+
+# --- Exports ---
+
+
+def test_exports_exec_stream_alias() -> None:
+    from pocket_dock import ExecStream
+
+    assert ExecStream is SyncExecStream
+
+
+def test_exports_process_alias() -> None:
+    from pocket_dock import Process
+
+    assert Process is SyncProcess
+
+
+def test_exports_async_exec_stream() -> None:
+    from pocket_dock.async_ import AsyncExecStream as ExportedStream
+
+    assert ExportedStream is AsyncExecStream
+
+
+def test_exports_async_process() -> None:
+    from pocket_dock.async_ import AsyncProcess as ExportedProc
+
+    assert ExportedProc is AsyncProcess

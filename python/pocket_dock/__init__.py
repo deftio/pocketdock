@@ -5,7 +5,13 @@ from __future__ import annotations
 
 from importlib.metadata import version
 
-from pocket_dock._sync_container import Container, create_new_container
+from pocket_dock._buffer import BufferSnapshot
+from pocket_dock._sync_container import (
+    Container,
+    SyncExecStream,
+    SyncProcess,
+    create_new_container,
+)
 from pocket_dock.errors import (
     ContainerError,
     ContainerGone,
@@ -18,7 +24,7 @@ from pocket_dock.errors import (
     SocketConnectionError,
     SocketError,
 )
-from pocket_dock.types import ContainerInfo, ExecResult
+from pocket_dock.types import ContainerInfo, ExecResult, StreamChunk
 
 __version__ = version("pocket-dock")
 
@@ -28,7 +34,11 @@ def get_version() -> str:
     return __version__
 
 
+ExecStream = SyncExecStream
+Process = SyncProcess
+
 __all__ = [
+    "BufferSnapshot",
     "Container",
     "ContainerError",
     "ContainerGone",
@@ -36,12 +46,15 @@ __all__ = [
     "ContainerNotFound",
     "ContainerNotRunning",
     "ExecResult",
+    "ExecStream",
     "ImageNotFound",
     "PocketDockError",
     "PodmanNotRunning",
+    "Process",
     "SocketCommunicationError",
     "SocketConnectionError",
     "SocketError",
+    "StreamChunk",
     "__version__",
     "create_new_container",
     "get_version",

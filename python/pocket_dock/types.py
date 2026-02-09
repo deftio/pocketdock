@@ -46,3 +46,11 @@ class ExecResult:
     def ok(self) -> bool:
         """Return True if the command exited successfully (exit code 0)."""
         return self.exit_code == 0
+
+
+@dataclasses.dataclass(frozen=True)
+class StreamChunk:
+    """A single chunk of output from a streaming exec."""
+
+    stream: str  # "stdout" | "stderr"
+    data: str

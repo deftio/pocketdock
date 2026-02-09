@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import asyncio
+    from collections.abc import AsyncGenerator
 
 STREAM_STDOUT = 1
 STREAM_STDERR = 2
@@ -112,6 +113,27 @@ async def demux_stream(
         stderr_bytes=b"".join(stderr_parts),
         truncated=truncated,
     )
+
+
+async def demux_stream_iter(
+    reader: asyncio.StreamReader,
+) -> AsyncGenerator[tuple[int, bytes], None]:
+    """Yield individual (stream_type, payload) frames as they arrive.
+
+    Unlike ``demux_stream`` which buffers everything, this yields each frame
+    independently for real-time streaming.
+    """
+    while True:
+        header = await _read_exact(reader, HEADER_SIZE)
+        if not header:
+            return
+        stream_type, payload_length = parse_stream_header(header)
+        if payload_length == 0:
+            continue
+        payload = await _read_exact(reader, payload_length)
+        if not payload:
+            return
+        yield stream_type, payload
 
 
 async def _read_exact(reader: asyncio.StreamReader, n: int) -> bytes:

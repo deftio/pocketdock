@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import atexit
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, overload
 
 from pocket_dock._async_container import (
     _DEFAULT_IMAGE,
@@ -27,10 +27,13 @@ from pocket_dock._async_container import (
 
 if TYPE_CHECKING:
     import concurrent.futures
+    from collections.abc import Callable
 
     from typing_extensions import Self
 
-    from pocket_dock.types import ContainerInfo, ExecResult
+    from pocket_dock._buffer import BufferSnapshot
+    from pocket_dock._process import AsyncExecStream, AsyncProcess
+    from pocket_dock.types import ContainerInfo, ExecResult, StreamChunk
 
 
 class _LoopThread:
@@ -75,6 +78,79 @@ class _LoopThread:
         self._thread.join(timeout=5)
 
 
+class SyncExecStream:
+    """Sync iterator over streaming exec output.
+
+    Wraps :class:`AsyncExecStream` for synchronous usage.
+    """
+
+    def __init__(self, async_stream: AsyncExecStream, lt: _LoopThread) -> None:
+        self._async_stream = async_stream
+        self._lt = lt
+
+    def __iter__(self) -> Self:
+        return self
+
+    def __next__(self) -> StreamChunk:
+        try:
+            return self._lt.run(self._async_stream.__anext__())  # type: ignore[return-value]
+        except StopAsyncIteration:
+            raise StopIteration from None
+
+    @property
+    def result(self) -> ExecResult:
+        """Return the ExecResult (only available after iteration completes)."""
+        return self._async_stream.result
+
+
+class SyncProcess:
+    """Sync handle to a detached exec process.
+
+    Wraps :class:`AsyncProcess` for synchronous usage.
+    """
+
+    def __init__(self, async_process: AsyncProcess, lt: _LoopThread) -> None:
+        self._async_process = async_process
+        self._lt = lt
+
+    @property
+    def id(self) -> str:
+        """The exec instance ID."""
+        return self._async_process.id
+
+    def is_running(self) -> bool:
+        """Return True if the background process is still running."""
+        return self._lt.run(self._async_process.is_running())  # type: ignore[return-value]
+
+    def kill(self, signal: int = 15) -> None:
+        """Kill the exec process by sending a signal."""
+        self._lt.run(self._async_process.kill(signal=signal))
+
+    def read(self) -> BufferSnapshot:
+        """Drain and return all buffered output."""
+        return self._async_process.read()
+
+    def peek(self) -> BufferSnapshot:
+        """Return buffered output without draining."""
+        return self._async_process.peek()
+
+    def wait(self, timeout: float | None = None) -> ExecResult:
+        """Block until the process exits, then return ExecResult."""
+        return self._lt.run(  # type: ignore[return-value]
+            self._async_process.wait(timeout=timeout),
+        )
+
+    @property
+    def buffer_size(self) -> int:
+        """Current bytes in the ring buffer."""
+        return self._async_process.buffer_size
+
+    @property
+    def buffer_overflow(self) -> bool:
+        """True if any buffered data was evicted due to capacity."""
+        return self._async_process.buffer_overflow
+
+
 class Container:
     """Sync handle to a running container.
 
@@ -101,21 +177,79 @@ class Container:
         """Human-readable container name (e.g. ``pd-a1b2c3d4``)."""
         return self._ac.name
 
+    @overload
     def run(
         self,
         command: str,
         *,
+        stream: Literal[True],
+        timeout: float | None = ...,
+        max_output: int = ...,
+        lang: str | None = ...,
+    ) -> SyncExecStream: ...
+
+    @overload
+    def run(
+        self,
+        command: str,
+        *,
+        detach: Literal[True],
+        timeout: float | None = ...,
+        max_output: int = ...,
+        lang: str | None = ...,
+    ) -> SyncProcess: ...
+
+    @overload
+    def run(
+        self,
+        command: str,
+        *,
+        timeout: float | None = ...,
+        max_output: int = ...,
+        lang: str | None = ...,
+    ) -> ExecResult: ...
+
+    @overload
+    def run(
+        self,
+        command: str,
+        *,
+        stream: bool,
+        detach: bool,
+        timeout: float | None = ...,
+        max_output: int = ...,
+        lang: str | None = ...,
+    ) -> ExecResult | SyncExecStream | SyncProcess: ...
+
+    def run(  # noqa: PLR0913
+        self,
+        command: str,
+        *,
+        stream: bool = False,
+        detach: bool = False,
         timeout: float | None = None,
         max_output: int = _DEFAULT_MAX_OUTPUT,
         lang: str | None = None,
-    ) -> ExecResult:
-        """Execute a command inside the container and return the result.
+    ) -> ExecResult | SyncExecStream | SyncProcess:
+        """Execute a command inside the container.
 
         See :meth:`AsyncContainer.run` for full documentation.
         """
-        return self._lt.run(  # type: ignore[return-value]
-            self._ac.run(command, timeout=timeout, max_output=max_output, lang=lang),
+        result = self._lt.run(
+            self._ac.run(
+                command,
+                stream=stream,
+                detach=detach,
+                timeout=timeout,
+                max_output=max_output,
+                lang=lang,
+            ),
         )
+        if stream:
+            return SyncExecStream(result, self._lt)  # type: ignore[arg-type]
+        if detach:
+            return SyncProcess(result, self._lt)  # type: ignore[arg-type]
+        return result  # type: ignore[return-value]
 
     def info(self) -> ContainerInfo:
         """Return a live snapshot of the container's state and resource usage.
@@ -165,6 +299,18 @@ class Container:
         See :meth:`AsyncContainer.pull` for full documentation.
         """
         self._lt.run(self._ac.pull(src, dest))
+
+    def on_stdout(self, fn: Callable[..., object]) -> None:
+        """Register a callback for stdout data from detached processes."""
+        self._ac.on_stdout(fn)
+
+    def on_stderr(self, fn: Callable[..., object]) -> None:
+        """Register a callback for stderr data from detached processes."""
+        self._ac.on_stderr(fn)
+
+    def on_exit(self, fn: Callable[..., object]) -> None:
+        """Register a callback for process exit from detached processes."""
+        self._ac.on_exit(fn)
 
     def shutdown(self, *, force: bool = False) -> None:
         """Stop and remove the container.
