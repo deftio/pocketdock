@@ -7,7 +7,7 @@ import datetime
 
 import pocket_dock
 import pytest
-from pocket_dock.types import ContainerInfo, ExecResult
+from pocket_dock.types import ContainerInfo, ExecResult, StreamChunk
 
 
 def test_exec_result_defaults() -> None:
@@ -141,3 +141,26 @@ def test_container_info_is_dataclass() -> None:
 
 def test_container_info_exported_from_package() -> None:
     assert pocket_dock.ContainerInfo is ContainerInfo
+
+
+# --- StreamChunk ---
+
+
+def test_stream_chunk_construction() -> None:
+    chunk = StreamChunk(stream="stdout", data="hello")
+    assert chunk.stream == "stdout"
+    assert chunk.data == "hello"
+
+
+def test_stream_chunk_is_frozen() -> None:
+    chunk = StreamChunk(stream="stderr", data="err")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        chunk.data = "x"  # type: ignore[misc]
+
+
+def test_stream_chunk_is_dataclass() -> None:
+    assert dataclasses.is_dataclass(StreamChunk)
+
+
+def test_stream_chunk_exported_from_package() -> None:
+    assert pocket_dock.StreamChunk is StreamChunk
