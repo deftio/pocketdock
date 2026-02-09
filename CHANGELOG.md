@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-02-08
+
+### Added
+
+- `run(stream=True)` — streaming mode returns `AsyncExecStream` / `ExecStream` async iterator yielding `StreamChunk` objects in real-time
+- `run(detach=True)` — detached mode returns `AsyncProcess` / `Process` handle for background execution
+- `StreamChunk` dataclass with `stream` ("stdout"/"stderr") and `data` fields
+- `AsyncExecStream` / `ExecStream` — async iterator with `.result` property after iteration
+- `AsyncProcess` / `Process` — detached process handle with `id`, `is_running()`, `kill()`, `wait()`, `read()`, `peek()`, `buffer_size`, `buffer_overflow`
+- `RingBuffer` — thread-safe bounded ring buffer (1 MB default) for detached process output
+- `BufferSnapshot` dataclass with `stdout` and `stderr` strings
+- `CallbackRegistry` — register callbacks for stdout, stderr, and exit events
+- `on_stdout()`, `on_stderr()`, `on_exit()` callback methods on `AsyncContainer` and `Container`
+- `demux_stream_iter()` — incremental async generator for stream frame parsing
+- `_exec_start_stream()` — streaming exec with Docker chunked TE and Podman raw stream support
+- `_demux_chunked_stream()` — handles misalignment between HTTP chunk and demux frame boundaries
+- Automatic cleanup of active streams and processes in `shutdown()`
+- `@overload` type signatures on `run()` for all three output modes
+- Exported `ExecStream`, `Process`, `BufferSnapshot`, `StreamChunk` from `pocket_dock`
+- Exported `AsyncExecStream`, `AsyncProcess` from `pocket_dock.async_`
+
 ## [0.4.0] - 2026-02-08
 
 ### Added
