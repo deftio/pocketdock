@@ -209,6 +209,18 @@ class Container:
         lang: str | None = ...,
     ) -> ExecResult: ...
 
+    @overload
+    def run(
+        self,
+        command: str,
+        *,
+        stream: bool,
+        detach: bool,
+        timeout: float | None = ...,
+        max_output: int = ...,
+        lang: str | None = ...,
+    ) -> ExecResult | SyncExecStream | SyncProcess: ...
+
     def run(  # noqa: PLR0913
         self,
         command: str,
