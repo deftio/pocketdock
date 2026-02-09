@@ -450,7 +450,7 @@ async def exec_command(
             )
         else:
             demux_result = await _exec_start(socket_path, exec_id, max_output)
-    except TimeoutError:
+    except (TimeoutError, asyncio.TimeoutError):
         timed_out = True
         demux_result = DemuxResult()
 
