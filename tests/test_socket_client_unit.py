@@ -874,7 +874,7 @@ async def test_demux_chunked_stream_frame_split_across_chunks() -> None:
 
 
 async def test_demux_chunked_stream_empty() -> None:
-    body = _make_chunked_body()  # just "0\r\n\r\n"
+    _make_chunked_body()  # just "0\r\n\r\n"
     reader = asyncio.StreamReader()
     reader.feed_data(b"0\r\n\r\n")
     reader.feed_eof()
@@ -926,7 +926,7 @@ async def test_exec_start_stream_docker_chunked() -> None:
         new_callable=AsyncMock,
         return_value=(200, {"transfer-encoding": "chunked"}, reader, mock_writer),
     ):
-        gen, writer = await _exec_start_stream("/tmp/s.sock", "exec-id")
+        gen, _writer = await _exec_start_stream("/tmp/s.sock", "exec-id")
         frames = [(st, p) async for st, p in gen]
 
     assert frames == [(1, b"chunked hello\n")]
