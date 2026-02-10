@@ -36,7 +36,10 @@ jobs:
       - run: uv sync --dev --python ${{ matrix.python-version }}
       - run: systemctl --user start podman.socket
       - run: podman build -t pocket-dock/minimal images/minimal/
-      - run: uv run pytest -n auto --cov-fail-under=100
+      - name: Run parallel-safe tests
+        run: uv run pytest -n auto --ignore=tests/test_persistence_integration.py
+      - name: Run serial tests (race-prone)
+        run: uv run pytest tests/test_persistence_integration.py --cov-append --cov-fail-under=100
 
   docs:
     runs-on: ubuntu-latest
