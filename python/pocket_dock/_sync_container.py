@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
     from pocket_dock._buffer import BufferSnapshot
     from pocket_dock._process import AsyncExecStream, AsyncProcess
+    from pocket_dock._session import AsyncSession
     from pocket_dock.types import ContainerInfo, ExecResult, StreamChunk
 
 
@@ -149,6 +150,44 @@ class SyncProcess:
     def buffer_overflow(self) -> bool:
         """True if any buffered data was evicted due to capacity."""
         return self._async_process.buffer_overflow
+
+
+class SyncSession:
+    """Sync handle to a persistent shell session.
+
+    Wraps :class:`AsyncSession` for synchronous usage.
+    """
+
+    def __init__(self, async_session: AsyncSession, lt: _LoopThread) -> None:
+        self._async_session = async_session
+        self._lt = lt
+
+    @property
+    def id(self) -> str:
+        """The exec instance ID backing this session."""
+        return self._async_session.id
+
+    def send(self, command: str) -> None:
+        """Send a command to the shell without waiting for completion."""
+        self._lt.run(self._async_session.send(command))
+
+    def send_and_wait(self, command: str, *, timeout: float | None = None) -> ExecResult:
+        """Send a command and wait for it to finish."""
+        return self._lt.run(  # type: ignore[return-value]
+            self._async_session.send_and_wait(command, timeout=timeout),
+        )
+
+    def read(self) -> str:
+        """Drain and return all accumulated output (thread-safe)."""
+        return self._async_session.read()
+
+    def on_output(self, fn: Callable[..., object]) -> None:
+        """Register a callback for output data."""
+        self._async_session.on_output(fn)
+
+    def close(self) -> None:
+        """Close the session, killing the shell process."""
+        self._lt.run(self._async_session.close())
 
 
 class Container:
@@ -311,6 +350,14 @@ class Container:
     def on_exit(self, fn: Callable[..., object]) -> None:
         """Register a callback for process exit from detached processes."""
         self._ac.on_exit(fn)
+
+    def session(self) -> SyncSession:
+        """Open a persistent shell session inside the container.
+
+        See :meth:`AsyncContainer.session` for full documentation.
+        """
+        async_session = self._lt.run(self._ac.session())
+        return SyncSession(async_session, self._lt)  # type: ignore[arg-type]
 
     def shutdown(self, *, force: bool = False) -> None:
         """Stop and remove the container.

@@ -17,10 +17,12 @@ from __future__ import annotations
 
 from pocket_dock._async_container import AsyncContainer, create_new_container
 from pocket_dock._process import AsyncExecStream, AsyncProcess
+from pocket_dock._session import AsyncSession
 
 __all__ = [
     "AsyncContainer",
     "AsyncExecStream",
     "AsyncProcess",
+    "AsyncSession",
     "create_new_container",
 ]

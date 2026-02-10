@@ -10,6 +10,7 @@ from pocket_dock._sync_container import (
     Container,
     SyncExecStream,
     SyncProcess,
+    SyncSession,
     create_new_container,
 )
 from pocket_dock.errors import (
@@ -20,6 +21,7 @@ from pocket_dock.errors import (
     ImageNotFound,
     PocketDockError,
     PodmanNotRunning,
+    SessionClosed,
     SocketCommunicationError,
     SocketConnectionError,
     SocketError,
@@ -36,6 +38,7 @@ def get_version() -> str:
 
 ExecStream = SyncExecStream
 Process = SyncProcess
+Session = SyncSession
 
 __all__ = [
     "BufferSnapshot",
@@ -51,6 +54,8 @@ __all__ = [
     "PocketDockError",
     "PodmanNotRunning",
     "Process",
+    "Session",
+    "SessionClosed",
     "SocketCommunicationError",
     "SocketConnectionError",
     "SocketError",

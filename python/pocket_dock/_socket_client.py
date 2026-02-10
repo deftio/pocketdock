@@ -487,13 +487,17 @@ async def _exec_create(
     socket_path: str,
     container_id: str,
     command: list[str],
+    *,
+    attach_stdin: bool = False,
 ) -> str:
     """Create an exec instance and return its ID."""
-    payload = {
+    payload: dict[str, object] = {
         "AttachStdout": True,
         "AttachStderr": True,
         "Cmd": command,
     }
+    if attach_stdin:
+        payload["AttachStdin"] = True
     status, body = await _request(
         socket_path,
         "POST",
