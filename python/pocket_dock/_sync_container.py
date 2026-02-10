@@ -216,6 +216,11 @@ class Container:
         """Human-readable container name (e.g. ``pd-a1b2c3d4``)."""
         return self._ac.name
 
+    @property
+    def persist(self) -> bool:
+        """Whether this container survives shutdown (stop without remove)."""
+        return self._ac.persist
+
     @overload
     def run(
         self,
@@ -359,6 +364,13 @@ class Container:
         async_session = self._lt.run(self._ac.session())
         return SyncSession(async_session, self._lt)  # type: ignore[arg-type]
 
+    def snapshot(self, image_name: str) -> str:
+        """Commit the container's current filesystem as a new image.
+
+        See :meth:`AsyncContainer.snapshot` for full documentation.
+        """
+        return self._lt.run(self._ac.snapshot(image_name))  # type: ignore[return-value]
+
     def shutdown(self, *, force: bool = False) -> None:
         """Stop and remove the container.
 
@@ -378,13 +390,15 @@ class Container:
         self.shutdown()
 
 
-def create_new_container(
+def create_new_container(  # noqa: PLR0913
     *,
     image: str = _DEFAULT_IMAGE,
     name: str | None = None,
     timeout: int = _DEFAULT_TIMEOUT,
     mem_limit: str | None = None,
     cpu_percent: int | None = None,
+    persist: bool = False,
+    volumes: dict[str, str] | None = None,
 ) -> Container:
     """Create and start a new container, returning a sync handle.
 
@@ -398,6 +412,8 @@ def create_new_container(
             timeout=timeout,
             mem_limit=mem_limit,
             cpu_percent=cpu_percent,
+            persist=persist,
+            volumes=volumes,
         )
     )
     return Container(ac, lt)  # type: ignore[arg-type]
