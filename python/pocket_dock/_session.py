@@ -200,7 +200,7 @@ class AsyncSession:
                 else:
                     self._emit(text, is_stdout=False)
         finally:
-            if self._pending is not None:
+            if self._pending is not None and not self._pending.event.is_set():
                 self._pending.exit_code = -1
                 self._pending.event.set()
 
