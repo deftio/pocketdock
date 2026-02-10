@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import datetime
     from pathlib import Path
+    from typing import TextIO
 
     from pocket_dock.types import ExecResult
 
@@ -104,7 +105,7 @@ class InstanceLogger:
 class SessionLogHandle:
     """Handle for incremental writes to a session log file."""
 
-    def __init__(self, handle: object) -> None:
+    def __init__(self, handle: TextIO | None) -> None:
         self._handle = handle
 
     def write_send(self, command: str) -> None:
@@ -114,27 +115,27 @@ class SessionLogHandle:
         from datetime import datetime, timezone  # noqa: PLC0415
 
         ts = datetime.now(tz=timezone.utc).isoformat()
-        self._handle.write(f"[{ts}] >>> {command}\n")  # type: ignore[union-attr]
-        self._handle.flush()  # type: ignore[union-attr]
+        self._handle.write(f"[{ts}] >>> {command}\n")
+        self._handle.flush()
 
     def write_recv(self, data: str) -> None:
         """Log output received from the session."""
         if self._handle is None:
             return
-        self._handle.write(data)  # type: ignore[union-attr]
-        self._handle.flush()  # type: ignore[union-attr]
+        self._handle.write(data)
+        self._handle.flush()
 
     def close(self) -> None:
         """Close the log file."""
         if self._handle is not None:
-            self._handle.close()  # type: ignore[union-attr]
+            self._handle.close()
             self._handle = None
 
 
 class DetachLogHandle:
     """Handle for incremental writes to a detach log file."""
 
-    def __init__(self, handle: object) -> None:
+    def __init__(self, handle: TextIO | None) -> None:
         self._handle = handle
 
     def write_output(self, stream: str, data: str) -> None:
@@ -144,16 +145,14 @@ class DetachLogHandle:
         from datetime import datetime, timezone  # noqa: PLC0415
 
         ts = datetime.now(tz=timezone.utc).isoformat()
-        self._handle.write(f"[{ts}] [{stream}] {data}")  # type: ignore[union-attr]
-        self._handle.flush()  # type: ignore[union-attr]
+        self._handle.write(f"[{ts}] [{stream}] {data}")
+        self._handle.flush()
 
     def close(self, exit_code: int, duration_ms: float) -> None:
         """Close the log file with exit info."""
         if self._handle is not None:
-            self._handle.write(  # type: ignore[union-attr]
-                f"\n# exit_code: {exit_code}\n# duration_ms: {duration_ms:.1f}\n"
-            )
-            self._handle.close()  # type: ignore[union-attr]
+            self._handle.write(f"\n# exit_code: {exit_code}\n# duration_ms: {duration_ms:.1f}\n")
+            self._handle.close()
             self._handle = None
 
 

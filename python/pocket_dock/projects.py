@@ -159,9 +159,10 @@ def read_instance_metadata(instance_dir: Path) -> dict[str, Any]:
     try:
         import tomllib  # type: ignore[import-not-found]  # noqa: PLC0415
     except ModuleNotFoundError:
-        import tomli as tomllib  # type: ignore[no-redef]  # noqa: PLC0415
+        import tomli as tomllib  # noqa: PLC0415
 
-    return tomllib.loads(toml_path.read_text())
+    result: dict[str, Any] = tomllib.loads(toml_path.read_text())
+    return result
 
 
 def remove_instance_dir(project_root: Path, instance_name: str) -> bool:

@@ -43,6 +43,7 @@ dev = [
     "pytest-xdist",
     "ruff",
     "mypy",
+    "types-PyYAML",
     "bandit[toml]",
     "pre-commit",
     "check-manifest",
