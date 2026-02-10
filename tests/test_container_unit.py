@@ -1640,3 +1640,79 @@ async def test_reboot_fresh_includes_persist_labels() -> None:
     labels = create.call_args[1]["labels"]
     assert labels["pocket-dock.persist"] == "true"
     assert "pocket-dock.created-at" in labels
+
+
+# --- Project properties ---
+
+
+def test_async_container_project_default() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test")
+    assert ac.project == ""
+    assert ac.data_path == ""
+
+
+def test_async_container_project_set() -> None:
+    ac = AsyncContainer(
+        "cid", "/tmp/s.sock", name="pd-test", project="my-proj", data_path="/some/path"
+    )
+    assert ac.project == "my-proj"
+    assert ac.data_path == "/some/path"
+
+
+def test_sync_container_project_delegates() -> None:
+    ac = AsyncContainer(
+        "cid", "/tmp/s.sock", name="pd-test", project="proj", data_path="/dp"
+    )
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    assert c.project == "proj"
+    assert c.data_path == "/dp"
+
+
+async def test_async_create_with_project_label() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocket_dock.projects.find_project_root", return_value=None),
+    ):
+        c = await async_factory(name="pd-proj", persist=True, project="my-project")
+
+    labels = create.call_args[1]["labels"]
+    assert labels["pocket-dock.project"] == "my-project"
+    assert c._project == "my-project"
+
+
+async def test_async_reboot_fresh_preserves_project_labels() -> None:
+    ac = AsyncContainer(
+        "cid",
+        "/tmp/s.sock",
+        name="pd-xx",
+        image="pocket-dock/minimal",
+        persist=True,
+        project="my-proj",
+        data_path="/data/path",
+    )
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="newcid",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await ac.reboot(fresh=True)
+
+    labels = create.call_args[1]["labels"]
+    assert labels["pocket-dock.project"] == "my-proj"
+    assert labels["pocket-dock.data-path"] == "/data/path"

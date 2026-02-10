@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
 from typing import Any
 
 from pocket_dock import _socket_client as sc
@@ -59,6 +61,8 @@ async def resume_container(
     mem_limit_bytes = int(host_config.get("Memory", 0))
     nano_cpus = int(host_config.get("NanoCpus", 0))
     persist = labels.get("pocket-dock.persist", "false").lower() == "true"
+    project = labels.get("pocket-dock.project", "")
+    data_path = labels.get("pocket-dock.data-path", "")
 
     return AsyncContainer(
         container_id,
@@ -69,17 +73,21 @@ async def resume_container(
         mem_limit_bytes=mem_limit_bytes,
         nano_cpus=nano_cpus,
         persist=persist,
+        project=project,
+        data_path=data_path,
     )
 
 
 async def list_containers(
     *,
     socket_path: str | None = None,
+    project: str | None = None,
 ) -> list[ContainerListItem]:
     """List all pocket-dock managed containers.
 
     Args:
         socket_path: Path to the engine socket. Auto-detected if ``None``.
+        project: If given, only list containers belonging to this project.
 
     Returns:
         List of :class:`ContainerListItem` objects.
@@ -89,9 +97,12 @@ async def list_containers(
 
     """
     socket_path = _resolve_socket(socket_path)
+    label_filter = "pocket-dock.managed=true"
+    if project is not None:
+        label_filter = f"pocket-dock.project={project}"
     raw = await sc.list_containers(
         socket_path,
-        label_filter="pocket-dock.managed=true",
+        label_filter=label_filter,
     )
     return [_parse_container_list_item(c) for c in raw]
 
@@ -121,18 +132,32 @@ async def destroy_container(
     if not containers:
         raise ContainerNotFound(name)
 
-    container_id: str = containers[0]["Id"]
+    container_data = containers[0]
+    container_id: str = container_data["Id"]
+
+    # Check for data-path label to clean up instance directory
+    inspect_data = await sc.inspect_container(socket_path, container_id)
+    labels = inspect_data.get("Config", {}).get("Labels", {}) or {}
+    data_path = labels.get("pocket-dock.data-path", "")
+
     await sc.remove_container(socket_path, container_id, force=True)
+
+    if data_path:
+        dp = Path(data_path)
+        if dp.is_dir():  # noqa: ASYNC240
+            shutil.rmtree(dp)
 
 
 async def prune(
     *,
     socket_path: str | None = None,
+    project: str | None = None,
 ) -> int:
     """Remove all stopped pocket-dock containers.
 
     Args:
         socket_path: Path to the engine socket. Auto-detected if ``None``.
+        project: If given, only prune containers belonging to this project.
 
     Returns:
         Number of containers removed.
@@ -143,9 +168,12 @@ async def prune(
     """
     socket_path = _resolve_socket(socket_path)
 
+    label_filter = "pocket-dock.managed=true"
+    if project is not None:
+        label_filter = f"pocket-dock.project={project}"
     raw = await sc.list_containers(
         socket_path,
-        label_filter="pocket-dock.managed=true",
+        label_filter=label_filter,
     )
     count = 0
     for container in raw:
@@ -188,4 +216,5 @@ def _parse_container_list_item(data: dict[str, Any]) -> ContainerListItem:
         image=data.get("Image", ""),
         created_at=labels.get("pocket-dock.created-at", ""),
         persist=labels.get("pocket-dock.persist", "false").lower() == "true",
+        project=labels.get("pocket-dock.project", ""),
     )

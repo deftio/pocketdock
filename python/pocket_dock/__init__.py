@@ -64,11 +64,12 @@ def resume_container(
 def list_containers(
     *,
     socket_path: str | None = None,
+    project: str | None = None,
 ) -> list[ContainerListItem]:
     """List all pocket-dock managed containers (sync)."""
     lt = _LoopThread.get()
     return lt.run(  # type: ignore[return-value]
-        _async_list_containers(socket_path=socket_path)
+        _async_list_containers(socket_path=socket_path, project=project)
     )
 
 
@@ -85,10 +86,13 @@ def destroy_container(
 def prune(
     *,
     socket_path: str | None = None,
+    project: str | None = None,
 ) -> int:
     """Remove all stopped pocket-dock containers (sync)."""
     lt = _LoopThread.get()
-    return lt.run(_async_prune(socket_path=socket_path))  # type: ignore[return-value]
+    return lt.run(  # type: ignore[return-value]
+        _async_prune(socket_path=socket_path, project=project)
+    )
 
 
 ExecStream = SyncExecStream

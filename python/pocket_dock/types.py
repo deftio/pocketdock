@@ -66,3 +66,4 @@ class ContainerListItem:
     image: str
     created_at: str
     persist: bool
+    project: str = ""
