@@ -22,6 +22,7 @@ from pocket_dock import _socket_client as sc
 from pocket_dock._callbacks import CallbackRegistry
 from pocket_dock._helpers import build_container_info, parse_mem_limit
 from pocket_dock._process import AsyncExecStream, AsyncProcess
+from pocket_dock._session import AsyncSession
 from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
 
 if TYPE_CHECKING:
@@ -87,6 +88,7 @@ class AsyncContainer:
         self._callbacks = CallbackRegistry()
         self._active_streams: list[AsyncExecStream] = []
         self._active_processes: list[AsyncProcess] = []
+        self._active_sessions: list[AsyncSession] = []
 
     @property
     def container_id(self) -> str:
@@ -399,6 +401,22 @@ class AsyncContainer:
         """Register a callback for process exit from detached processes."""
         self._callbacks.on_exit(fn)
 
+    async def session(self) -> AsyncSession:
+        """Open a persistent shell session inside the container.
+
+        Returns an :class:`AsyncSession` connected to a bash process.
+        Commands sent through the session share state (cwd, env vars).
+        """
+        exec_id = await sc._exec_create(  # noqa: SLF001
+            self._socket_path, self._container_id, ["bash"], attach_stdin=True
+        )
+        gen, writer = await sc._exec_start_stream(  # noqa: SLF001
+            self._socket_path, exec_id
+        )
+        sess = AsyncSession(exec_id, gen, writer, self._socket_path, self._container_id)
+        self._active_sessions.append(sess)
+        return sess
+
     async def shutdown(self, *, force: bool = False) -> None:
         """Stop and remove the container.
 
@@ -409,6 +427,11 @@ class AsyncContainer:
         if self._closed:
             return
         self._closed = True
+
+        # Clean up active sessions
+        for sess in self._active_sessions:
+            await sess._close()  # noqa: SLF001
+        self._active_sessions.clear()
 
         # Clean up active streams
         for s in self._active_streams:

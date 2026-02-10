@@ -83,3 +83,7 @@ class ImageNotFound(PocketDockError):
     def __init__(self, image: str) -> None:
         self.image = image
         super().__init__(f"Image not found: {image}")
+
+
+class SessionClosed(PocketDockError):
+    """Operation attempted on a closed session."""
