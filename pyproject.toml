@@ -102,6 +102,7 @@ source = ["pocket_dock"]
 show_missing = true
 exclude_lines = [
     "if TYPE_CHECKING:",
+    "@overload",
 ]
 # fail_under is enforced in CI via --cov-fail-under=100
 
