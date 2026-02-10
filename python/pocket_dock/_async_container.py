@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 from pocket_dock import _socket_client as sc
 from pocket_dock._callbacks import CallbackRegistry
 from pocket_dock._helpers import build_container_info, parse_mem_limit
+from pocket_dock._logger import InstanceLogger
 from pocket_dock._process import AsyncExecStream, AsyncProcess
 from pocket_dock._session import AsyncSession
 from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
@@ -108,6 +109,9 @@ class AsyncContainer:
         self._persist = persist
         self._project = project
         self._data_path = data_path
+        self._logger: InstanceLogger | None = None
+        if data_path:
+            self._logger = InstanceLogger(pathlib.Path(data_path))
         self._closed = False
         self._callbacks = CallbackRegistry()
         self._active_streams: list[AsyncExecStream] = []
@@ -237,18 +241,25 @@ class AsyncContainer:
             gen, writer = await sc._exec_start_stream(  # noqa: SLF001
                 self._socket_path, exec_id
             )
-            proc = AsyncProcess(exec_id, self, gen, writer, self._callbacks)
+            detach_log = None
+            if self._logger is not None:
+                detach_log = self._logger.start_detach_log(command)
+            proc = AsyncProcess(exec_id, self, gen, writer, self._callbacks, log_handle=detach_log)
             self._active_processes.append(proc)
             return proc
 
         t = timeout if timeout is not None else self._timeout
-        return await sc.exec_command(
+        started_at = datetime.datetime.now(tz=datetime.timezone.utc)
+        result = await sc.exec_command(
             self._socket_path,
             self._container_id,
             cmd,
             max_output=max_output,
             timeout=t,
         )
+        if self._logger is not None:
+            self._logger.log_run(command, result, started_at)
+        return result
 
     async def info(self) -> ContainerInfo:
         """Return a live snapshot of the container's state and resource usage.
@@ -451,7 +462,12 @@ class AsyncContainer:
         gen, writer = await sc._exec_start_stream(  # noqa: SLF001
             self._socket_path, exec_id
         )
-        sess = AsyncSession(exec_id, gen, writer, self._socket_path, self._container_id)
+        log_handle = None
+        if self._logger is not None:
+            log_handle = self._logger.start_session_log(exec_id)
+        sess = AsyncSession(
+            exec_id, gen, writer, self._socket_path, self._container_id, log_handle=log_handle
+        )
         self._active_sessions.append(sess)
         return sess
 

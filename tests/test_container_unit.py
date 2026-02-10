@@ -1660,9 +1660,7 @@ def test_async_container_project_set() -> None:
 
 
 def test_sync_container_project_delegates() -> None:
-    ac = AsyncContainer(
-        "cid", "/tmp/s.sock", name="pd-test", project="proj", data_path="/dp"
-    )
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test", project="proj", data_path="/dp")
     lt = _LoopThread.get()
     c = Container(ac, lt)
     assert c.project == "proj"

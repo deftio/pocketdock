@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from pocket_dock._async_container import AsyncContainer
     from pocket_dock._callbacks import CallbackRegistry
+    from pocket_dock._logger import DetachLogHandle
 
 
 class AsyncExecStream:
@@ -119,12 +120,14 @@ class AsyncProcess:
         writer: asyncio.StreamWriter,
         callbacks: CallbackRegistry,
         buffer_capacity: int = 1_048_576,
+        log_handle: DetachLogHandle | None = None,
     ) -> None:
         self._exec_id = exec_id
         self._container = container
         self._socket_path = container.socket_path
         self._writer = writer
         self._callbacks = callbacks
+        self._log_handle = log_handle
         self._buffer = RingBuffer(buffer_capacity)
         self._done = asyncio.Event()
         self._exit_code: int = -1
@@ -135,14 +138,19 @@ class AsyncProcess:
         gen: AsyncGenerator[tuple[int, bytes], None],
     ) -> None:
         """Background task: read frames, dispatch to buffer and callbacks."""
+        start_time = time.monotonic()
         try:
             async for stream_type, payload in gen:
                 self._buffer.write(stream_type, payload)
                 data_str = payload.decode("utf-8", errors="replace")
                 if stream_type == STREAM_STDOUT:
                     self._callbacks.dispatch_stdout(self._container, data_str)
+                    if self._log_handle is not None:
+                        self._log_handle.write_output("stdout", data_str)
                 else:
                     self._callbacks.dispatch_stderr(self._container, data_str)
+                    if self._log_handle is not None:
+                        self._log_handle.write_output("stderr", data_str)
         finally:
             self._writer.close()
             await self._writer.wait_closed()
@@ -151,6 +159,10 @@ class AsyncProcess:
 
             with contextlib.suppress(Exception):
                 self._exit_code = await _exec_inspect_exit_code(self._socket_path, self._exec_id)
+
+            if self._log_handle is not None:
+                duration_ms = (time.monotonic() - start_time) * 1000
+                self._log_handle.close(self._exit_code, duration_ms)
 
             self._done.set()
             self._callbacks.dispatch_exit(self._container, self._exit_code)

@@ -30,6 +30,8 @@ from pocket_dock.types import ExecResult
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
 
+    from pocket_dock._logger import SessionLogHandle
+
 _SENTINEL_RE = re.compile(r"__PD_(\w{16})_(\d+)__")
 
 
@@ -53,19 +55,21 @@ class AsyncSession:
     Created via :meth:`AsyncContainer.session`.  Do not instantiate directly.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         exec_id: str,
         frame_gen: AsyncGenerator[tuple[int, bytes], None],
         writer: asyncio.StreamWriter,
         socket_path: str,
         container_id: str,
+        log_handle: SessionLogHandle | None = None,
     ) -> None:
         self._exec_id = exec_id
         self._frame_gen = frame_gen
         self._writer = writer
         self._socket_path = socket_path
         self._container_id = container_id
+        self._log_handle = log_handle
 
         self._output: list[str] = []
         self._lock = threading.Lock()
@@ -89,6 +93,8 @@ class AsyncSession:
         """
         if self._closed:
             raise SessionClosed
+        if self._log_handle is not None:
+            self._log_handle.write_send(command)
         self._writer.write(f"{command}\n".encode())
         await self._writer.drain()
 
@@ -170,6 +176,8 @@ class AsyncSession:
         if self._closed:
             return
         self._closed = True
+        if self._log_handle is not None:
+            self._log_handle.close()
         self._writer.close()
         await self._writer.wait_closed()
         self._task.cancel()
@@ -215,6 +223,8 @@ class AsyncSession:
 
     def _emit(self, text: str, *, is_stdout: bool) -> None:
         """Dispatch output to the general buffer, pending command, and callbacks."""
+        if self._log_handle is not None:
+            self._log_handle.write_recv(text)
         with self._lock:
             self._output.append(text)
         if self._pending is not None and not self._pending.event.is_set():

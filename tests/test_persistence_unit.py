@@ -502,9 +502,7 @@ async def test_list_containers_with_project_filter() -> None:
     ):
         await list_containers(project="my-project")
 
-    list_mock.assert_called_once_with(
-        "/tmp/s.sock", label_filter="pocket-dock.project=my-project"
-    )
+    list_mock.assert_called_once_with("/tmp/s.sock", label_filter="pocket-dock.project=my-project")
 
 
 async def test_prune_with_project_filter() -> None:
@@ -519,9 +517,7 @@ async def test_prune_with_project_filter() -> None:
         count = await prune(project="my-project")
 
     assert count == 0
-    list_mock.assert_called_once_with(
-        "/tmp/s.sock", label_filter="pocket-dock.project=my-project"
-    )
+    list_mock.assert_called_once_with("/tmp/s.sock", label_filter="pocket-dock.project=my-project")
 
 
 async def test_destroy_cleans_up_data_path(tmp_path: object) -> None:
