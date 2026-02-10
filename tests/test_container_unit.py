@@ -1378,3 +1378,265 @@ def test_exports_async_process() -> None:
     from pocket_dock.async_ import AsyncProcess as ExportedProc
 
     assert ExportedProc is AsyncProcess
+
+
+# --- Persist property ---
+
+
+def test_async_container_persist_default() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test")
+    assert ac.persist is False
+
+
+def test_async_container_persist_true() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test", persist=True)
+    assert ac.persist is True
+
+
+def test_sync_container_persist_delegates() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test", persist=True)
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    assert c.persist is True
+
+
+# --- Shutdown with persist ---
+
+
+async def test_async_shutdown_persist_stops_but_does_not_remove() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx", persist=True)
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
+        patch(
+            "pocket_dock._async_container.sc.remove_container",
+            new_callable=AsyncMock,
+        ) as remove,
+    ):
+        await ac.shutdown()
+
+    stop.assert_called_once_with("/tmp/s.sock", "cid")
+    remove.assert_not_called()
+
+
+async def test_async_shutdown_persist_force_still_stops_only() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx", persist=True)
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
+        patch(
+            "pocket_dock._async_container.sc.remove_container",
+            new_callable=AsyncMock,
+        ) as remove,
+    ):
+        await ac.shutdown(force=True)
+
+    stop.assert_called_once_with("/tmp/s.sock", "cid")
+    remove.assert_not_called()
+
+
+async def test_async_shutdown_persist_idempotent() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx", persist=True)
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
+        patch(
+            "pocket_dock._async_container.sc.remove_container",
+            new_callable=AsyncMock,
+        ),
+    ):
+        await ac.shutdown()
+        await ac.shutdown()
+
+    stop.assert_called_once()
+
+
+# --- Snapshot ---
+
+
+async def test_async_snapshot_with_tag() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
+
+    with patch(
+        "pocket_dock._async_container.sc.commit_container",
+        new_callable=AsyncMock,
+        return_value="sha256:img",
+    ) as mock:
+        result = await ac.snapshot("myrepo:v1")
+
+    assert result == "sha256:img"
+    mock.assert_called_once_with("/tmp/s.sock", "cid", "myrepo", "v1")
+
+
+async def test_async_snapshot_no_tag_defaults_latest() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
+
+    with patch(
+        "pocket_dock._async_container.sc.commit_container",
+        new_callable=AsyncMock,
+        return_value="sha256:img",
+    ) as mock:
+        await ac.snapshot("myrepo")
+
+    mock.assert_called_once_with("/tmp/s.sock", "cid", "myrepo", "latest")
+
+
+async def test_async_snapshot_image_with_registry() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
+
+    with patch(
+        "pocket_dock._async_container.sc.commit_container",
+        new_callable=AsyncMock,
+        return_value="sha256:img",
+    ) as mock:
+        await ac.snapshot("registry.io/repo:v2")
+
+    mock.assert_called_once_with("/tmp/s.sock", "cid", "registry.io/repo", "v2")
+
+
+def test_sync_snapshot_delegates() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+
+    with patch(
+        "pocket_dock._async_container.sc.commit_container",
+        new_callable=AsyncMock,
+        return_value="sha256:img",
+    ):
+        result = c.snapshot("myrepo:v1")
+
+    assert result == "sha256:img"
+
+
+# --- Create with persist and volumes ---
+
+
+async def test_async_create_with_persist() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        c = await async_factory(name="pd-persist", persist=True)
+
+    assert c.persist is True
+    labels = create.call_args[1]["labels"]
+    assert labels["pocket-dock.persist"] == "true"
+    assert "pocket-dock.created-at" in labels
+
+
+async def test_async_create_without_persist_label() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        c = await async_factory(name="pd-eph")
+
+    assert c.persist is False
+    labels = create.call_args[1]["labels"]
+    assert labels["pocket-dock.persist"] == "false"
+
+
+async def test_async_create_with_volumes() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(name="pd-vol", volumes={"/host/path": "/container/path"})
+
+    hc = create.call_args[1]["host_config"]
+    assert "/host/path:/container/path" in hc["Binds"]
+
+
+async def test_async_create_volumes_without_resource_limits() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(name="pd-vol2", volumes={"/a": "/b"})
+
+    hc = create.call_args[1]["host_config"]
+    assert hc is not None
+    assert "/a:/b" in hc["Binds"]
+
+
+async def test_async_create_volumes_with_resource_limits() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(
+            name="pd-vol3",
+            mem_limit="256m",
+            volumes={"/a": "/b"},
+        )
+
+    hc = create.call_args[1]["host_config"]
+    assert hc["Memory"] == 256 * 1024**2
+    assert "/a:/b" in hc["Binds"]
+
+
+# --- Reboot with persist labels ---
+
+
+async def test_reboot_fresh_includes_persist_labels() -> None:
+    ac = AsyncContainer(
+        "cid", "/tmp/s.sock", name="pd-xx", image="pocket-dock/minimal", persist=True
+    )
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="newcid",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await ac.reboot(fresh=True)
+
+    assert ac.container_id == "newcid"
+    labels = create.call_args[1]["labels"]
+    assert labels["pocket-dock.persist"] == "true"
+    assert "pocket-dock.created-at" in labels

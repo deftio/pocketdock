@@ -32,10 +32,12 @@ from pocket_dock._socket_client import (
     _request_raw,
     _request_stream,
     _send_request,
+    commit_container,
     create_container,
     detect_socket,
     get_container_stats,
     get_container_top,
+    list_containers,
     ping,
     pull_archive,
     push_archive,
@@ -978,3 +980,102 @@ async def test_exec_start_stream_error_status() -> None:
         pytest.raises(SocketCommunicationError, match="exec start failed"),
     ):
         await _exec_start_stream("/tmp/s.sock", "exec-id")
+
+
+# --- list_containers ---
+
+
+async def test_list_containers_no_filter() -> None:
+    import json
+
+    result_body = json.dumps([{"Id": "abc", "State": "running"}]).encode()
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(200, result_body),
+    ) as mock:
+        result = await list_containers("/tmp/s.sock")
+
+    assert len(result) == 1
+    assert result[0]["Id"] == "abc"
+    call_path = mock.call_args[0][2]
+    assert call_path == "/containers/json?all=true"
+
+
+async def test_list_containers_with_label_filter() -> None:
+    import json
+    import urllib.parse
+
+    result_body = json.dumps([]).encode()
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(200, result_body),
+    ) as mock:
+        result = await list_containers(
+            "/tmp/s.sock",
+            label_filter="pocket-dock.managed=true",
+        )
+
+    assert result == []
+    call_path = mock.call_args[0][2]
+    assert "filters=" in call_path
+    decoded = urllib.parse.unquote(call_path)
+    assert "pocket-dock.managed=true" in decoded
+
+
+async def test_list_containers_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(500, b"internal error"),
+        ),
+        pytest.raises(SocketCommunicationError, match="list containers failed"),
+    ):
+        await list_containers("/tmp/s.sock")
+
+
+# --- commit_container ---
+
+
+async def test_commit_container_success() -> None:
+    import json
+
+    result_body = json.dumps({"Id": "sha256:newimage123"}).encode()
+    with patch(
+        "pocket_dock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(201, result_body),
+    ) as mock:
+        image_id = await commit_container("/tmp/s.sock", "cid123", "myrepo", "v1")
+
+    assert image_id == "sha256:newimage123"
+    call_path = mock.call_args[0][2]
+    assert "container=cid123" in call_path
+    assert "repo=myrepo" in call_path
+    assert "tag=v1" in call_path
+
+
+async def test_commit_container_not_found() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(404, b"not found"),
+        ),
+        pytest.raises(ContainerNotFound),
+    ):
+        await commit_container("/tmp/s.sock", "cid", "repo", "tag")
+
+
+async def test_commit_container_not_running() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=(409, b"conflict"),
+        ),
+        pytest.raises(ContainerNotRunning),
+    ):
+        await commit_container("/tmp/s.sock", "cid", "repo", "tag")
