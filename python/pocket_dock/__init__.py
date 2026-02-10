@@ -4,6 +4,10 @@
 from __future__ import annotations
 
 from importlib.metadata import version
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from pocket_dock._buffer import BufferSnapshot
 from pocket_dock._sync_container import (
@@ -22,6 +26,7 @@ from pocket_dock.errors import (
     ImageNotFound,
     PocketDockError,
     PodmanNotRunning,
+    ProjectNotInitialized,
     SessionClosed,
     SocketCommunicationError,
     SocketConnectionError,
@@ -39,7 +44,20 @@ from pocket_dock.persistence import (
 from pocket_dock.persistence import (
     resume_container as _async_resume_container,
 )
-from pocket_dock.types import ContainerInfo, ContainerListItem, ExecResult, StreamChunk
+from pocket_dock.projects import (
+    doctor as _async_doctor,
+)
+from pocket_dock.projects import (
+    find_project_root,
+    init_project,
+)
+from pocket_dock.types import (
+    ContainerInfo,
+    ContainerListItem,
+    DoctorReport,
+    ExecResult,
+    StreamChunk,
+)
 
 __version__ = version("pocket-dock")
 
@@ -95,6 +113,18 @@ def prune(
     )
 
 
+def doctor(
+    *,
+    project_root: Path | None = None,
+    socket_path: str | None = None,
+) -> DoctorReport:
+    """Cross-reference local instance dirs with engine containers (sync)."""
+    lt = _LoopThread.get()
+    return lt.run(  # type: ignore[return-value]
+        _async_doctor(project_root=project_root, socket_path=socket_path)
+    )
+
+
 ExecStream = SyncExecStream
 Process = SyncProcess
 Session = SyncSession
@@ -108,12 +138,14 @@ __all__ = [
     "ContainerListItem",
     "ContainerNotFound",
     "ContainerNotRunning",
+    "DoctorReport",
     "ExecResult",
     "ExecStream",
     "ImageNotFound",
     "PocketDockError",
     "PodmanNotRunning",
     "Process",
+    "ProjectNotInitialized",
     "Session",
     "SessionClosed",
     "SocketCommunicationError",
@@ -123,7 +155,10 @@ __all__ = [
     "__version__",
     "create_new_container",
     "destroy_container",
+    "doctor",
+    "find_project_root",
     "get_version",
+    "init_project",
     "list_containers",
     "prune",
     "resume_container",

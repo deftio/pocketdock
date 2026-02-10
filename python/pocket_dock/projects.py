@@ -13,6 +13,8 @@ from typing import Any
 
 import yaml
 
+from pocket_dock.types import DoctorReport
+
 _CONFIG_FILENAME = "pocket-dock.yaml"
 _INSTANCES_DIR = "instances"
 
@@ -177,6 +179,56 @@ def list_instance_dirs(project_root: Path) -> list[Path]:
     if not instances_dir.is_dir():
         return []
     return sorted(p for p in instances_dir.iterdir() if p.is_dir())
+
+
+async def doctor(
+    *,
+    project_root: Path | None = None,
+    socket_path: str | None = None,
+) -> DoctorReport:
+    """Cross-reference local instance dirs with engine containers.
+
+    Args:
+        project_root: Explicit project root. Auto-detected if ``None``.
+        socket_path: Path to the engine socket. Auto-detected if ``None``.
+
+    Returns:
+        A :class:`DoctorReport` with orphaned containers, stale dirs, and healthy count.
+
+    Raises:
+        ProjectNotInitialized: If no ``.pocket-dock/`` project directory is found.
+
+    """
+    from pocket_dock.errors import ProjectNotInitialized  # noqa: PLC0415
+    from pocket_dock.persistence import list_containers  # noqa: PLC0415
+
+    if project_root is None:
+        project_root = find_project_root()
+    if project_root is None:
+        raise ProjectNotInitialized
+
+    config_file = project_root / ".pocket-dock" / _CONFIG_FILENAME
+    if not config_file.is_file():
+        raise ProjectNotInitialized
+
+    project_name = get_project_name(project_root)
+
+    # Local instance directory names
+    local_dirs = {p.name for p in list_instance_dirs(project_root)}
+
+    # Engine containers for this project
+    items = await list_containers(socket_path=socket_path, project=project_name)
+    container_names = {item.name for item in items}
+
+    orphaned = tuple(sorted(container_names - local_dirs))
+    stale = tuple(sorted(local_dirs - container_names))
+    healthy = len(local_dirs & container_names)
+
+    return DoctorReport(
+        orphaned_containers=orphaned,
+        stale_instance_dirs=stale,
+        healthy=healthy,
+    )
 
 
 # ---------------------------------------------------------------------------
