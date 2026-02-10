@@ -38,6 +38,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-asyncio",
+    "pytest-xdist",
     "ruff",
     "mypy",
     "bandit[toml]",

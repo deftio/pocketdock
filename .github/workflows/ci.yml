@@ -36,7 +36,7 @@ jobs:
       - run: uv sync --dev --python ${{ matrix.python-version }}
       - run: systemctl --user start podman.socket
       - run: podman build -t pocket-dock/minimal images/minimal/
-      - run: uv run pytest --cov-fail-under=100
+      - run: uv run pytest -n auto --cov-fail-under=100
 
   docs:
     runs-on: ubuntu-latest
