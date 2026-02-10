@@ -5,7 +5,7 @@ These tests do NOT require a running container engine.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pocket_dock.errors import ContainerNotFound, PodmanNotRunning
@@ -380,3 +380,76 @@ async def test_prune_empty_list_returns_zero() -> None:
         count = await prune()
 
     assert count == 0
+
+
+# --- Sync wrappers (pocket_dock.__init__) ---
+
+
+def _close_coroutine_arg(mock_obj: MagicMock) -> None:
+    """Close unawaited coroutine passed to mock to suppress warnings."""
+    coro = mock_obj.run.call_args[0][0]
+    coro.close()
+
+
+def test_sync_resume_container() -> None:
+    import pocket_dock
+
+    mock_lt = MagicMock()
+    mock_lt.run.return_value = MagicMock()
+    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+        lt_cls.get.return_value = mock_lt
+        c = pocket_dock.resume_container("pd-test", socket_path="/tmp/s.sock")
+
+    lt_cls.get.assert_called_once()
+    mock_lt.run.assert_called_once()
+    _close_coroutine_arg(mock_lt)
+    assert c is not None
+
+
+def test_sync_list_containers() -> None:
+    import pocket_dock
+
+    mock_lt = MagicMock()
+    mock_lt.run.return_value = [
+        ContainerListItem(
+            id="abc", name="pd-a", status="running", image="img", created_at="", persist=False
+        )
+    ]
+    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+        lt_cls.get.return_value = mock_lt
+        result = pocket_dock.list_containers(socket_path="/tmp/s.sock")
+
+    lt_cls.get.assert_called_once()
+    mock_lt.run.assert_called_once()
+    _close_coroutine_arg(mock_lt)
+    assert len(result) == 1
+    assert result[0].name == "pd-a"
+
+
+def test_sync_destroy_container() -> None:
+    import pocket_dock
+
+    mock_lt = MagicMock()
+    mock_lt.run.return_value = None
+    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+        lt_cls.get.return_value = mock_lt
+        pocket_dock.destroy_container("pd-test", socket_path="/tmp/s.sock")
+
+    lt_cls.get.assert_called_once()
+    mock_lt.run.assert_called_once()
+    _close_coroutine_arg(mock_lt)
+
+
+def test_sync_prune() -> None:
+    import pocket_dock
+
+    mock_lt = MagicMock()
+    mock_lt.run.return_value = 3
+    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+        lt_cls.get.return_value = mock_lt
+        count = pocket_dock.prune(socket_path="/tmp/s.sock")
+
+    lt_cls.get.assert_called_once()
+    mock_lt.run.assert_called_once()
+    _close_coroutine_arg(mock_lt)
+    assert count == 3

@@ -156,6 +156,7 @@ async def test_volume_mount(tmp_path: pytest.TempPathFactory) -> None:  # type: 
 
     host_dir = pathlib.Path(str(tmp_path)) / "vol-test"
     host_dir.mkdir(parents=True, exist_ok=True)
+    host_dir.chmod(0o777)  # rootless Podman: container user needs write access
 
     c = await create_new_container(volumes={str(host_dir): "/mnt/shared"})
     try:
