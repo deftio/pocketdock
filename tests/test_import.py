@@ -13,13 +13,13 @@ def test_version_attribute() -> None:
     import pocket_dock
 
     assert isinstance(pocket_dock.__version__, str)
-    assert pocket_dock.__version__ == "0.7.0"
+    assert pocket_dock.__version__ == "0.8.0"
 
 
 def test_get_version_function() -> None:
     from pocket_dock import get_version
 
-    assert get_version() == "0.7.0"
+    assert get_version() == "0.8.0"
 
 
 def test_import_resume_container() -> None:
@@ -64,3 +64,51 @@ def test_import_async_persistence() -> None:
     assert callable(list_containers)
     assert callable(destroy_container)
     assert callable(prune)
+
+
+def test_import_doctor() -> None:
+    from pocket_dock import doctor
+
+    assert callable(doctor)
+
+
+def test_import_doctor_report() -> None:
+    from pocket_dock import DoctorReport
+
+    assert DoctorReport is not None
+
+
+def test_import_project_not_initialized() -> None:
+    from pocket_dock import ProjectNotInitialized
+
+    assert issubclass(ProjectNotInitialized, Exception)
+
+
+def test_import_find_project_root() -> None:
+    from pocket_dock import find_project_root
+
+    assert callable(find_project_root)
+
+
+def test_import_init_project() -> None:
+    from pocket_dock import init_project
+
+    assert callable(init_project)
+
+
+def test_import_async_doctor() -> None:
+    from pocket_dock.async_ import doctor
+
+    assert callable(doctor)
+
+
+def test_import_async_find_project_root() -> None:
+    from pocket_dock.async_ import find_project_root
+
+    assert callable(find_project_root)
+
+
+def test_import_async_init_project() -> None:
+    from pocket_dock.async_ import init_project
+
+    assert callable(init_project)
