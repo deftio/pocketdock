@@ -913,6 +913,20 @@ async def test_demux_chunked_stream_empty_lines_between_chunks() -> None:
     assert frames == [(1, b"hello\n")]
 
 
+async def test_demux_chunked_stream_eof_without_terminal_chunk() -> None:
+    """EOF (connection closed) without a terminal 0-size chunk should not hang."""
+    frame = _make_frame(1, b"before eof\n")
+    chunk_hex = f"{len(frame):x}\r\n".encode()
+    # No terminal "0\r\n\r\n" — just data then EOF
+    body = chunk_hex + frame + b"\r\n"
+    reader = asyncio.StreamReader()
+    reader.feed_data(body)
+    reader.feed_eof()
+
+    frames = [(st, p) async for st, p in _demux_chunked_stream(reader)]
+    assert frames == [(1, b"before eof\n")]
+
+
 # --- _exec_start_stream ---
 
 

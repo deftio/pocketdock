@@ -595,6 +595,8 @@ async def _demux_chunked_stream(
     buf = bytearray()
     while True:
         size_line = await reader.readline()
+        if not size_line:
+            break  # EOF — connection closed
         size_str = size_line.strip().decode("ascii", errors="replace")
         if not size_str:
             continue
