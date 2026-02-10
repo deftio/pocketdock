@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-02-09
+
+### Added
+
+- `AsyncSession` / `Session` — persistent shell sessions with state persistence (cwd, env vars, shell history)
+- `session()` method on `AsyncContainer` and `Container` to open a persistent shell
+- `send()` — fire-and-forget command to the shell
+- `send_and_wait()` — send a command and wait for completion with exit code, stdout, stderr, and duration
+- `read()` — drain accumulated output from the session (thread-safe)
+- `on_output()` — register callbacks for session output
+- `close()` — close the session without stopping the container
+- Sentinel protocol (`__PD_{uuid}_${?}__`) for reliable command boundary and exit code detection
+- `SessionClosed` error for operations on closed sessions
+- `attach_stdin` support in socket client `_exec_create()` for bidirectional exec connections
+- Automatic session cleanup during `shutdown()`
+- Exported `AsyncSession` from `pocket_dock.async_` and `Session` (alias for `SyncSession`) from `pocket_dock`
+
 ## [0.5.0] - 2026-02-08
 
 ### Added
