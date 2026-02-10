@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pocket-dock"
-version = "0.6.0"
+version = "0.7.0"
 description = "Portable, offline-first container sandboxes for LLM agents and dev workflows"
 readme = "README.md"
 license = "BSD-2-Clause"
@@ -38,6 +38,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-asyncio",
+    "pytest-xdist",
     "ruff",
     "mypy",
     "bandit[toml]",
@@ -92,7 +93,7 @@ warn_unused_configs = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "--cov=pocket_dock --cov-report=term-missing -v"
+addopts = "--cov=pocket_dock --cov-report=term-missing -v --durations=10"
 
 [tool.coverage.run]
 branch = true

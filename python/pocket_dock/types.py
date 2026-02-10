@@ -54,3 +54,15 @@ class StreamChunk:
 
     stream: str  # "stdout" | "stderr"
     data: str
+
+
+@dataclasses.dataclass(frozen=True)
+class ContainerListItem:
+    """Summary information for a pocket-dock managed container."""
+
+    id: str
+    name: str
+    status: str
+    image: str
+    created_at: str
+    persist: bool

@@ -595,6 +595,8 @@ async def _demux_chunked_stream(
     buf = bytearray()
     while True:
         size_line = await reader.readline()
+        if not size_line:
+            break  # EOF — connection closed
         size_str = size_line.strip().decode("ascii", errors="replace")
         if not size_str:
             continue
@@ -725,3 +727,69 @@ async def pull_archive(
         raise FileNotFoundError(msg)
     _check_container_response(status, body, container_id)
     return body
+
+
+# ---------------------------------------------------------------------------
+# Container listing / commit
+# ---------------------------------------------------------------------------
+
+
+async def list_containers(
+    socket_path: str,
+    *,
+    label_filter: str | None = None,
+) -> list[dict[str, Any]]:
+    """List containers, optionally filtered by label.
+
+    Uses ``GET /containers/json?all=true``.
+
+    Args:
+        socket_path: Path to the container engine Unix socket.
+        label_filter: Label filter string (e.g. ``"pocket-dock.managed=true"``).
+
+    Returns:
+        List of container JSON objects from the engine.
+
+    """
+    path = "/containers/json?all=true"
+    if label_filter is not None:
+        filters = json.dumps({"label": [label_filter]})
+        path = f"{path}&filters={urllib.parse.quote(filters)}"
+    status, body = await _request(socket_path, "GET", path)
+    if status >= 400:  # noqa: PLR2004
+        msg = f"list containers failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
+        raise SocketCommunicationError(msg)
+    return json.loads(body)  # type: ignore[no-any-return]
+
+
+async def commit_container(
+    socket_path: str,
+    container_id: str,
+    repo: str,
+    tag: str,
+) -> str:
+    """Commit a container's filesystem as a new image.
+
+    Uses ``POST /commit?container={id}&repo={repo}&tag={tag}``.
+
+    Args:
+        socket_path: Path to the container engine Unix socket.
+        container_id: Container to commit.
+        repo: Image repository name.
+        tag: Image tag.
+
+    Returns:
+        The new image ID.
+
+    """
+    params = urllib.parse.urlencode(
+        {
+            "container": container_id,
+            "repo": repo,
+            "tag": tag,
+        }
+    )
+    status, body = await _request(socket_path, "POST", f"/commit?{params}")
+    _check_container_response(status, body, container_id)
+    data = json.loads(body)
+    return str(data["Id"])

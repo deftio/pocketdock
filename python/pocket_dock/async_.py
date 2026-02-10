@@ -18,6 +18,12 @@ from __future__ import annotations
 from pocket_dock._async_container import AsyncContainer, create_new_container
 from pocket_dock._process import AsyncExecStream, AsyncProcess
 from pocket_dock._session import AsyncSession
+from pocket_dock.persistence import (
+    destroy_container,
+    list_containers,
+    prune,
+    resume_container,
+)
 
 __all__ = [
     "AsyncContainer",
@@ -25,4 +31,8 @@ __all__ = [
     "AsyncProcess",
     "AsyncSession",
     "create_new_container",
+    "destroy_container",
+    "list_containers",
+    "prune",
+    "resume_container",
 ]

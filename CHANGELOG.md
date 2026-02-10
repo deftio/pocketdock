@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-02-10
+
+### Added
+
+- `persist=True` parameter for `create_new_container()` — container survives `shutdown()` (stop without remove)
+- `volumes` parameter for `create_new_container()` — mount host directories into the container
+- `container.snapshot(image_name)` — commit container filesystem as a new reusable image
+- `container.persist` property — check if container is persistent
+- `resume_container(name)` — resume a stopped persistent container by name
+- `list_containers()` — list all pocket-dock managed containers (running and stopped)
+- `destroy_container(name)` — permanently remove a container regardless of persist setting
+- `prune()` — remove all stopped pocket-dock managed containers
+- `ContainerListItem` dataclass with `id`, `name`, `status`, `image`, `created_at`, `persist`
+- `pocket-dock.persist` and `pocket-dock.created-at` labels on all containers
+- `list_containers()` and `commit_container()` socket client methods
+- All new functions available as sync (from `pocket_dock`) and async (from `pocket_dock.async_`)
+
 ## [0.6.0] - 2026-02-09
 
 ### Added

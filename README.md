@@ -1,8 +1,12 @@
 # pocket-dock
 
+[![CI](https://github.com/deftio/pocket-dock/actions/workflows/ci.yml/badge.svg)](https://github.com/deftio/pocket-dock/actions/workflows/ci.yml)
+[![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/deftio/pocket-dock/actions/workflows/ci.yml)
+[![License: BSD-2-Clause](https://img.shields.io/badge/License-BSD_2--Clause-blue.svg)](https://opensource.org/licenses/BSD-2-Clause)
+
 **Portable, offline-first container sandboxes for LLM agents and dev workflows.**
 
-One `Container` class. Podman-first, Docker-compatible. Python SDK + CLI. Zero external dependencies. Zero API keys. Zero cloud.
+One Container class. Podman-first, Docker-compatible. Python SDK + CLI. Zero external dependencies. Zero API keys. Zero cloud.
 
 ## Why pocket-dock?
 
@@ -222,9 +226,9 @@ User Code / LLM Agent / CLI
 | M1 | Blocking run (sync + async) | 0.2.0 | Done |
 | M2 | File operations (push/pull) | 0.3.0 | Done |
 | M3 | Container info + resource limits | 0.4.0 | Done |
-| M4 | Stream / detach / buffer / callbacks | 0.5.0 | In progress |
-| M5 | Sessions (persistent shells) | 0.6.0 | Planned |
-| M6 | Persistence (resume, snapshot) | 0.7.0 | Planned |
+| M4 | Stream / detach / buffer / callbacks | 0.5.0 | Done |
+| M5 | Sessions (persistent shells) | 0.6.0 | Done |
+| M6 | Persistence (resume, snapshot) | 0.7.0 | Done |
 | M7 | Projects (.pocket-dock/ management) | 0.8.0 | Planned |
 | M8 | CLI (15+ commands) | 0.9.0 | Planned |
 | M9 | Image profiles | 1.0.0 | Planned |

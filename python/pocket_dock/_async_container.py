@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import datetime
 import io
 import pathlib
 import secrets
@@ -76,6 +77,7 @@ class AsyncContainer:
         timeout: int = _DEFAULT_TIMEOUT,
         mem_limit_bytes: int = 0,
         nano_cpus: int = 0,
+        persist: bool = False,
     ) -> None:
         self._container_id = container_id
         self._socket_path = socket_path
@@ -84,6 +86,7 @@ class AsyncContainer:
         self._timeout = timeout
         self._mem_limit_bytes = mem_limit_bytes
         self._nano_cpus = nano_cpus
+        self._persist = persist
         self._closed = False
         self._callbacks = CallbackRegistry()
         self._active_streams: list[AsyncExecStream] = []
@@ -104,6 +107,11 @@ class AsyncContainer:
     def name(self) -> str:
         """Human-readable container name (e.g. ``pd-a1b2c3d4``)."""
         return self._name
+
+    @property
+    def persist(self) -> bool:
+        """Whether this container survives shutdown (stop without remove)."""
+        return self._persist
 
     @overload
     async def run(
@@ -253,6 +261,8 @@ class AsyncContainer:
         labels = {
             "pocket-dock.managed": "true",
             "pocket-dock.instance": self._name,
+            "pocket-dock.persist": str(self._persist).lower(),
+            "pocket-dock.created-at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
         }
         host_config = _build_host_config(self._mem_limit_bytes, self._nano_cpus)
         self._container_id = await sc.create_container(
@@ -417,6 +427,24 @@ class AsyncContainer:
         self._active_sessions.append(sess)
         return sess
 
+    async def snapshot(self, image_name: str) -> str:
+        """Commit the container's current filesystem as a new image.
+
+        Args:
+            image_name: Image name, optionally with tag (e.g. ``"my-image:v1"``).
+                If no tag is provided, defaults to ``"latest"``.
+
+        Returns:
+            The new image ID.
+
+        """
+        if ":" in image_name:
+            repo, tag = image_name.rsplit(":", 1)
+        else:
+            repo = image_name
+            tag = "latest"
+        return await sc.commit_container(self._socket_path, self._container_id, repo, tag)
+
     async def shutdown(self, *, force: bool = False) -> None:
         """Stop and remove the container.
 
@@ -443,7 +471,10 @@ class AsyncContainer:
             await p._cancel()  # noqa: SLF001
         self._active_processes.clear()
 
-        if force:
+        if self._persist:
+            with contextlib.suppress(ContainerNotRunning, ContainerNotFound):
+                await sc.stop_container(self._socket_path, self._container_id)
+        elif force:
             await sc.remove_container(self._socket_path, self._container_id, force=True)
         else:
             with contextlib.suppress(ContainerNotRunning, ContainerNotFound):
@@ -463,13 +494,15 @@ class AsyncContainer:
         await self.shutdown()
 
 
-async def create_new_container(
+async def create_new_container(  # noqa: PLR0913
     *,
     image: str = _DEFAULT_IMAGE,
     name: str | None = None,
     timeout: int = _DEFAULT_TIMEOUT,
     mem_limit: str | None = None,
     cpu_percent: int | None = None,
+    persist: bool = False,
+    volumes: dict[str, str] | None = None,
 ) -> AsyncContainer:
     """Create and start a new container, returning an async handle.
 
@@ -479,6 +512,8 @@ async def create_new_container(
         timeout: Default exec timeout in seconds.
         mem_limit: Memory limit (e.g. ``"256m"``, ``"1g"``).
         cpu_percent: CPU usage cap as a percentage (e.g. ``50`` for 50%).
+        persist: If ``True``, shutdown stops but does not remove the container.
+        volumes: Host-to-container mount mappings (e.g. ``{"/host": "/container"}``).
 
     Returns:
         A running :class:`AsyncContainer`.
@@ -497,8 +532,15 @@ async def create_new_container(
     labels = {
         "pocket-dock.managed": "true",
         "pocket-dock.instance": name,
+        "pocket-dock.persist": str(persist).lower(),
+        "pocket-dock.created-at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
     }
     host_config = _build_host_config(mem_limit_bytes, nano_cpus)
+
+    if volumes is not None:
+        if host_config is None:
+            host_config = {}
+        host_config["Binds"] = [f"{h}:{c}" for h, c in volumes.items()]
 
     container_id = await sc.create_container(
         socket_path,
@@ -517,4 +559,5 @@ async def create_new_container(
         timeout=timeout,
         mem_limit_bytes=mem_limit_bytes,
         nano_cpus=nano_cpus,
+        persist=persist,
     )
