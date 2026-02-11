@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pocketdock"
-version = "1.1.0"
+version = "1.1.1"
 description = "Portable, offline-first container sandboxes for LLM agents and dev workflows"
 readme = "README.md"
 license = "BSD-2-Clause"

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-02-11
+
+### Fixed
+
+- Renamed `POCKET_DOCK_SOCKET` env var to `POCKETDOCK_SOCKET`
+- Fixed docs badge URL to use new repo name
+- Added PyPI version badge to README
+
 ## [1.1.0] - 2026-02-11
 
 ### Changed
