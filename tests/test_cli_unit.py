@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from click.testing import CliRunner
 from pocket_dock.cli.main import CliContext, cli
@@ -26,7 +26,7 @@ def test_cli_version() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert "0.9.0" in result.output
+    assert "1.0.0" in result.output
 
 
 def test_cli_socket_option() -> None:
@@ -1279,3 +1279,357 @@ def test_detect_engine_cli_no_socket_fallback_docker(mock_which: MagicMock) -> N
 
     mock_which.return_value = None
     assert _detect_engine_cli(None) == "docker"
+
+
+# --- create command with --profile and --device ---
+
+
+@patch("pocket_dock.create_new_container")
+def test_create_with_profile(mock_create: MagicMock) -> None:
+    container = MagicMock()
+    container.name = "test"
+    container.container_id = "abc123def456"
+    mock_create.return_value = container
+    runner = CliRunner()
+    result = runner.invoke(cli, ["create", "--profile", "dev"])
+    assert result.exit_code == 0
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["profile"] == "dev"
+
+
+@patch("pocket_dock.create_new_container")
+def test_create_with_device(mock_create: MagicMock) -> None:
+    container = MagicMock()
+    container.name = "test"
+    container.container_id = "abc123def456"
+    mock_create.return_value = container
+    runner = CliRunner()
+    result = runner.invoke(cli, ["create", "-d", "/dev/ttyUSB0"])
+    assert result.exit_code == 0
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["devices"] == ["/dev/ttyUSB0"]
+
+
+@patch("pocket_dock.create_new_container")
+def test_create_with_multiple_devices(mock_create: MagicMock) -> None:
+    container = MagicMock()
+    container.name = "test"
+    container.container_id = "abc123def456"
+    mock_create.return_value = container
+    runner = CliRunner()
+    result = runner.invoke(cli, ["create", "-d", "/dev/ttyUSB0", "-d", "/dev/ttyACM0"])
+    assert result.exit_code == 0
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["devices"] == ["/dev/ttyUSB0", "/dev/ttyACM0"]
+
+
+@patch("pocket_dock.create_new_container")
+def test_create_profile_and_image(mock_create: MagicMock) -> None:
+    container = MagicMock()
+    container.name = "test"
+    container.container_id = "abc123"
+    mock_create.return_value = container
+    runner = CliRunner()
+    result = runner.invoke(cli, ["create", "--profile", "agent", "--image", "custom:latest"])
+    assert result.exit_code == 0
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["image"] == "custom:latest"
+    assert call_kwargs["profile"] == "agent"
+
+
+# --- build command ---
+
+
+@patch("pocket_dock._socket_client.build_image", new_callable=AsyncMock)
+@patch("pocket_dock._socket_client.detect_socket")
+def test_build_single_profile(mock_detect: MagicMock, mock_build: AsyncMock) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_build.return_value = '{"stream":"ok"}'
+    runner = CliRunner()
+    result = runner.invoke(cli, ["build", "minimal"])
+    assert result.exit_code == 0
+    assert "Built" in result.output
+
+
+@patch("pocket_dock._socket_client.build_image", new_callable=AsyncMock)
+@patch("pocket_dock._socket_client.detect_socket")
+def test_build_all_profiles(mock_detect: MagicMock, mock_build: AsyncMock) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_build.return_value = '{"stream":"ok"}'
+    runner = CliRunner()
+    result = runner.invoke(cli, ["build", "--all"])
+    assert result.exit_code == 0
+    assert result.output.count("Built") == 4
+
+
+@patch("pocket_dock._socket_client.build_image", new_callable=AsyncMock)
+@patch("pocket_dock._socket_client.detect_socket")
+def test_build_default_builds_all(mock_detect: MagicMock, mock_build: AsyncMock) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_build.return_value = '{"stream":"ok"}'
+    runner = CliRunner()
+    result = runner.invoke(cli, ["build"])
+    assert result.exit_code == 0
+    assert result.output.count("Built") == 4
+
+
+@patch("pocket_dock._socket_client.detect_socket")
+def test_build_no_engine(mock_detect: MagicMock) -> None:
+    mock_detect.return_value = None
+    runner = CliRunner()
+    result = runner.invoke(cli, ["build", "minimal"])
+    assert result.exit_code == 1
+
+
+def test_build_unknown_profile() -> None:
+    runner = CliRunner()
+    with patch("pocket_dock._socket_client.detect_socket", return_value="/tmp/s.sock"):
+        result = runner.invoke(cli, ["build", "nonexistent"])
+    assert result.exit_code == 1
+
+
+@patch("pocket_dock._socket_client.build_image")
+@patch("pocket_dock._socket_client.detect_socket")
+def test_build_error(mock_detect: MagicMock, mock_build: MagicMock) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_build.side_effect = RuntimeError("build boom")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["build", "minimal"])
+    assert result.exit_code == 1
+
+
+@patch("pocket_dock._socket_client.build_image")
+@patch("pocket_dock._socket_client.detect_socket")
+def test_build_pocket_dock_error(mock_detect: MagicMock, mock_build: MagicMock) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_build.side_effect = PodmanNotRunning()
+    runner = CliRunner()
+    result = runner.invoke(cli, ["build", "minimal"])
+    assert result.exit_code == 1
+
+
+# --- export command ---
+
+
+@patch("pocket_dock._socket_client.save_image", new_callable=AsyncMock)
+@patch("pocket_dock._socket_client.detect_socket")
+def test_export_with_image(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Path) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_save.return_value = b"tar-data"
+    out = str(tmp_path / "out.tar")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["export", "--image", "pocket-dock/minimal", "-o", out])
+    assert result.exit_code == 0
+    assert Path(out).read_bytes() == b"tar-data"
+
+
+@patch("pocket_dock._socket_client.save_image", new_callable=AsyncMock)
+@patch("pocket_dock._socket_client.detect_socket")
+def test_export_with_profile(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Path) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_save.return_value = b"tar-data"
+    out = str(tmp_path / "out.tar")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["export", "--profile", "dev", "-o", out])
+    assert result.exit_code == 0
+
+
+@patch("pocket_dock._socket_client.save_image", new_callable=AsyncMock)
+@patch("pocket_dock._socket_client.detect_socket")
+def test_export_all(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Path) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_save.return_value = b"tar-data"
+    out = str(tmp_path / "out.tar")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["export", "--all", "-o", out])
+    assert result.exit_code == 0
+
+
+@patch("pocket_dock._socket_client.save_image", new_callable=AsyncMock)
+@patch("pocket_dock._socket_client.detect_socket")
+def test_export_gzip(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Path) -> None:
+    import gzip
+
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_save.return_value = b"tar-data"
+    out = str(tmp_path / "out.tar.gz")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["export", "--image", "test", "-o", out])
+    assert result.exit_code == 0
+    # Verify it's gzip-compressed
+    decompressed = gzip.decompress(Path(out).read_bytes())
+    assert decompressed == b"tar-data"
+
+
+@patch("pocket_dock._socket_client.detect_socket")
+def test_export_no_engine(mock_detect: MagicMock, tmp_path: Path) -> None:
+    mock_detect.return_value = None
+    out = str(tmp_path / "out.tar")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["export", "--image", "test", "-o", out])
+    assert result.exit_code == 1
+
+
+def test_export_no_image_or_profile(tmp_path: Path) -> None:
+    out = str(tmp_path / "out.tar")
+    runner = CliRunner()
+    with patch("pocket_dock._socket_client.detect_socket", return_value="/tmp/s.sock"):
+        result = runner.invoke(cli, ["export", "-o", out])
+    assert result.exit_code != 0
+
+
+@patch("pocket_dock._socket_client.save_image")
+@patch("pocket_dock._socket_client.detect_socket")
+def test_export_error(mock_detect: MagicMock, mock_save: MagicMock, tmp_path: Path) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_save.side_effect = RuntimeError("save boom")
+    out = str(tmp_path / "out.tar")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["export", "--image", "test", "-o", out])
+    assert result.exit_code == 1
+
+
+@patch("pocket_dock._socket_client.save_image")
+@patch("pocket_dock._socket_client.detect_socket")
+def test_export_pocket_dock_error(
+    mock_detect: MagicMock, mock_save: MagicMock, tmp_path: Path
+) -> None:
+    from pocket_dock.errors import ImageNotFound
+
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_save.side_effect = ImageNotFound("nope")
+    out = str(tmp_path / "out.tar")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["export", "--image", "nope", "-o", out])
+    assert result.exit_code == 1
+
+
+# --- import command ---
+
+
+@patch("pocket_dock._socket_client.load_image", new_callable=AsyncMock)
+@patch("pocket_dock._socket_client.detect_socket")
+def test_import_success(mock_detect: MagicMock, mock_load: AsyncMock, tmp_path: Path) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_load.return_value = "ok"
+    tar_file = tmp_path / "images.tar"
+    tar_file.write_bytes(b"tar-data")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["import", str(tar_file)])
+    assert result.exit_code == 0
+    assert "Imported" in result.output
+
+
+@patch("pocket_dock._socket_client.load_image", new_callable=AsyncMock)
+@patch("pocket_dock._socket_client.detect_socket")
+def test_import_gzip(mock_detect: MagicMock, mock_load: AsyncMock, tmp_path: Path) -> None:
+    import gzip
+
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_load.return_value = "ok"
+    gz_file = tmp_path / "images.tar.gz"
+    gz_file.write_bytes(gzip.compress(b"tar-data"))
+    runner = CliRunner()
+    result = runner.invoke(cli, ["import", str(gz_file)])
+    assert result.exit_code == 0
+    # Verify the decompressed data was passed
+    call_args = mock_load.call_args[0]
+    assert call_args[1] == b"tar-data"
+
+
+@patch("pocket_dock._socket_client.detect_socket")
+def test_import_no_engine(mock_detect: MagicMock, tmp_path: Path) -> None:
+    mock_detect.return_value = None
+    tar_file = tmp_path / "images.tar"
+    tar_file.write_bytes(b"data")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["import", str(tar_file)])
+    assert result.exit_code == 1
+
+
+@patch("pocket_dock._socket_client.load_image")
+@patch("pocket_dock._socket_client.detect_socket")
+def test_import_error(mock_detect: MagicMock, mock_load: MagicMock, tmp_path: Path) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_load.side_effect = RuntimeError("load boom")
+    tar_file = tmp_path / "images.tar"
+    tar_file.write_bytes(b"data")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["import", str(tar_file)])
+    assert result.exit_code == 1
+
+
+@patch("pocket_dock._socket_client.load_image")
+@patch("pocket_dock._socket_client.detect_socket")
+def test_import_pocket_dock_error(
+    mock_detect: MagicMock, mock_load: MagicMock, tmp_path: Path
+) -> None:
+    mock_detect.return_value = "/tmp/s.sock"
+    mock_load.side_effect = PodmanNotRunning()
+    tar_file = tmp_path / "images.tar"
+    tar_file.write_bytes(b"data")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["import", str(tar_file)])
+    assert result.exit_code == 1
+
+
+def test_import_nonexistent_file() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["import", "/nonexistent/file.tar"])
+    assert result.exit_code != 0
+
+
+# --- profiles command ---
+
+
+def test_profiles_list() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profiles"])
+    assert result.exit_code == 0
+    assert "minimal" in result.output
+    assert "dev" in result.output
+    assert "agent" in result.output
+    assert "embedded" in result.output
+
+
+def test_profiles_json() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profiles", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert len(data) == 4
+    names = {p["name"] for p in data}
+    assert names == {"minimal", "dev", "agent", "embedded"}
+
+
+def test_profiles_help() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["profiles", "--help"])
+    assert result.exit_code == 0
+
+
+# --- build help ---
+
+
+def test_build_help() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["build", "--help"])
+    assert result.exit_code == 0
+
+
+# --- export help ---
+
+
+def test_export_help() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["export", "--help"])
+    assert result.exit_code == 0
+
+
+# --- import help ---
+
+
+def test_import_help() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["import", "--help"])
+    assert result.exit_code == 0

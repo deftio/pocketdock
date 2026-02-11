@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-02-10
+
+### Added
+
+- Four image profiles: `minimal`, `dev`, `agent`, `embedded` — pre-baked Dockerfiles for common use cases
+- `profiles.py` module — `ProfileInfo` dataclass, `resolve_profile()`, `list_profiles()`, `get_dockerfile_path()`
+- `profile` parameter on `create_new_container()` — resolves profile name to image tag automatically
+- `devices` parameter on `create_new_container()` — USB/device passthrough to containers
+- `build_image()`, `save_image()`, `load_image()` socket client methods for image management via engine API
+- CLI `build` command — build profile images from Dockerfiles via socket API
+- CLI `export` command — save images to tar/tar.gz files for air-gap transfer
+- CLI `import` command — load images from tar/tar.gz files
+- CLI `profiles` command — list available profiles (table or `--json`)
+- `--profile` and `--device` options on CLI `create` command
+- Exported `ProfileInfo`, `resolve_profile`, `list_profiles` from `pocket_dock` and `pocket_dock.async_`
+
+### Changed
+
+- Version bump to 1.0.0 — stable API
+
 ## [0.9.0] - 2026-02-10
 
 ### Added

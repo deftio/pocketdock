@@ -40,12 +40,16 @@ def cli(ctx: click.Context, socket: str | None, *, verbose: bool) -> None:
 # --- Register commands ---
 
 from pocket_dock.cli._commands import (  # noqa: E402
+    build_cmd,
     create_cmd,
     doctor_cmd,
+    export_cmd,
+    import_cmd,
     info_cmd,
     init_cmd,
     list_cmd,
     logs_cmd,
+    profiles_cmd,
     prune_cmd,
     pull_cmd,
     push_cmd,
@@ -76,3 +80,7 @@ cli.add_command(shutdown_cmd)
 cli.add_command(snapshot_cmd)
 cli.add_command(prune_cmd)
 cli.add_command(shell_cmd)
+cli.add_command(build_cmd)
+cli.add_command(export_cmd)
+cli.add_command(import_cmd, name="import")
+cli.add_command(profiles_cmd)

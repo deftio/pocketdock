@@ -25,6 +25,7 @@ from pocket_dock.persistence import (
     resume_container,
     stop_container,
 )
+from pocket_dock.profiles import ProfileInfo, list_profiles, resolve_profile
 from pocket_dock.projects import doctor, find_project_root, init_project
 
 __all__ = [
@@ -32,13 +33,16 @@ __all__ = [
     "AsyncExecStream",
     "AsyncProcess",
     "AsyncSession",
+    "ProfileInfo",
     "create_new_container",
     "destroy_container",
     "doctor",
     "find_project_root",
     "init_project",
     "list_containers",
+    "list_profiles",
     "prune",
+    "resolve_profile",
     "resume_container",
     "stop_container",
 ]

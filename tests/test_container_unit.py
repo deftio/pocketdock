@@ -1877,3 +1877,192 @@ async def test_create_new_container_with_explicit_project(tmp_path: Path) -> Non
 
     labels = create_mock.call_args[1]["labels"]
     assert labels["pocket-dock.project"] == "explicit-proj"
+
+
+# --- create_new_container with profile ---
+
+
+async def test_async_create_with_profile_resolves_image() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        c = await async_factory(name="pd-prof", profile="dev")
+
+    assert c.container_id == "deadbeef"
+    # Image should be resolved from profile
+    args = create.call_args
+    assert args[0][1] == "pocket-dock/dev"
+
+
+async def test_async_create_profile_ignored_when_image_explicit() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        c = await async_factory(name="pd-imgover", image="custom:latest", profile="agent")
+
+    assert c.container_id == "deadbeef"
+    # Explicit image wins over profile
+    args = create.call_args
+    assert args[0][1] == "custom:latest"
+
+
+async def test_async_create_profile_none_uses_default() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(name="pd-nopr")
+
+    args = create.call_args
+    assert args[0][1] == "pocket-dock/minimal"
+
+
+async def test_async_create_profile_unknown_raises() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        pytest.raises(ValueError, match="Unknown profile"),
+    ):
+        await async_factory(name="pd-bad", profile="nonexistent")
+
+
+async def test_async_create_with_all_profiles() -> None:
+    for profile_name, expected_tag in [
+        ("minimal", "pocket-dock/minimal"),
+        ("dev", "pocket-dock/dev"),
+        ("agent", "pocket-dock/agent"),
+        ("embedded", "pocket-dock/embedded"),
+    ]:
+        with (
+            patch(
+                "pocket_dock._async_container.sc.detect_socket",
+                return_value="/tmp/s.sock",
+            ),
+            patch(
+                "pocket_dock._async_container.sc.create_container",
+                new_callable=AsyncMock,
+                return_value="deadbeef",
+            ) as create,
+            patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        ):
+            await async_factory(name="pd-test", profile=profile_name)
+
+        args = create.call_args
+        assert args[0][1] == expected_tag, f"Failed for profile {profile_name}"
+
+
+# --- create_new_container with devices ---
+
+
+async def test_async_create_with_devices() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(name="pd-dev", devices=["/dev/ttyUSB0"])
+
+    hc = create.call_args[1]["host_config"]
+    assert hc is not None
+    assert len(hc["Devices"]) == 1
+    dev = hc["Devices"][0]
+    assert dev["PathOnHost"] == "/dev/ttyUSB0"
+    assert dev["PathInContainer"] == "/dev/ttyUSB0"
+    assert dev["CgroupPermissions"] == "rwm"
+
+
+async def test_async_create_with_multiple_devices() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(name="pd-devs", devices=["/dev/ttyUSB0", "/dev/ttyACM0"])
+
+    hc = create.call_args[1]["host_config"]
+    assert len(hc["Devices"]) == 2
+
+
+async def test_async_create_with_devices_and_limits() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(
+            name="pd-dl",
+            mem_limit="128m",
+            devices=["/dev/ttyUSB0"],
+        )
+
+    hc = create.call_args[1]["host_config"]
+    assert hc["Memory"] == 128 * 1024**2
+    assert len(hc["Devices"]) == 1
+
+
+async def test_async_create_devices_none_no_host_config_entry() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(name="pd-nodev")
+
+    hc = create.call_args[1]["host_config"]
+    assert hc is None

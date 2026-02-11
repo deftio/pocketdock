@@ -793,3 +793,94 @@ async def commit_container(
     _check_container_response(status, body, container_id)
     data = json.loads(body)
     return str(data["Id"])
+
+
+# ---------------------------------------------------------------------------
+# Image build / save / load
+# ---------------------------------------------------------------------------
+
+
+async def build_image(
+    socket_path: str,
+    context_tar: bytes,
+    tag: str,
+) -> str:
+    """Build an image from a tar context containing a Dockerfile.
+
+    Uses ``POST /build?t={tag}``.
+
+    Args:
+        socket_path: Path to the container engine Unix socket.
+        context_tar: Tar archive containing the Dockerfile and build context.
+        tag: Image tag (e.g. ``"pocket-dock/dev"``).
+
+    Returns:
+        Build output as a string (streaming JSON lines from the engine).
+
+    """
+    encoded_tag = urllib.parse.quote(tag, safe="")
+    status, body = await _request_raw(
+        socket_path,
+        "POST",
+        f"/build?t={encoded_tag}",
+        context_tar,
+    )
+    if status >= 400:  # noqa: PLR2004
+        msg = f"build failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
+        raise SocketCommunicationError(msg)
+    return body.decode("utf-8", errors="replace")
+
+
+async def save_image(socket_path: str, image_name: str) -> bytes:
+    """Export an image as a tar archive.
+
+    Uses ``GET /images/{name}/get``.
+
+    Args:
+        socket_path: Path to the container engine Unix socket.
+        image_name: Image name with optional tag (e.g. ``"pocket-dock/dev:latest"``).
+
+    Returns:
+        Raw tar archive bytes.
+
+    Raises:
+        ImageNotFound: If the image does not exist locally.
+
+    """
+    encoded = urllib.parse.quote(image_name, safe="")
+    status, body = await _request_raw(
+        socket_path,
+        "GET",
+        f"/images/{encoded}/get",
+    )
+    if status == 404:  # noqa: PLR2004
+        raise ImageNotFound(image_name)
+    if status >= 400:  # noqa: PLR2004
+        msg = f"save failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
+        raise SocketCommunicationError(msg)
+    return body
+
+
+async def load_image(socket_path: str, tar_data: bytes) -> str:
+    """Load an image from a tar archive.
+
+    Uses ``POST /images/load``.
+
+    Args:
+        socket_path: Path to the container engine Unix socket.
+        tar_data: Raw tar archive bytes (as produced by :func:`save_image`).
+
+    Returns:
+        Load output from the engine.
+
+    """
+    status, body = await _request_raw(
+        socket_path,
+        "POST",
+        "/images/load",
+        tar_data,
+    )
+    if status >= 400:  # noqa: PLR2004
+        msg = f"load failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
+        raise SocketCommunicationError(msg)
+    return body.decode("utf-8", errors="replace")

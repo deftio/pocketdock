@@ -30,7 +30,7 @@ pip install pocket-dock
 # Docker: https://docs.docker.com/get-docker/
 
 # Build the minimal image (~25MB, <500ms startup)
-podman build -t pocket-dock/minimal images/minimal/
+pocket-dock build minimal
 ```
 
 ```python
@@ -191,6 +191,12 @@ pocket-dock resume my-sandbox               # resume stopped container
 pocket-dock snapshot my-sandbox my-image:v1 # commit as image
 pocket-dock shutdown my-sandbox --yes       # stop + remove
 pocket-dock prune --yes                     # remove all stopped containers
+
+# Image profiles
+pocket-dock profiles                        # list available profiles
+pocket-dock build                           # build all profile images
+pocket-dock export --all -o images.tar.gz   # save images for transfer
+pocket-dock import images.tar.gz            # load images from file
 ```
 
 ## Image profiles
@@ -205,10 +211,30 @@ Four pre-baked Dockerfiles ship in `images/` for common use cases:
 | **embedded** | ~450 MB | Alpine 3.21 | GCC, CMake, ARM cross-compiler, Arduino CLI, PlatformIO | Enabled |
 
 ```bash
-# Build all profiles
-for p in minimal dev agent embedded; do
-    podman build -t pocket-dock/$p images/$p/
-done
+# Build all profiles via CLI
+pocket-dock build
+
+# Build a single profile
+pocket-dock build dev
+
+# Export images for air-gap transfer
+pocket-dock export --all -o images.tar.gz
+
+# Import on another machine
+pocket-dock import images.tar.gz
+```
+
+```python
+# Create a container with a profile
+from pocket_dock import create_new_container
+
+with create_new_container(profile="dev") as c:
+    result = c.run("python --version")
+    print(result.stdout)
+
+# Device passthrough
+with create_new_container(profile="embedded", devices=["/dev/ttyUSB0"]) as c:
+    result = c.run("ls /dev/ttyUSB0")
 ```
 
 ## Architecture
@@ -251,7 +277,7 @@ User Code / LLM Agent / CLI
 | M6 | Persistence (resume, snapshot) | 0.7.0 | Done |
 | M7 | Projects (.pocket-dock/ management) | 0.8.0 | Done |
 | M8 | CLI (17 commands) | 0.9.0 | Done |
-| M9 | Image profiles | 1.0.0 | Planned |
+| M9 | Image profiles | 1.0.0 | Done |
 | M10 | ContainerPool (pre-warming) | 1.1.0 | Planned |
 
 See `plan/pocket-dock-plan.md` for the full 2500-line architecture spec.
