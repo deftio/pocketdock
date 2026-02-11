@@ -23,17 +23,33 @@ theme:
     - content.code.copy
     - navigation.sections
     - navigation.expand
+    - navigation.tabs
+    - navigation.top
+    - content.tabs.link
 
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
+  - User Guide:
+      - Creating Containers: guide/containers.md
+      - Running Commands: guide/commands.md
+      - File Operations: guide/files.md
+      - Sessions: guide/sessions.md
+      - Persistence: guide/persistence.md
+      - Projects: guide/projects.md
+      - Image Profiles: guide/profiles.md
+      - Async API: guide/async.md
+  - CLI Reference: cli.md
   - Concepts:
       - Architecture: concepts/architecture.md
       - Connection Model: concepts/connection-model.md
   - Reference:
       - API: reference/api.md
+      - Types: reference/types.md
       - Errors: reference/errors.md
+      - Configuration: reference/configuration.md
   - Contributing: contributing.md
+  - Changelog: changelog.md
 
 markdown_extensions:
   - admonition
@@ -42,5 +58,8 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
+  - pymdownx.details
+  - attr_list
+  - def_list
   - toc:
       permalink: true
