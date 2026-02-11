@@ -410,6 +410,8 @@ def create_new_container(  # noqa: PLR0913
     persist: bool = False,
     volumes: dict[str, str] | None = None,
     project: str | None = None,
+    profile: str | None = None,
+    devices: list[str] | None = None,
 ) -> Container:
     """Create and start a new container, returning a sync handle.
 
@@ -426,6 +428,8 @@ def create_new_container(  # noqa: PLR0913
             persist=persist,
             volumes=volumes,
             project=project,
+            profile=profile,
+            devices=devices,
         )
     )
     return Container(ac, lt)  # type: ignore[arg-type]

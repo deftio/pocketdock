@@ -47,6 +47,7 @@ from pocket_dock.persistence import (
 from pocket_dock.persistence import (
     stop_container as _async_stop_container,
 )
+from pocket_dock.profiles import ProfileInfo, list_profiles, resolve_profile
 from pocket_dock.projects import (
     doctor as _async_doctor,
 )
@@ -158,6 +159,7 @@ __all__ = [
     "PocketDockError",
     "PodmanNotRunning",
     "Process",
+    "ProfileInfo",
     "ProjectNotInitialized",
     "Session",
     "SessionClosed",
@@ -173,7 +175,9 @@ __all__ = [
     "get_version",
     "init_project",
     "list_containers",
+    "list_profiles",
     "prune",
+    "resolve_profile",
     "resume_container",
     "stop_container",
 ]

@@ -13,13 +13,13 @@ def test_version_attribute() -> None:
     import pocket_dock
 
     assert isinstance(pocket_dock.__version__, str)
-    assert pocket_dock.__version__ == "0.9.0"
+    assert pocket_dock.__version__ == "1.0.0"
 
 
 def test_get_version_function() -> None:
     from pocket_dock import get_version
 
-    assert get_version() == "0.9.0"
+    assert get_version() == "1.0.0"
 
 
 def test_import_resume_container() -> None:
@@ -130,3 +130,33 @@ def test_import_cli_main() -> None:
     from pocket_dock.cli.main import cli
 
     assert callable(cli)
+
+
+def test_import_profile_info() -> None:
+    from pocket_dock import ProfileInfo
+
+    assert ProfileInfo is not None
+
+
+def test_import_resolve_profile() -> None:
+    from pocket_dock import resolve_profile
+
+    assert callable(resolve_profile)
+
+
+def test_import_list_profiles() -> None:
+    from pocket_dock import list_profiles
+
+    assert callable(list_profiles)
+
+
+def test_import_async_resolve_profile() -> None:
+    from pocket_dock.async_ import resolve_profile
+
+    assert callable(resolve_profile)
+
+
+def test_import_async_list_profiles() -> None:
+    from pocket_dock.async_ import list_profiles
+
+    assert callable(list_profiles)

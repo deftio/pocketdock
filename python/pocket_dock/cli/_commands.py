@@ -290,6 +290,8 @@ def _build_create_kwargs(  # noqa: PLR0913
     persist: bool,
     volume: tuple[str, ...],
     project: str | None,
+    profile: str | None = None,
+    device: tuple[str, ...] = (),
 ) -> dict[str, object]:
     """Build kwargs dict for create_new_container from CLI options."""
     kwargs: dict[str, object] = {"timeout": timeout, "persist": persist}
@@ -303,6 +305,10 @@ def _build_create_kwargs(  # noqa: PLR0913
         kwargs["cpu_percent"] = cpu_percent
     if project:
         kwargs["project"] = project
+    if profile:
+        kwargs["profile"] = profile
+    if device:
+        kwargs["devices"] = list(device)
     if volume:
         volumes = dict(
             pair
@@ -323,6 +329,14 @@ def _build_create_kwargs(  # noqa: PLR0913
 @click.option("--persist", is_flag=True, help="Keep container on shutdown (stop, don't remove).")
 @click.option("--volume", "-v", multiple=True, help="Volume mount HOST:CONTAINER.")
 @click.option("--project", default=None, help="Project name.")
+@click.option(
+    "--profile",
+    default=None,
+    help="Image profile (minimal, dev, agent, embedded).",
+)
+@click.option(
+    "--device", "-d", multiple=True, help="Host device to passthrough (e.g. /dev/ttyUSB0)."
+)
 @click.pass_context
 def create_cmd(  # noqa: PLR0913
     ctx: click.Context,
@@ -335,6 +349,8 @@ def create_cmd(  # noqa: PLR0913
     persist: bool,
     volume: tuple[str, ...],
     project: str | None,
+    profile: str | None,
+    device: tuple[str, ...],
 ) -> None:
     """Create and start a new container."""
     import os  # noqa: PLC0415
@@ -351,6 +367,8 @@ def create_cmd(  # noqa: PLR0913
         persist=persist,
         volume=volume,
         project=project,
+        profile=profile,
+        device=device,
     )
 
     old_env = os.environ.get("POCKET_DOCK_SOCKET")
@@ -650,3 +668,216 @@ def shell_cmd(ctx: click.Context, container: str) -> None:
             check=False,
         )
     raise SystemExit(ret.returncode)
+
+
+# ---------------------------------------------------------------------------
+# Image management commands
+# ---------------------------------------------------------------------------
+
+
+def _build_tar_context(dockerfile_dir: Path) -> bytes:
+    """Create a tar archive from a Dockerfile directory for the build API."""
+    import io  # noqa: PLC0415
+    import tarfile  # noqa: PLC0415
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        for item in dockerfile_dir.iterdir():
+            tar.add(str(item), arcname=item.name)
+    return buf.getvalue()
+
+
+@click.command("build")
+@click.argument("profiles", nargs=-1)
+@click.option("--all", "build_all", is_flag=True, help="Build all profiles.")
+@click.pass_context
+def build_cmd(ctx: click.Context, profiles: tuple[str, ...], *, build_all: bool) -> None:
+    """Build image profiles from Dockerfiles."""
+    import asyncio  # noqa: PLC0415
+
+    from pocket_dock import _socket_client as sc  # noqa: PLC0415
+    from pocket_dock.profiles import (  # noqa: PLC0415
+        get_dockerfile_path,
+        list_profiles,
+        resolve_profile,
+    )
+
+    cli_ctx = _get_ctx(ctx)
+
+    names = [p.name for p in list_profiles()] if build_all or not profiles else list(profiles)
+
+    socket_path = cli_ctx.socket or sc.detect_socket()
+    if socket_path is None:
+        from pocket_dock.errors import PodmanNotRunning  # noqa: PLC0415
+
+        err = PodmanNotRunning()
+        format_error(err)
+        raise SystemExit(1) from err
+
+    for name in names:
+        try:
+            info = resolve_profile(name)
+        except ValueError as exc:
+            click.echo(str(exc), err=True)
+            raise SystemExit(1) from exc
+
+        dockerfile_dir = get_dockerfile_path(name)
+        context = _build_tar_context(dockerfile_dir)
+        click.echo(f"Building {info.image_tag} ...")
+        try:
+            asyncio.run(sc.build_image(socket_path, context, info.image_tag))
+        except Exception as exc:
+            from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+
+            if isinstance(exc, PocketDockError):
+                format_error(exc)
+            else:
+                click.echo(f"Build failed: {exc}", err=True)
+            raise SystemExit(1) from exc
+        print_success(f"Built {info.image_tag}")
+
+
+@click.command("export")
+@click.option("--image", default=None, help="Image name to export.")
+@click.option(
+    "--profile",
+    default=None,
+    help="Profile name to export (resolves to image tag).",
+)
+@click.option("--all", "export_all", is_flag=True, help="Export all profile images.")
+@click.option("-o", "--output", required=True, type=click.Path(), help="Output tar file path.")
+@click.pass_context
+def export_cmd(
+    ctx: click.Context,
+    *,
+    image: str | None,
+    profile: str | None,
+    export_all: bool,
+    output: str,
+) -> None:
+    """Export images to a tar file for air-gap transfer."""
+    import asyncio  # noqa: PLC0415
+    import gzip  # noqa: PLC0415
+
+    from pocket_dock import _socket_client as sc  # noqa: PLC0415
+
+    cli_ctx = _get_ctx(ctx)
+    socket_path = cli_ctx.socket or sc.detect_socket()
+    if socket_path is None:
+        from pocket_dock.errors import PodmanNotRunning  # noqa: PLC0415
+
+        err = PodmanNotRunning()
+        format_error(err)
+        raise SystemExit(1) from err
+
+    image_names = _resolve_export_images(image=image, profile=profile, export_all=export_all)
+
+    out_path = Path(output)
+    for img_name in image_names:
+        click.echo(f"Exporting {img_name} ...")
+        try:
+            tar_data = asyncio.run(sc.save_image(socket_path, img_name))
+        except Exception as exc:
+            from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+
+            if isinstance(exc, PocketDockError):
+                format_error(exc)
+            else:
+                click.echo(f"Export failed: {exc}", err=True)
+            raise SystemExit(1) from exc
+
+        if str(out_path).endswith(".gz"):
+            out_path.write_bytes(gzip.compress(tar_data))
+        else:
+            out_path.write_bytes(tar_data)
+
+    print_success(f"Exported to {output}")
+
+
+def _resolve_export_images(
+    *,
+    image: str | None,
+    profile: str | None,
+    export_all: bool,
+) -> list[str]:
+    """Determine image names for export."""
+    from pocket_dock.profiles import list_profiles, resolve_profile  # noqa: PLC0415
+
+    if export_all:
+        return [p.image_tag for p in list_profiles()]
+    if profile:
+        return [resolve_profile(profile).image_tag]
+    if image:
+        return [image]
+    msg = "Specify --image, --profile, or --all"
+    raise click.UsageError(msg)
+
+
+@click.command("import")
+@click.argument("file", type=click.Path(exists=True))
+@click.pass_context
+def import_cmd(ctx: click.Context, file: str) -> None:
+    """Import images from a tar file."""
+    import asyncio  # noqa: PLC0415
+    import gzip  # noqa: PLC0415
+
+    from pocket_dock import _socket_client as sc  # noqa: PLC0415
+
+    cli_ctx = _get_ctx(ctx)
+    socket_path = cli_ctx.socket or sc.detect_socket()
+    if socket_path is None:
+        from pocket_dock.errors import PodmanNotRunning  # noqa: PLC0415
+
+        err = PodmanNotRunning()
+        format_error(err)
+        raise SystemExit(1) from err
+
+    file_path = Path(file)
+    raw = file_path.read_bytes()
+    if file.endswith(".gz"):
+        raw = gzip.decompress(raw)
+
+    click.echo(f"Importing from {file} ...")
+    try:
+        asyncio.run(sc.load_image(socket_path, raw))
+    except Exception as exc:
+        from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+
+        if isinstance(exc, PocketDockError):
+            format_error(exc)
+        else:
+            click.echo(f"Import failed: {exc}", err=True)
+        raise SystemExit(1) from exc
+    print_success(f"Imported from {file}")
+
+
+@click.command("profiles")
+@click.option("--json", "json_output", is_flag=True, help="Output as JSON.")
+def profiles_cmd(*, json_output: bool) -> None:
+    """List available image profiles."""
+    from pocket_dock.profiles import list_profiles  # noqa: PLC0415
+
+    all_profiles = list_profiles()
+    if json_output:
+        import dataclasses  # noqa: PLC0415
+
+        from pocket_dock.cli._output import click_echo_json  # noqa: PLC0415
+
+        click_echo_json([dataclasses.asdict(p) for p in all_profiles])
+        return
+
+    from rich.console import Console  # noqa: PLC0415
+    from rich.table import Table  # noqa: PLC0415
+
+    table = Table(title="Image Profiles")
+    table.add_column("Name", style="cyan")
+    table.add_column("Image Tag")
+    table.add_column("Network")
+    table.add_column("Size")
+    table.add_column("Description")
+
+    for p in all_profiles:
+        net = "[green]enabled[/green]" if p.network_default else "[yellow]disabled[/yellow]"
+        table.add_row(p.name, p.image_tag, net, p.size_estimate, p.description)
+
+    Console().print(table)

@@ -78,6 +78,26 @@ def _build_host_config(mem_limit_bytes: int, nano_cpus: int) -> dict[str, Any] |
     return hc or None
 
 
+def _augment_host_config(
+    host_config: dict[str, Any] | None,
+    *,
+    devices: list[str] | None = None,
+    volumes: dict[str, str] | None = None,
+) -> dict[str, Any] | None:
+    """Add devices and volumes to an existing host config (or create one)."""
+    if devices is not None:
+        if host_config is None:
+            host_config = {}
+        host_config["Devices"] = [
+            {"PathOnHost": d, "PathInContainer": d, "CgroupPermissions": "rwm"} for d in devices
+        ]
+    if volumes is not None:
+        if host_config is None:
+            host_config = {}
+        host_config["Binds"] = [f"{h}:{c}" for h, c in volumes.items()]
+    return host_config
+
+
 class AsyncContainer:
     """Async handle to a running container.
 
@@ -548,6 +568,8 @@ async def create_new_container(  # noqa: PLR0913
     persist: bool = False,
     volumes: dict[str, str] | None = None,
     project: str | None = None,
+    profile: str | None = None,
+    devices: list[str] | None = None,
 ) -> AsyncContainer:
     """Create and start a new container, returning an async handle.
 
@@ -560,6 +582,10 @@ async def create_new_container(  # noqa: PLR0913
         persist: If ``True``, shutdown stops but does not remove the container.
         volumes: Host-to-container mount mappings (e.g. ``{"/host": "/container"}``).
         project: Project name. Auto-detected from ``.pocket-dock/`` if ``None``.
+        profile: Image profile name (e.g. ``"dev"``, ``"agent"``). Resolved to
+            an image tag via :func:`pocket_dock.profiles.resolve_profile`. Ignored
+            when *image* is explicitly set to a non-default value.
+        devices: Host device paths to passthrough (e.g. ``["/dev/ttyUSB0"]``).
 
     Returns:
         A running :class:`AsyncContainer`.
@@ -574,6 +600,13 @@ async def create_new_container(  # noqa: PLR0913
 
     if name is None:
         name = _generate_name()
+
+    # Resolve profile → image tag when image was not explicitly overridden
+    if profile is not None and image == _DEFAULT_IMAGE:
+        from pocket_dock.profiles import resolve_profile  # noqa: PLC0415
+
+        profile_info = resolve_profile(profile)
+        image = profile_info.image_tag
 
     socket_path = sc.detect_socket()
     if socket_path is None:
@@ -606,11 +639,7 @@ async def create_new_container(  # noqa: PLR0913
 
     labels = _build_labels(name, persist=persist, project=resolved_project, data_path=data_path)
     host_config = _build_host_config(mem_limit_bytes, nano_cpus)
-
-    if volumes is not None:
-        if host_config is None:
-            host_config = {}
-        host_config["Binds"] = [f"{h}:{c}" for h, c in volumes.items()]
+    host_config = _augment_host_config(host_config, devices=devices, volumes=volumes)
 
     container_id = await sc.create_container(
         socket_path,

@@ -32,17 +32,20 @@ from pocket_dock._socket_client import (
     _request_raw,
     _request_stream,
     _send_request,
+    build_image,
     commit_container,
     create_container,
     detect_socket,
     get_container_stats,
     get_container_top,
     list_containers,
+    load_image,
     ping,
     pull_archive,
     push_archive,
     remove_container,
     restart_container,
+    save_image,
     start_container,
     stop_container,
 )
@@ -1093,3 +1096,91 @@ async def test_commit_container_not_running() -> None:
         pytest.raises(ContainerNotRunning),
     ):
         await commit_container("/tmp/s.sock", "cid", "repo", "tag")
+
+
+# --- build_image ---
+
+
+async def test_build_image_success() -> None:
+    with patch(
+        "pocket_dock._socket_client._request_raw",
+        new_callable=AsyncMock,
+        return_value=(200, b'{"stream":"Step 1/1 : FROM alpine"}'),
+    ):
+        result = await build_image("/tmp/s.sock", b"tar-data", "pocket-dock/test")
+    assert "Step 1/1" in result
+
+
+async def test_build_image_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request_raw",
+            new_callable=AsyncMock,
+            return_value=(500, b"build error"),
+        ),
+        pytest.raises(SocketCommunicationError, match="build failed"),
+    ):
+        await build_image("/tmp/s.sock", b"tar", "bad:tag")
+
+
+# --- save_image ---
+
+
+async def test_save_image_success() -> None:
+    fake_tar = b"fake-tar-bytes"
+    with patch(
+        "pocket_dock._socket_client._request_raw",
+        new_callable=AsyncMock,
+        return_value=(200, fake_tar),
+    ):
+        result = await save_image("/tmp/s.sock", "pocket-dock/minimal")
+    assert result == fake_tar
+
+
+async def test_save_image_not_found() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request_raw",
+            new_callable=AsyncMock,
+            return_value=(404, b"not found"),
+        ),
+        pytest.raises(ImageNotFound),
+    ):
+        await save_image("/tmp/s.sock", "nonexistent:latest")
+
+
+async def test_save_image_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request_raw",
+            new_callable=AsyncMock,
+            return_value=(500, b"server error"),
+        ),
+        pytest.raises(SocketCommunicationError, match="save failed"),
+    ):
+        await save_image("/tmp/s.sock", "bad:image")
+
+
+# --- load_image ---
+
+
+async def test_load_image_success() -> None:
+    with patch(
+        "pocket_dock._socket_client._request_raw",
+        new_callable=AsyncMock,
+        return_value=(200, b'{"stream":"Loaded image"}'),
+    ):
+        result = await load_image("/tmp/s.sock", b"tar-data")
+    assert "Loaded image" in result
+
+
+async def test_load_image_error() -> None:
+    with (
+        patch(
+            "pocket_dock._socket_client._request_raw",
+            new_callable=AsyncMock,
+            return_value=(500, b"load error"),
+        ),
+        pytest.raises(SocketCommunicationError, match="load failed"),
+    ):
+        await load_image("/tmp/s.sock", b"bad-tar")
