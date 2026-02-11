@@ -127,8 +127,7 @@ def write_instance_metadata(  # noqa: PLR0913
         container_pairs.append(("created_at", created_at))
     container_pairs.append(("persist", persist))
 
-    if container_pairs:
-        _emit_section(lines, "container", container_pairs)
+    _emit_section(lines, "container", container_pairs)
 
     # --- resources section ---
     resource_pairs: list[tuple[str, object]] = []
