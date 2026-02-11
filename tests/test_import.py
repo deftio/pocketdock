@@ -13,13 +13,13 @@ def test_version_attribute() -> None:
     import pocket_dock
 
     assert isinstance(pocket_dock.__version__, str)
-    assert pocket_dock.__version__ == "0.8.0"
+    assert pocket_dock.__version__ == "0.9.0"
 
 
 def test_get_version_function() -> None:
     from pocket_dock import get_version
 
-    assert get_version() == "0.8.0"
+    assert get_version() == "0.9.0"
 
 
 def test_import_resume_container() -> None:
@@ -112,3 +112,21 @@ def test_import_async_init_project() -> None:
     from pocket_dock.async_ import init_project
 
     assert callable(init_project)
+
+
+def test_import_stop_container() -> None:
+    from pocket_dock import stop_container
+
+    assert callable(stop_container)
+
+
+def test_import_async_stop_container() -> None:
+    from pocket_dock.async_ import stop_container
+
+    assert callable(stop_container)
+
+
+def test_import_cli_main() -> None:
+    from pocket_dock.cli.main import cli
+
+    assert callable(cli)

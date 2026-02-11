@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
-      - run: uv sync --dev
+      - run: uv sync --dev --all-extras
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy --strict python/pocket_dock/
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
       - run: uv python install ${{ matrix.python-version }}
-      - run: uv sync --dev --python ${{ matrix.python-version }}
+      - run: uv sync --dev --all-extras --python ${{ matrix.python-version }}
       - run: systemctl --user start podman.socket
       - run: podman build -t pocket-dock/minimal images/minimal/
       - name: Run parallel-safe tests

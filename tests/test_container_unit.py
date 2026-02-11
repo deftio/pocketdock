@@ -362,6 +362,8 @@ def test_loopthread_shutdown() -> None:
 
 
 def test_loopthread_double_check_locking_race() -> None:
+    # Ensure the singleton exists (may be None in parallel xdist workers)
+    _LoopThread.get()
     original_instance = _LoopThread._instance
     original_lock = _LoopThread._lock
 
