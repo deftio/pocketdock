@@ -19,6 +19,7 @@ from pocket_dock.persistence import (
     prune,
     resume_container,
 )
+from pocket_dock.projects import init_project
 
 from .conftest import requires_engine
 
@@ -170,3 +171,77 @@ async def test_volume_mount(tmp_path: pytest.TempPathFactory) -> None:  # type: 
         assert "from-container" in (host_dir / "test.txt").read_text()
     finally:
         await c.shutdown()
+
+
+# --- project integration ---
+
+
+@requires_engine
+async def test_persist_with_project_sets_labels(
+    tmp_path: pytest.TempPathFactory,  # type: ignore[type-arg]
+) -> None:
+    import pathlib
+
+    project_dir = pathlib.Path(str(tmp_path)) / "proj"
+    project_dir.mkdir()
+    init_project(project_dir, project_name="integ-test")
+
+    c = await create_new_container(persist=True, project="integ-test")
+    name = c.name
+    try:
+        # Verify project label is set
+        socket_path = c.socket_path
+        containers = await sc.list_containers(
+            socket_path, label_filter=f"pocket-dock.instance={name}"
+        )
+        assert len(containers) == 1
+        labels = containers[0].get("Labels", {})
+        assert labels.get("pocket-dock.project") == "integ-test"
+    finally:
+        await c.shutdown()
+        await destroy_container(name)
+
+
+@requires_engine
+async def test_list_containers_project_filter() -> None:
+    c1 = await create_new_container(persist=True, project="proj-a")
+    c2 = await create_new_container(persist=True, project="proj-b")
+    name1, name2 = c1.name, c2.name
+    try:
+        items_a = await list_containers(project="proj-a")
+        items_b = await list_containers(project="proj-b")
+
+        names_a = [item.name for item in items_a]
+        names_b = [item.name for item in items_b]
+
+        assert name1 in names_a
+        assert name2 not in names_a
+        assert name2 in names_b
+        assert name1 not in names_b
+    finally:
+        await c1.shutdown()
+        await c2.shutdown()
+        await destroy_container(name1)
+        await destroy_container(name2)
+
+
+@requires_engine
+async def test_prune_with_project_filter() -> None:
+    c1 = await create_new_container(persist=True, project="prune-a")
+    c2 = await create_new_container(persist=True, project="prune-b")
+    name1, name2 = c1.name, c2.name
+    await c1.shutdown()
+    await c2.shutdown()
+
+    # Prune only project "prune-a"
+    count = await prune(project="prune-a")
+    assert count >= 1
+
+    # c1 should be gone, c2 should remain
+    items = await list_containers()
+    remaining = [item.name for item in items]
+    assert name1 not in remaining
+    assert name2 in remaining
+
+    # Clean up c2
+    await destroy_container(name2)

@@ -24,6 +24,7 @@ from pocket_dock.persistence import (
     prune,
     resume_container,
 )
+from pocket_dock.projects import doctor, find_project_root, init_project
 
 __all__ = [
     "AsyncContainer",
@@ -32,6 +33,9 @@ __all__ = [
     "AsyncSession",
     "create_new_container",
     "destroy_container",
+    "doctor",
+    "find_project_root",
+    "init_project",
     "list_containers",
     "prune",
     "resume_container",

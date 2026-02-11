@@ -221,6 +221,16 @@ class Container:
         """Whether this container survives shutdown (stop without remove)."""
         return self._ac.persist
 
+    @property
+    def project(self) -> str:
+        """Project name this container belongs to (empty if none)."""
+        return self._ac.project
+
+    @property
+    def data_path(self) -> str:
+        """Instance data directory path (empty if none)."""
+        return self._ac.data_path
+
     @overload
     def run(
         self,
@@ -399,6 +409,7 @@ def create_new_container(  # noqa: PLR0913
     cpu_percent: int | None = None,
     persist: bool = False,
     volumes: dict[str, str] | None = None,
+    project: str | None = None,
 ) -> Container:
     """Create and start a new container, returning a sync handle.
 
@@ -414,6 +425,7 @@ def create_new_container(  # noqa: PLR0913
             cpu_percent=cpu_percent,
             persist=persist,
             volumes=volumes,
+            project=project,
         )
     )
     return Container(ac, lt)  # type: ignore[arg-type]

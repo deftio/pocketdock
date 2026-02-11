@@ -21,13 +21,14 @@ from pocket_dock._async_container import (
     create_new_container as async_factory,
 )
 from pocket_dock._process import AsyncExecStream, AsyncProcess
-from pocket_dock._stream import STREAM_STDOUT
+from pocket_dock._stream import STREAM_STDERR, STREAM_STDOUT
 from pocket_dock._sync_container import Container, SyncExecStream, SyncProcess, _LoopThread
 from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
 from pocket_dock.types import ExecResult
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+    from pathlib import Path
 
 # --- Name generation ---
 
@@ -1640,3 +1641,237 @@ async def test_reboot_fresh_includes_persist_labels() -> None:
     labels = create.call_args[1]["labels"]
     assert labels["pocket-dock.persist"] == "true"
     assert "pocket-dock.created-at" in labels
+
+
+# --- Project properties ---
+
+
+def test_async_container_project_default() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test")
+    assert ac.project == ""
+    assert ac.data_path == ""
+
+
+def test_async_container_project_set() -> None:
+    ac = AsyncContainer(
+        "cid", "/tmp/s.sock", name="pd-test", project="my-proj", data_path="/some/path"
+    )
+    assert ac.project == "my-proj"
+    assert ac.data_path == "/some/path"
+
+
+def test_sync_container_project_delegates() -> None:
+    ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test", project="proj", data_path="/dp")
+    lt = _LoopThread.get()
+    c = Container(ac, lt)
+    assert c.project == "proj"
+    assert c.data_path == "/dp"
+
+
+async def test_async_create_with_project_label() -> None:
+    with (
+        patch(
+            "pocket_dock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocket_dock.projects.find_project_root", return_value=None),
+    ):
+        c = await async_factory(name="pd-proj", persist=True, project="my-project")
+
+    labels = create.call_args[1]["labels"]
+    assert labels["pocket-dock.project"] == "my-project"
+    assert c._project == "my-project"
+
+
+async def test_async_reboot_fresh_preserves_project_labels() -> None:
+    ac = AsyncContainer(
+        "cid",
+        "/tmp/s.sock",
+        name="pd-xx",
+        image="pocket-dock/minimal",
+        persist=True,
+        project="my-proj",
+        data_path="/data/path",
+    )
+
+    with (
+        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="newcid",
+        ) as create,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await ac.reboot(fresh=True)
+
+    labels = create.call_args[1]["labels"]
+    assert labels["pocket-dock.project"] == "my-proj"
+    assert labels["pocket-dock.data-path"] == "/data/path"
+
+
+# --- Logger integration in container ---
+
+
+async def test_run_blocking_calls_logger(tmp_path: Path) -> None:
+    logs_dir = tmp_path / "logs"
+    logs_dir.mkdir()
+    ac = AsyncContainer("cid", "/fake.sock", name="test", image="img", data_path=str(tmp_path))
+
+    mock_result = ExecResult(exit_code=0, stdout="hello\n", stderr="", duration_ms=42.0)
+    with patch(
+        "pocket_dock._async_container.sc.exec_command",
+        new_callable=AsyncMock,
+        return_value=mock_result,
+    ):
+        result = await ac.run("echo hello")
+
+    assert result.ok
+    # Logger should have written a log file and history
+    log_files = list(logs_dir.glob("run-*.log"))
+    assert len(log_files) == 1
+    history = (logs_dir / "history.jsonl").read_text()
+    assert '"echo hello"' in history
+
+
+async def test_run_detach_creates_log_handle(tmp_path: Path) -> None:
+    logs_dir = tmp_path / "logs"
+    logs_dir.mkdir()
+    ac = AsyncContainer("cid", "/fake.sock", name="test", image="img", data_path=str(tmp_path))
+
+    async def fake_gen() -> AsyncGenerator[tuple[int, bytes], None]:
+        yield (STREAM_STDOUT, b"out")
+        yield (STREAM_STDERR, b"err")
+
+    mock_writer = MagicMock()
+    mock_writer.close = MagicMock()
+    mock_writer.wait_closed = AsyncMock()
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(fake_gen(), mock_writer),
+        ),
+    ):
+        proc = await ac.run("echo test", detach=True)
+        await proc.wait(timeout=5)
+
+    # Detach log should have been created with both stdout and stderr
+    log_files = list(logs_dir.glob("detach-*.log"))
+    assert len(log_files) == 1
+    content = log_files[0].read_text()
+    assert "echo test" in content
+    assert "[stdout]" in content
+    assert "[stderr]" in content
+
+
+async def test_session_creates_log_handle(tmp_path: Path) -> None:
+    import asyncio
+
+    logs_dir = tmp_path / "logs"
+    logs_dir.mkdir()
+    ac = AsyncContainer("cid", "/fake.sock", name="test", image="img", data_path=str(tmp_path))
+
+    async def fake_gen() -> AsyncGenerator[tuple[int, bytes], None]:
+        yield (STREAM_STDOUT, b"bash$ \n")
+
+    mock_writer = MagicMock()
+    mock_writer.write = MagicMock()
+    mock_writer.drain = AsyncMock()
+    mock_writer.close = MagicMock()
+    mock_writer.wait_closed = AsyncMock()
+
+    with (
+        patch(
+            "pocket_dock._async_container.sc._exec_create",
+            new_callable=AsyncMock,
+            return_value="eid",
+        ),
+        patch(
+            "pocket_dock._async_container.sc._exec_start_stream",
+            new_callable=AsyncMock,
+            return_value=(fake_gen(), mock_writer),
+        ),
+    ):
+        sess = await ac.session()
+        await sess.send("ls")
+        # Give reader task time to process the output
+        await asyncio.sleep(0.05)
+        await sess.close()
+
+    # Session log should have been created with send and recv logged
+    log_files = list(logs_dir.glob("session-*.log"))
+    assert len(log_files) == 1
+    content = log_files[0].read_text()
+    assert "ls" in content
+    assert "bash$" in content
+
+
+# --- create_new_container with project root ---
+
+
+async def test_create_new_container_with_project_root(tmp_path: Path) -> None:
+    from pocket_dock.projects import init_project
+
+    init_project(tmp_path, project_name="my-test-proj")
+
+    with (
+        patch("pocket_dock._async_container.sc.detect_socket", return_value="/fake.sock"),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="cid123",
+        ) as create_mock,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocket_dock.projects.find_project_root", return_value=tmp_path),
+    ):
+        ac = await async_factory(persist=True)
+        assert ac.project == "my-test-proj"
+        assert ac.data_path != ""
+
+    labels = create_mock.call_args[1]["labels"]
+    assert labels["pocket-dock.project"] == "my-test-proj"
+    assert "pocket-dock.data-path" in labels
+
+    # Instance dir should have been created
+    instances = list((tmp_path / ".pocket-dock" / "instances").iterdir())
+    assert len(instances) == 1
+    toml_file = instances[0] / "instance.toml"
+    assert toml_file.is_file()
+    content = toml_file.read_text()
+    assert "cid123" in content
+
+
+async def test_create_new_container_with_explicit_project(tmp_path: Path) -> None:
+    from pocket_dock.projects import init_project
+
+    init_project(tmp_path, project_name="yaml-name")
+
+    with (
+        patch("pocket_dock._async_container.sc.detect_socket", return_value="/fake.sock"),
+        patch(
+            "pocket_dock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="cid456",
+        ) as create_mock,
+        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocket_dock.projects.find_project_root", return_value=tmp_path),
+    ):
+        ac = await async_factory(persist=True, project="explicit-proj")
+        assert ac.project == "explicit-proj"
+
+    labels = create_mock.call_args[1]["labels"]
+    assert labels["pocket-dock.project"] == "explicit-proj"

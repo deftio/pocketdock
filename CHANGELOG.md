@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-02-10
+
+### Added
+
+- `.pocket-dock/` project management — `init_project()`, `find_project_root()`, `get_project_name()`
+- Instance directory lifecycle — `ensure_instance_dir()`, `write_instance_metadata()`, `read_instance_metadata()`, `remove_instance_dir()`, `list_instance_dirs()`
+- `PocketDockConfig` dataclass and `load_config()` with install-level → project-level precedence
+- `pocket-dock.yaml` project configuration file with logging and persistence defaults
+- `instance.toml` metadata files per persistent container (container info, resources, provenance)
+- `project` parameter on `create_new_container()` — associates containers with a project
+- `pocket-dock.project` and `pocket-dock.data-path` labels on persistent containers
+- `list_containers(project=...)` and `prune(project=...)` — filter by project name
+- `destroy_container()` now cleans up the instance directory when `pocket-dock.data-path` label is present
+- `InstanceLogger` — auto-logging of `run()` results, session I/O, and detached process output to disk
+- `history.jsonl` command history per instance
+- `doctor()` — cross-references local instance dirs with engine containers to find orphaned containers and stale dirs
+- `DoctorReport` dataclass with `orphaned_containers`, `stale_instance_dirs`, `healthy`
+- `ProjectNotInitialized` exception
+- `PyYAML` and `tomli` (Python < 3.11) added as core dependencies for config/metadata parsing
+- All new functions available as sync (from `pocket_dock`) and async (from `pocket_dock.async_`)
+
 ## [0.7.0] - 2026-02-10
 
 ### Added

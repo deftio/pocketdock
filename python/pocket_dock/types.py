@@ -66,3 +66,13 @@ class ContainerListItem:
     image: str
     created_at: str
     persist: bool
+    project: str = ""
+
+
+@dataclasses.dataclass(frozen=True)
+class DoctorReport:
+    """Result of the doctor command cross-referencing containers and instance dirs."""
+
+    orphaned_containers: tuple[str, ...]
+    stale_instance_dirs: tuple[str, ...]
+    healthy: int

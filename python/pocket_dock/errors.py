@@ -87,3 +87,10 @@ class ImageNotFound(PocketDockError):
 
 class SessionClosed(PocketDockError):
     """Operation attempted on a closed session."""
+
+
+class ProjectNotInitialized(PocketDockError):
+    """No .pocket-dock/ project directory found."""
+
+    def __init__(self) -> None:
+        super().__init__("No .pocket-dock/ project directory found. Run `pocket-dock init` first.")

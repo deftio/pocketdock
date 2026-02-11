@@ -301,12 +301,18 @@ async def test_destroy_not_found_raises() -> None:
 
 
 async def test_destroy_removes_with_force() -> None:
+    inspect_data = {"Config": {"Labels": {}}}
     with (
         patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
             "pocket_dock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[{"Id": "abc123"}],
+        ),
+        patch(
+            "pocket_dock.persistence.sc.inspect_container",
+            new_callable=AsyncMock,
+            return_value=inspect_data,
         ),
         patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
     ):
@@ -453,3 +459,167 @@ def test_sync_prune() -> None:
     mock_lt.run.assert_called_once()
     _close_coroutine_arg(mock_lt)
     assert count == 3
+
+
+# --- Project-scoped features (M7) ---
+
+
+def test_parse_container_list_item_includes_project() -> None:
+    data = {
+        "Id": "abc123def456",
+        "Names": ["pd-test"],
+        "State": "running",
+        "Image": "img",
+        "Labels": {
+            "pocket-dock.instance": "pd-test",
+            "pocket-dock.project": "my-project",
+        },
+    }
+    item = _parse_container_list_item(data)
+    assert item.project == "my-project"
+
+
+def test_parse_container_list_item_no_project() -> None:
+    data = {
+        "Id": "abc123",
+        "Names": ["pd-test"],
+        "State": "running",
+        "Image": "img",
+        "Labels": {},
+    }
+    item = _parse_container_list_item(data)
+    assert item.project == ""
+
+
+async def test_list_containers_with_project_filter() -> None:
+    with (
+        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch(
+            "pocket_dock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as list_mock,
+    ):
+        await list_containers(project="my-project")
+
+    list_mock.assert_called_once_with("/tmp/s.sock", label_filter="pocket-dock.project=my-project")
+
+
+async def test_prune_with_project_filter() -> None:
+    with (
+        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch(
+            "pocket_dock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as list_mock,
+    ):
+        count = await prune(project="my-project")
+
+    assert count == 0
+    list_mock.assert_called_once_with("/tmp/s.sock", label_filter="pocket-dock.project=my-project")
+
+
+async def test_destroy_cleans_up_data_path(tmp_path: object) -> None:
+    import pathlib
+
+    data_dir = pathlib.Path(str(tmp_path)) / "instance-data"
+    data_dir.mkdir()
+    (data_dir / "test.txt").write_text("test")
+
+    inspect_data = {
+        "Config": {"Labels": {"pocket-dock.data-path": str(data_dir)}},
+    }
+    with (
+        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch(
+            "pocket_dock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=[{"Id": "abc123"}],
+        ),
+        patch(
+            "pocket_dock.persistence.sc.inspect_container",
+            new_callable=AsyncMock,
+            return_value=inspect_data,
+        ),
+        patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock),
+    ):
+        await destroy_container("test")
+
+    assert not data_dir.exists()
+
+
+async def test_destroy_no_data_path_label() -> None:
+    inspect_data = {"Config": {"Labels": {}}}
+    with (
+        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch(
+            "pocket_dock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=[{"Id": "abc123"}],
+        ),
+        patch(
+            "pocket_dock.persistence.sc.inspect_container",
+            new_callable=AsyncMock,
+            return_value=inspect_data,
+        ),
+        patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
+    ):
+        await destroy_container("test")
+
+    remove.assert_called_once()
+
+
+async def test_destroy_data_path_already_gone() -> None:
+    inspect_data = {
+        "Config": {"Labels": {"pocket-dock.data-path": "/nonexistent/path"}},
+    }
+    with (
+        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch(
+            "pocket_dock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=[{"Id": "abc123"}],
+        ),
+        patch(
+            "pocket_dock.persistence.sc.inspect_container",
+            new_callable=AsyncMock,
+            return_value=inspect_data,
+        ),
+        patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock),
+    ):
+        # Should not raise even if data path doesn't exist
+        await destroy_container("test")
+
+
+async def test_resume_restores_project_and_data_path() -> None:
+    list_result = [{"Id": "abc123", "State": "running"}]
+    inspect_result = {
+        "Config": {
+            "Image": "img",
+            "Labels": {
+                "pocket-dock.persist": "true",
+                "pocket-dock.project": "my-proj",
+                "pocket-dock.data-path": "/some/path",
+            },
+        },
+        "HostConfig": {"Memory": 0, "NanoCpus": 0},
+    }
+    with (
+        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch(
+            "pocket_dock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=list_result,
+        ),
+        patch("pocket_dock.persistence.sc.start_container", new_callable=AsyncMock),
+        patch(
+            "pocket_dock.persistence.sc.inspect_container",
+            new_callable=AsyncMock,
+            return_value=inspect_result,
+        ),
+    ):
+        c = await resume_container("pd-test")
+
+    assert c._project == "my-proj"
+    assert c._data_path == "/some/path"

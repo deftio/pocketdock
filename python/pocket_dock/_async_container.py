@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 from pocket_dock import _socket_client as sc
 from pocket_dock._callbacks import CallbackRegistry
 from pocket_dock._helpers import build_container_info, parse_mem_limit
+from pocket_dock._logger import InstanceLogger
 from pocket_dock._process import AsyncExecStream, AsyncProcess
 from pocket_dock._session import AsyncSession
 from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
@@ -48,6 +49,23 @@ def _build_command(command: str, lang: str | None) -> list[str]:
     if lang == "python":
         return ["python3", "-c", command]
     return ["sh", "-c", command]
+
+
+def _build_labels(
+    name: str, *, persist: bool, project: str = "", data_path: str = ""
+) -> dict[str, str]:
+    """Build the standard pocket-dock container labels."""
+    labels = {
+        "pocket-dock.managed": "true",
+        "pocket-dock.instance": name,
+        "pocket-dock.persist": str(persist).lower(),
+        "pocket-dock.created-at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+    }
+    if project:
+        labels["pocket-dock.project"] = project
+    if data_path:
+        labels["pocket-dock.data-path"] = data_path
+    return labels
 
 
 def _build_host_config(mem_limit_bytes: int, nano_cpus: int) -> dict[str, Any] | None:
@@ -78,6 +96,8 @@ class AsyncContainer:
         mem_limit_bytes: int = 0,
         nano_cpus: int = 0,
         persist: bool = False,
+        project: str = "",
+        data_path: str = "",
     ) -> None:
         self._container_id = container_id
         self._socket_path = socket_path
@@ -87,6 +107,11 @@ class AsyncContainer:
         self._mem_limit_bytes = mem_limit_bytes
         self._nano_cpus = nano_cpus
         self._persist = persist
+        self._project = project
+        self._data_path = data_path
+        self._logger: InstanceLogger | None = None
+        if data_path:
+            self._logger = InstanceLogger(pathlib.Path(data_path))
         self._closed = False
         self._callbacks = CallbackRegistry()
         self._active_streams: list[AsyncExecStream] = []
@@ -112,6 +137,16 @@ class AsyncContainer:
     def persist(self) -> bool:
         """Whether this container survives shutdown (stop without remove)."""
         return self._persist
+
+    @property
+    def project(self) -> str:
+        """Project name this container belongs to (empty if none)."""
+        return self._project
+
+    @property
+    def data_path(self) -> str:
+        """Instance data directory path (empty if none)."""
+        return self._data_path
 
     @overload
     async def run(
@@ -206,18 +241,25 @@ class AsyncContainer:
             gen, writer = await sc._exec_start_stream(  # noqa: SLF001
                 self._socket_path, exec_id
             )
-            proc = AsyncProcess(exec_id, self, gen, writer, self._callbacks)
+            detach_log = None
+            if self._logger is not None:
+                detach_log = self._logger.start_detach_log(command)
+            proc = AsyncProcess(exec_id, self, gen, writer, self._callbacks, log_handle=detach_log)
             self._active_processes.append(proc)
             return proc
 
         t = timeout if timeout is not None else self._timeout
-        return await sc.exec_command(
+        started_at = datetime.datetime.now(tz=datetime.timezone.utc)
+        result = await sc.exec_command(
             self._socket_path,
             self._container_id,
             cmd,
             max_output=max_output,
             timeout=t,
         )
+        if self._logger is not None:
+            self._logger.log_run(command, result, started_at)
+        return result
 
     async def info(self) -> ContainerInfo:
         """Return a live snapshot of the container's state and resource usage.
@@ -258,12 +300,9 @@ class AsyncContainer:
         with contextlib.suppress(ContainerNotFound):
             await sc.remove_container(self._socket_path, self._container_id, force=True)
 
-        labels = {
-            "pocket-dock.managed": "true",
-            "pocket-dock.instance": self._name,
-            "pocket-dock.persist": str(self._persist).lower(),
-            "pocket-dock.created-at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
-        }
+        labels = _build_labels(
+            self._name, persist=self._persist, project=self._project, data_path=self._data_path
+        )
         host_config = _build_host_config(self._mem_limit_bytes, self._nano_cpus)
         self._container_id = await sc.create_container(
             self._socket_path,
@@ -423,7 +462,12 @@ class AsyncContainer:
         gen, writer = await sc._exec_start_stream(  # noqa: SLF001
             self._socket_path, exec_id
         )
-        sess = AsyncSession(exec_id, gen, writer, self._socket_path, self._container_id)
+        log_handle = None
+        if self._logger is not None:
+            log_handle = self._logger.start_session_log(exec_id)
+        sess = AsyncSession(
+            exec_id, gen, writer, self._socket_path, self._container_id, log_handle=log_handle
+        )
         self._active_sessions.append(sess)
         return sess
 
@@ -503,6 +547,7 @@ async def create_new_container(  # noqa: PLR0913
     cpu_percent: int | None = None,
     persist: bool = False,
     volumes: dict[str, str] | None = None,
+    project: str | None = None,
 ) -> AsyncContainer:
     """Create and start a new container, returning an async handle.
 
@@ -514,11 +559,19 @@ async def create_new_container(  # noqa: PLR0913
         cpu_percent: CPU usage cap as a percentage (e.g. ``50`` for 50%).
         persist: If ``True``, shutdown stops but does not remove the container.
         volumes: Host-to-container mount mappings (e.g. ``{"/host": "/container"}``).
+        project: Project name. Auto-detected from ``.pocket-dock/`` if ``None``.
 
     Returns:
         A running :class:`AsyncContainer`.
 
     """
+    from pocket_dock.projects import (  # noqa: PLC0415
+        ensure_instance_dir,
+        find_project_root,
+        get_project_name,
+        write_instance_metadata,
+    )
+
     if name is None:
         name = _generate_name()
 
@@ -529,12 +582,29 @@ async def create_new_container(  # noqa: PLR0913
     mem_limit_bytes = parse_mem_limit(mem_limit) if mem_limit is not None else 0
     nano_cpus = cpu_percent * 10_000_000 if cpu_percent is not None else 0
 
-    labels = {
-        "pocket-dock.managed": "true",
-        "pocket-dock.instance": name,
-        "pocket-dock.persist": str(persist).lower(),
-        "pocket-dock.created-at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
-    }
+    # Resolve project + instance directory for persistent containers
+    resolved_project = project or ""
+    data_path = ""
+    if persist:
+        project_root = find_project_root()
+        if project_root is not None:
+            if not resolved_project:
+                resolved_project = get_project_name(project_root)
+            instance_dir = ensure_instance_dir(project_root, name)
+            data_path = str(instance_dir)
+            write_instance_metadata(
+                instance_dir,
+                container_id="(pending)",
+                name=name,
+                image=image,
+                project=resolved_project,
+                created_at=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+                persist=True,
+                mem_limit=mem_limit or "",
+                cpu_percent=cpu_percent or 0,
+            )
+
+    labels = _build_labels(name, persist=persist, project=resolved_project, data_path=data_path)
     host_config = _build_host_config(mem_limit_bytes, nano_cpus)
 
     if volumes is not None:
@@ -551,6 +621,20 @@ async def create_new_container(  # noqa: PLR0913
     )
     await sc.start_container(socket_path, container_id)
 
+    # Update instance metadata with real container ID
+    if data_path:
+        write_instance_metadata(
+            pathlib.Path(data_path),
+            container_id=container_id,
+            name=name,
+            image=image,
+            project=resolved_project,
+            created_at=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            persist=True,
+            mem_limit=mem_limit or "",
+            cpu_percent=cpu_percent or 0,
+        )
+
     return AsyncContainer(
         container_id,
         socket_path,
@@ -560,4 +644,6 @@ async def create_new_container(  # noqa: PLR0913
         mem_limit_bytes=mem_limit_bytes,
         nano_cpus=nano_cpus,
         persist=persist,
+        project=resolved_project,
+        data_path=data_path,
     )

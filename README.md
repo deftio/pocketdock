@@ -6,7 +6,7 @@
 
 **Portable, offline-first container sandboxes for LLM agents and dev workflows.**
 
-One Container class. Podman-first, Docker-compatible. Python SDK + CLI. Zero external dependencies. Zero API keys. Zero cloud.
+One Container class. Podman-first, Docker-compatible. Python SDK + CLI. Minimal dependencies. Zero API keys. Zero cloud.
 
 ## Why pocket-dock?
 
@@ -199,12 +199,14 @@ done
 User Code / LLM Agent / CLI
         |
         v
-  pocket-dock SDK (zero external deps)
+  pocket-dock SDK
   +--------------------------------------+
   | Container (sync)  -> AsyncContainer  |  facade pattern
   |   +- _socket_client (raw HTTP/Unix)  |
-  +- ContainerPool (pre-warming)         |
+  +- ProjectManager (.pocket-dock/)      |
+  +- Persistence (resume, snapshot)      |
   +- Sessions (persistent shells)        |
+  +- ContainerPool (pre-warming)         |
   +--------------------------------------+
         |  raw HTTP over Unix socket
         |  (one connection per operation)
@@ -216,7 +218,7 @@ User Code / LLM Agent / CLI
 - **Connection-per-operation** — each API call opens its own Unix socket connection. No pooling. Unix sockets are cheap; isolation prevents streaming from blocking other operations.
 - **Async core, sync facade** — `AsyncContainer` does all real work. `Container` is a sync wrapper that manages a background event loop.
 - **No cached state** — always poll live from the engine. The container might have been killed externally.
-- **Zero dependencies** — the SDK uses only Python stdlib (`http.client`, `json`, `socket`, `tarfile`, `asyncio`).
+- **Minimal dependencies** — the SDK uses Python stdlib for container I/O, plus `PyYAML` and `tomli` for config/metadata parsing.
 
 ## Roadmap
 
@@ -229,7 +231,7 @@ User Code / LLM Agent / CLI
 | M4 | Stream / detach / buffer / callbacks | 0.5.0 | Done |
 | M5 | Sessions (persistent shells) | 0.6.0 | Done |
 | M6 | Persistence (resume, snapshot) | 0.7.0 | Done |
-| M7 | Projects (.pocket-dock/ management) | 0.8.0 | Planned |
+| M7 | Projects (.pocket-dock/ management) | 0.8.0 | Done |
 | M8 | CLI (15+ commands) | 0.9.0 | Planned |
 | M9 | Image profiles | 1.0.0 | Planned |
 | M10 | ContainerPool (pre-warming) | 1.1.0 | Planned |
