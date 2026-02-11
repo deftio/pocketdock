@@ -206,3 +206,23 @@ async def test_doctor_uses_project_name_from_yaml(tmp_path: Path) -> None:
 
     # Verify list_containers was called with the project name from yaml
     mock_lc.assert_called_once_with(socket_path="/fake.sock", project="custom-name")
+
+
+# --- sync doctor wrapper ---
+
+
+def test_sync_doctor_wrapper(tmp_path: Path) -> None:
+    import pocket_dock
+
+    init_project(tmp_path, project_name="sync-proj")
+
+    with patch(
+        "pocket_dock.persistence.list_containers",
+        new_callable=AsyncMock,
+        return_value=[],
+    ):
+        report = pocket_dock.doctor(project_root=tmp_path, socket_path="/fake.sock")
+
+    assert report.healthy == 0
+    assert report.orphaned_containers == ()
+    assert report.stale_instance_dirs == ()
