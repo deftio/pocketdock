@@ -2,28 +2,73 @@
 
 **Portable, offline-first container sandboxes for LLM agents and dev workflows.**
 
-One `Container` class. Podman-first, Docker-compatible. Python SDK + CLI. Zero external dependencies.
+pocket-dock is a Python SDK and CLI that talks directly to Podman or Docker over its Unix socket. No cloud. No API keys. No external dependencies for the core SDK.
 
-## What is this?
+---
 
-pocket-dock is a thin, reusable Python library that talks directly to your container engine over its Unix socket. It ships with pre-baked images you build once and keep locally, and works entirely offline after initial setup.
+## Use Cases
 
-## Quick start
+- **LLM agent code execution** — run untrusted code in isolated sandboxes with resource limits
+- **Code evaluation pipelines** — evaluate student/candidate code safely with timeouts and output caps
+- **Embedded development** — C/C++ cross-compilation for ARM, ESP32, Arduino inside containers
+- **Reproducible dev environments** — disposable sandboxes with pre-baked toolchains
+- **CI/CD building blocks** — lightweight, scriptable container orchestration
 
-```bash
-pip install pocket-dock
-podman build -t pocket-dock/minimal images/minimal/
-```
+## Feature Highlights
+
+| Feature | Description |
+|---------|-------------|
+| **Three execution modes** | Blocking, streaming, and detached with ring buffer |
+| **File operations** | Read, write, list, push, pull between host and container |
+| **Persistent sessions** | Long-lived shells with state (cwd, env vars, history) |
+| **Resource limits** | Memory caps and CPU throttling per container |
+| **Persistence** | Stop/resume containers, snapshot to images, volume mounts |
+| **Project management** | `.pocket-dock/` directories with config, logging, health checks |
+| **Image profiles** | Four pre-baked Dockerfiles: minimal, dev, agent, embedded |
+| **Full CLI** | 21 commands for lifecycle, file ops, and project management |
+| **Async-first** | Sync facade over async core — use either API |
+| **Callbacks** | Register handlers for stdout, stderr, and exit events |
+
+## Quick Example
 
 ```python
 from pocket_dock import create_new_container
 
-c = create_new_container()
-result = c.run("echo hello")
-print(result.stdout)  # "hello\n"
-c.shutdown()
+with create_new_container() as c:
+    # Run a command
+    result = c.run("echo hello")
+    print(result.stdout)  # "hello\n"
+    print(result.ok)      # True
+
+    # Run Python code
+    result = c.run("print(2 + 2)", lang="python")
+    print(result.stdout)  # "4\n"
+
+    # Read/write files
+    c.write_file("/tmp/data.txt", "hello from host")
+    data = c.read_file("/tmp/data.txt")
+# Container is automatically stopped and removed
 ```
 
-## Status
+## Install
 
-This project is under active development. See the [Quickstart](quickstart.md) to get started.
+=== "SDK only"
+
+    ```bash
+    pip install pocket-dock
+    ```
+
+=== "SDK + CLI"
+
+    ```bash
+    pip install pocket-dock[cli]
+    ```
+
+Requires [Podman](https://podman.io/getting-started/installation) (recommended) or [Docker](https://docs.docker.com/get-docker/).
+
+## What's Next?
+
+- **[Quickstart](quickstart.md)** — build an image and run your first container in under a minute
+- **[User Guide](guide/containers.md)** — deep dive into containers, commands, files, sessions, and more
+- **[CLI Reference](cli.md)** — all 21 commands with examples
+- **[API Reference](reference/api.md)** — full SDK reference with type signatures

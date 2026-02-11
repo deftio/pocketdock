@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-02-11
+
+### Changed
+
+- Rewrote README as a focused landing page with features list, quick example, and docs links
+- Comprehensive docs site with 17 pages: user guide, CLI reference, API reference, concepts
+- GitHub Pages deployment via `mkdocs gh-deploy` workflow
+- Added `navigation.tabs`, `navigation.top`, and `content.tabs.link` theme features to mkdocs
+
 ## [1.0.0] - 2026-02-10
 
 ### Added
