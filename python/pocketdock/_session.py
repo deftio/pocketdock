@@ -23,14 +23,14 @@ import time
 import uuid
 from typing import TYPE_CHECKING
 
-from pocket_dock._stream import STREAM_STDOUT
-from pocket_dock.errors import SessionClosed
-from pocket_dock.types import ExecResult
+from pocketdock._stream import STREAM_STDOUT
+from pocketdock.errors import SessionClosed
+from pocketdock.types import ExecResult
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
 
-    from pocket_dock._logger import SessionLogHandle
+    from pocketdock._logger import SessionLogHandle
 
 _SENTINEL_RE = re.compile(r"__PD_(\w{16})_(\d+)__")
 

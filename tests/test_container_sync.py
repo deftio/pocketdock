@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from pocket_dock import Container, create_new_container
-from pocket_dock.types import ExecResult
+from pocketdock import Container, create_new_container
+from pocketdock.types import ExecResult
 
 from .conftest import requires_engine
 

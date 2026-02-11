@@ -34,7 +34,7 @@ Connection-per-operation means:
 
 ## Socket Auto-Detection
 
-If no socket path is specified, pocket-dock searches in this order:
+If no socket path is specified, pocketdock searches in this order:
 
 | Priority | Path | Engine |
 |----------|------|--------|
@@ -59,7 +59,7 @@ Or via environment variable:
 export POCKET_DOCK_SOCKET=/path/to/engine.sock
 ```
 
-Or via project config (`pocket-dock.yaml`):
+Or via project config (`pocketdock.yaml`):
 
 ```yaml
 socket: /path/to/engine.sock
@@ -73,7 +73,7 @@ Multiple async operations can run concurrently on the same container:
 
 ```python
 import asyncio
-from pocket_dock.async_ import create_new_container
+from pocketdock.async_ import create_new_container
 
 async def main():
     async with await create_new_container() as c:
@@ -104,7 +104,7 @@ for chunk in stream:
 
 ## Engine Compatibility
 
-pocket-dock supports both Podman and Docker. The socket client handles differences transparently:
+pocketdock supports both Podman and Docker. The socket client handles differences transparently:
 
 | Feature | Docker | Podman |
 |---------|--------|--------|

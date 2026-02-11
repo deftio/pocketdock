@@ -1,13 +1,13 @@
 # Projects
 
-pocket-dock projects group containers with a shared configuration directory (`.pocket-dock/`) that lives next to your code.
+pocketdock projects group containers with a shared configuration directory (`.pocketdock/`) that lives next to your code.
 
 ## Initialize a Project
 
 ```python
-from pocket_dock import init_project
+from pocketdock import init_project
 
-project_root = init_project()  # Creates .pocket-dock/ in the current directory
+project_root = init_project()  # Creates .pocketdock/ in the current directory
 ```
 
 Or specify a path:
@@ -26,17 +26,17 @@ This creates:
 
 ```
 my-project/
-├── .pocket-dock/
-│   └── pocket-dock.yaml
+├── .pocketdock/
+│   └── pocketdock.yaml
 └── ... (your code)
 ```
 
 ## Find Project Root
 
-Walk up from a directory to find the nearest `.pocket-dock/pocket-dock.yaml`:
+Walk up from a directory to find the nearest `.pocketdock/pocketdock.yaml`:
 
 ```python
-from pocket_dock import find_project_root
+from pocketdock import find_project_root
 
 root = find_project_root()  # Starts from cwd
 root = find_project_root("/some/nested/dir")
@@ -46,7 +46,7 @@ Returns `None` if no project is found.
 
 ## Project Configuration
 
-The `pocket-dock.yaml` file configures project defaults:
+The `pocketdock.yaml` file configures project defaults:
 
 ```yaml
 project_name: my-app
@@ -73,9 +73,9 @@ c = create_new_container(project="my-app", persist=True)
 If you're inside a project directory, the project is auto-detected:
 
 ```python
-# Inside a directory with .pocket-dock/pocket-dock.yaml
+# Inside a directory with .pocketdock/pocketdock.yaml
 c = create_new_container(persist=True)
-# project is auto-detected from the nearest .pocket-dock/
+# project is auto-detected from the nearest .pocketdock/
 ```
 
 ## Instance Directories
@@ -83,8 +83,8 @@ c = create_new_container(persist=True)
 Each persistent container in a project gets its own instance directory:
 
 ```
-.pocket-dock/
-├── pocket-dock.yaml
+.pocketdock/
+├── pocketdock.yaml
 └── instances/
     └── my-sandbox/
         ├── instance.toml    # Container metadata
@@ -99,7 +99,7 @@ Each persistent container in a project gets its own instance directory:
 ```toml
 container_id = "abc123..."
 name = "my-sandbox"
-image = "pocket-dock/minimal"
+image = "pocketdock/minimal"
 project = "my-app"
 created_at = "2026-01-15T10:30:00"
 persist = true
@@ -116,7 +116,7 @@ cpu_percent = 50
 Diagnose project health by cross-referencing local instance directories with the container engine:
 
 ```python
-from pocket_dock import doctor
+from pocketdock import doctor
 
 report = doctor()
 report.orphaned_containers    # Containers with no instance dir
@@ -137,7 +137,7 @@ The `DoctorReport` fields:
 If `doctor()` is called outside a project directory, it raises `ProjectNotInitialized`:
 
 ```python
-from pocket_dock import ProjectNotInitialized
+from pocketdock import ProjectNotInitialized
 
 try:
     report = doctor()

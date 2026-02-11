@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 
 import pytest
-from pocket_dock._helpers import (
+from pocketdock._helpers import (
     _extract_memory,
     _extract_pids,
     _extract_processes,

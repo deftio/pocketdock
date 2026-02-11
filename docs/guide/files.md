@@ -1,6 +1,6 @@
 # File Operations
 
-pocket-dock provides five methods for moving data between the host and container.
+pocketdock provides five methods for moving data between the host and container.
 
 ## Write a File
 

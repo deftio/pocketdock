@@ -67,7 +67,7 @@ Each milestone is **accepted only if all items pass**.
 * [ ] Can run against locally available images
 * [ ] Image resolution logic is deterministic
 * [ ] Container names are predictable and collision-safe
-* [ ] Containers are labeled with pocket-dock metadata
+* [ ] Containers are labeled with pocketdock metadata
 * [ ] Temporary containers are cleaned up on success
 * [ ] Cleanup occurs on failure paths
 * [ ] SDK user can opt into reuse vs ephemeral containers
@@ -80,7 +80,7 @@ Each milestone is **accepted only if all items pass**.
 
 ### Acceptance
 
-* [ ] `.project/.pocket-dock/instances/` is created automatically
+* [ ] `.project/.pocketdock/instances/` is created automatically
 * [ ] Each instance has:
 
   * ID

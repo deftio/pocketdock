@@ -15,13 +15,13 @@ import atexit
 import threading
 from typing import TYPE_CHECKING, Literal, overload
 
-from pocket_dock._async_container import (
+from pocketdock._async_container import (
     _DEFAULT_IMAGE,
     _DEFAULT_MAX_OUTPUT,
     _DEFAULT_TIMEOUT,
     AsyncContainer,
 )
-from pocket_dock._async_container import (
+from pocketdock._async_container import (
     create_new_container as _async_create,
 )
 
@@ -31,10 +31,10 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from pocket_dock._buffer import BufferSnapshot
-    from pocket_dock._process import AsyncExecStream, AsyncProcess
-    from pocket_dock._session import AsyncSession
-    from pocket_dock.types import ContainerInfo, ExecResult, StreamChunk
+    from pocketdock._buffer import BufferSnapshot
+    from pocketdock._process import AsyncExecStream, AsyncProcess
+    from pocketdock._session import AsyncSession
+    from pocketdock.types import ContainerInfo, ExecResult, StreamChunk
 
 
 class _LoopThread:
@@ -47,7 +47,7 @@ class _LoopThread:
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(
             target=self._loop.run_forever,
-            name="pocket-dock-event-loop",
+            name="pocketdock-event-loop",
             daemon=True,
         )
         self._thread.start()
@@ -193,7 +193,7 @@ class SyncSession:
 class Container:
     """Sync handle to a running container.
 
-    Created via :func:`pocket_dock.create_new_container`.
+    Created via :func:`pocketdock.create_new_container`.
     Do not instantiate directly.
     """
 
@@ -415,7 +415,7 @@ def create_new_container(  # noqa: PLR0913
 ) -> Container:
     """Create and start a new container, returning a sync handle.
 
-    See :func:`pocket_dock.async_.create_new_container` for argument docs.
+    See :func:`pocketdock.async_.create_new_container` for argument docs.
     """
     lt = _LoopThread.get()
     ac = lt.run(

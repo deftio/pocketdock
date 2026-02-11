@@ -1,17 +1,17 @@
 # Async API
 
-pocket-dock is async-first. The sync `Container` is a thin facade over `AsyncContainer`, which does all real work. Use the async API directly when you need concurrency or are already in an async context.
+pocketdock is async-first. The sync `Container` is a thin facade over `AsyncContainer`, which does all real work. Use the async API directly when you need concurrency or are already in an async context.
 
 ## Import
 
 ```python
-from pocket_dock.async_ import create_new_container
+from pocketdock.async_ import create_new_container
 ```
 
-All async equivalents live in `pocket_dock.async_`:
+All async equivalents live in `pocketdock.async_`:
 
 ```python
-from pocket_dock.async_ import (
+from pocketdock.async_ import (
     create_new_container,
     resume_container,
     list_containers,
@@ -30,7 +30,7 @@ from pocket_dock.async_ import (
 
 ```python
 import asyncio
-from pocket_dock.async_ import create_new_container
+from pocketdock.async_ import create_new_container
 
 async def main():
     async with await create_new_container() as c:
@@ -49,7 +49,7 @@ Run commands in multiple containers simultaneously:
 
 ```python
 import asyncio
-from pocket_dock.async_ import create_new_container
+from pocketdock.async_ import create_new_container
 
 async def main():
     async with (
@@ -104,8 +104,8 @@ async with await create_new_container() as c:
 
 | Scenario | Recommendation |
 |----------|---------------|
-| Scripts, CLIs, notebooks | Use sync (`pocket_dock`) |
-| Already in an async context | Use async (`pocket_dock.async_`) |
+| Scripts, CLIs, notebooks | Use sync (`pocketdock`) |
+| Already in an async context | Use async (`pocketdock.async_`) |
 | Multiple containers concurrently | Use async + `asyncio.gather()` |
 | Web frameworks (FastAPI, aiohttp) | Use async |
 | Simple one-container tasks | Use sync |
@@ -120,10 +120,10 @@ The async API uses different type names for streams and processes:
 | `Process` | `AsyncProcess` |
 | `Session` | `AsyncSession` |
 
-These are exported from `pocket_dock.async_`:
+These are exported from `pocketdock.async_`:
 
 ```python
-from pocket_dock.async_ import AsyncContainer, AsyncExecStream, AsyncProcess, AsyncSession
+from pocketdock.async_ import AsyncContainer, AsyncExecStream, AsyncProcess, AsyncSession
 ```
 
 ## How the Sync Facade Works

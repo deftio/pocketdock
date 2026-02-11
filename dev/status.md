@@ -1,6 +1,6 @@
 # Implementation Status
 
-Tracking progress against the milestones defined in `plan/pocket-dock-plan.md`.
+Tracking progress against the milestones defined in `plan/pocketdock-plan.md`.
 
 ## Current: M2 Complete
 
@@ -13,8 +13,8 @@ Tracking progress against the milestones defined in `plan/pocket-dock-plan.md`.
 - [x] `dev/` directory with this status file
 - [x] `.claude/CLAUDE.md`
 - [x] `LICENSE` (BSD-2-Clause)
-- [x] `python/pocket_dock/__init__.py` (exports errors + ExecResult)
-- [x] `python/pocket_dock/py.typed` (PEP 561 marker)
+- [x] `python/pocketdock/__init__.py` (exports errors + ExecResult)
+- [x] `python/pocketdock/py.typed` (PEP 561 marker)
 - [x] `tests/` directory with conftest, import, errors, types, stream, socket client tests
 - [x] `.pre-commit-config.yaml`
 - [x] `.github/workflows/ci.yml`
@@ -38,7 +38,7 @@ Tracking progress against the milestones defined in `plan/pocket-dock-plan.md`.
 - [x] Blocking `run()` with timeout and output capping
 - [x] `lang` parameter for `run()` (e.g. `lang="python"`)
 - [x] Timeout support in `exec_command` via `asyncio.wait_for`
-- [x] Container labels (`pocket-dock.managed`, `pocket-dock.instance`)
+- [x] Container labels (`pocketdock.managed`, `pocketdock.instance`)
 - [x] Auto-generated container names (`pd-{8 hex}`)
 - [x] Multiple containers from one process work independently
 - [x] Thread-safe sync facade via `asyncio.run_coroutine_threadsafe`
@@ -70,7 +70,7 @@ Tracking progress against the milestones defined in `plan/pocket-dock-plan.md`.
 | M4 | Stream/detach/buffer/callbacks | 0.5.0 | Not started |
 | M5 | Sessions (persistent shells) | 0.6.0 | Not started |
 | M6 | Persistence (resume, snapshot) | 0.7.0 | Not started |
-| M7 | Projects (.pocket-dock/ management) | 0.8.0 | Not started |
+| M7 | Projects (.pocketdock/ management) | 0.8.0 | Not started |
 | M8 | CLI (15+ commands) | 0.9.0 | Not started |
 | M9 | Image profiles | 1.0.0 | Not started |
 | M10 | ContainerPool (post-stable) | 1.1.0 | Not started |

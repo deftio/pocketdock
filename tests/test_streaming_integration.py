@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 
-from pocket_dock._async_container import create_new_container
-from pocket_dock._process import AsyncExecStream, AsyncProcess
-from pocket_dock.types import ExecResult
+from pocketdock._async_container import create_new_container
+from pocketdock._process import AsyncExecStream, AsyncProcess
+from pocketdock.types import ExecResult
 
 from .conftest import requires_engine
 

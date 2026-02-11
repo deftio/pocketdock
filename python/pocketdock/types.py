@@ -58,7 +58,7 @@ class StreamChunk:
 
 @dataclasses.dataclass(frozen=True)
 class ContainerListItem:
-    """Summary information for a pocket-dock managed container."""
+    """Summary information for a pocketdock managed container."""
 
     id: str
     name: str

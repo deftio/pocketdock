@@ -1,9 +1,9 @@
-"""Tests for the pocket-dock error hierarchy."""
+"""Tests for the pocketdock error hierarchy."""
 
 from __future__ import annotations
 
-import pocket_dock
-from pocket_dock.errors import (
+import pocketdock
+from pocketdock.errors import (
     ContainerError,
     ContainerGone,
     ContainerNotFound,
@@ -19,7 +19,7 @@ from pocket_dock.errors import (
 # -- Inheritance --
 
 
-def test_socket_error_is_pocket_dock_error() -> None:
+def test_socket_error_is_pocketdock_error() -> None:
     assert issubclass(SocketError, PocketDockError)
 
 
@@ -35,7 +35,7 @@ def test_podman_not_running_is_socket_error() -> None:
     assert issubclass(PodmanNotRunning, SocketError)
 
 
-def test_container_error_is_pocket_dock_error() -> None:
+def test_container_error_is_pocketdock_error() -> None:
     assert issubclass(ContainerError, PocketDockError)
 
 
@@ -51,14 +51,14 @@ def test_container_gone_is_container_error() -> None:
     assert issubclass(ContainerGone, ContainerError)
 
 
-def test_image_not_found_is_pocket_dock_error() -> None:
+def test_image_not_found_is_pocketdock_error() -> None:
     assert issubclass(ImageNotFound, PocketDockError)
 
 
 # -- Catchability --
 
 
-def test_catch_socket_connection_error_as_pocket_dock_error() -> None:
+def test_catch_socket_connection_error_as_pocketdock_error() -> None:
     try:
         raise SocketConnectionError("/tmp/test.sock")
     except PocketDockError:
@@ -72,7 +72,7 @@ def test_catch_container_not_found_as_container_error() -> None:
         pass
 
 
-def test_catch_image_not_found_as_pocket_dock_error() -> None:
+def test_catch_image_not_found_as_pocketdock_error() -> None:
     try:
         raise ImageNotFound("missing:latest")
     except PocketDockError:
@@ -152,13 +152,13 @@ def test_image_not_found_stores_image() -> None:
 
 
 def test_errors_exported_from_package() -> None:
-    assert pocket_dock.PocketDockError is PocketDockError
-    assert pocket_dock.SocketError is SocketError
-    assert pocket_dock.SocketConnectionError is SocketConnectionError
-    assert pocket_dock.SocketCommunicationError is SocketCommunicationError
-    assert pocket_dock.PodmanNotRunning is PodmanNotRunning
-    assert pocket_dock.ContainerError is ContainerError
-    assert pocket_dock.ContainerNotFound is ContainerNotFound
-    assert pocket_dock.ContainerNotRunning is ContainerNotRunning
-    assert pocket_dock.ContainerGone is ContainerGone
-    assert pocket_dock.ImageNotFound is ImageNotFound
+    assert pocketdock.PocketDockError is PocketDockError
+    assert pocketdock.SocketError is SocketError
+    assert pocketdock.SocketConnectionError is SocketConnectionError
+    assert pocketdock.SocketCommunicationError is SocketCommunicationError
+    assert pocketdock.PodmanNotRunning is PodmanNotRunning
+    assert pocketdock.ContainerError is ContainerError
+    assert pocketdock.ContainerNotFound is ContainerNotFound
+    assert pocketdock.ContainerNotRunning is ContainerNotRunning
+    assert pocketdock.ContainerGone is ContainerGone
+    assert pocketdock.ImageNotFound is ImageNotFound

@@ -41,8 +41,8 @@ Thumbs.db
 # mkdocs
 site/
 
-# pocket-dock runtime data
-.pocket-dock/
+# pocketdock runtime data
+.pocketdock/
 
 # Environment / secrets
 .env

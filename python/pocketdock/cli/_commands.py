@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING
 import click
 
 if TYPE_CHECKING:
-    from pocket_dock import Container
-    from pocket_dock.cli.main import CliContext
+    from pocketdock import Container
+    from pocketdock.cli.main import CliContext
 
-from pocket_dock.cli._output import (
+from pocketdock.cli._output import (
     format_container_info,
     format_container_list,
     format_doctor_report,
@@ -31,11 +31,11 @@ def _get_ctx(ctx: click.Context) -> CliContext:
 
 def _resolve_container(name: str, socket_path: str | None) -> Container:
     """Resolve a container by name. Returns a Container handle or raises SystemExit."""
-    import pocket_dock  # noqa: PLC0415
+    import pocketdock  # noqa: PLC0415
 
     try:
-        return pocket_dock.resume_container(name, socket_path=socket_path)
-    except pocket_dock.PocketDockError as exc:
+        return pocketdock.resume_container(name, socket_path=socket_path)
+    except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
 
@@ -49,13 +49,13 @@ def _resolve_container(name: str, socket_path: str | None) -> Container:
 @click.option("--name", default=None, help="Project name (defaults to directory name).")
 @click.argument("path", required=False, default=None)
 def init_cmd(name: str | None, path: str | None) -> None:
-    """Initialize a pocket-dock project."""
-    import pocket_dock  # noqa: PLC0415
+    """Initialize a pocketdock project."""
+    import pocketdock  # noqa: PLC0415
 
     resolved = Path(path) if path else None
     try:
-        root = pocket_dock.init_project(resolved, project_name=name)
-    except pocket_dock.PocketDockError as exc:
+        root = pocketdock.init_project(resolved, project_name=name)
+    except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
     print_success(f"Project initialized at {root}")
@@ -66,13 +66,13 @@ def init_cmd(name: str | None, path: str | None) -> None:
 @click.option("--project", default=None, help="Filter by project name.")
 @click.pass_context
 def list_cmd(ctx: click.Context, *, json_output: bool, project: str | None) -> None:
-    """List pocket-dock containers."""
-    import pocket_dock  # noqa: PLC0415
+    """List pocketdock containers."""
+    import pocketdock  # noqa: PLC0415
 
     cli_ctx = _get_ctx(ctx)
     try:
-        items = pocket_dock.list_containers(socket_path=cli_ctx.socket, project=project)
-    except pocket_dock.PocketDockError as exc:
+        items = pocketdock.list_containers(socket_path=cli_ctx.socket, project=project)
+    except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
     format_container_list(items, json_output=json_output)
@@ -89,7 +89,7 @@ def info_cmd(ctx: click.Context, container: str, *, json_output: bool) -> None:
     try:
         info = c.info()
     except Exception as exc:
-        from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+        from pocketdock.errors import PocketDockError  # noqa: PLC0415
 
         if isinstance(exc, PocketDockError):
             format_error(exc)
@@ -102,12 +102,12 @@ def info_cmd(ctx: click.Context, container: str, *, json_output: bool) -> None:
 @click.pass_context
 def doctor_cmd(ctx: click.Context, *, json_output: bool) -> None:
     """Diagnose project health."""
-    import pocket_dock  # noqa: PLC0415
+    import pocketdock  # noqa: PLC0415
 
     cli_ctx = _get_ctx(ctx)
     try:
-        report = pocket_dock.doctor(socket_path=cli_ctx.socket)
-    except pocket_dock.PocketDockError as exc:
+        report = pocketdock.doctor(socket_path=cli_ctx.socket)
+    except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
     format_doctor_report(report, json_output=json_output)
@@ -118,20 +118,20 @@ def doctor_cmd(ctx: click.Context, *, json_output: bool) -> None:
 @click.pass_context
 def status_cmd(ctx: click.Context, *, json_output: bool) -> None:
     """Show project status summary."""
-    import pocket_dock  # noqa: PLC0415
-    from pocket_dock.projects import get_project_name, list_instance_dirs  # noqa: PLC0415
+    import pocketdock  # noqa: PLC0415
+    from pocketdock.projects import get_project_name, list_instance_dirs  # noqa: PLC0415
 
     cli_ctx = _get_ctx(ctx)
     try:
-        root = pocket_dock.find_project_root()
+        root = pocketdock.find_project_root()
         if root is None:
-            from pocket_dock.errors import ProjectNotInitialized  # noqa: PLC0415
+            from pocketdock.errors import ProjectNotInitialized  # noqa: PLC0415
 
             raise ProjectNotInitialized
         project_name = get_project_name(root)
         instances = list_instance_dirs(root)
-        containers = pocket_dock.list_containers(socket_path=cli_ctx.socket, project=project_name)
-    except pocket_dock.PocketDockError as exc:
+        containers = pocketdock.list_containers(socket_path=cli_ctx.socket, project=project_name)
+    except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
 
@@ -237,12 +237,12 @@ def logs_cmd(
     json_output: bool,
 ) -> None:
     """View container logs from history.jsonl."""
-    import pocket_dock  # noqa: PLC0415
-    from pocket_dock.projects import list_instance_dirs  # noqa: PLC0415
+    import pocketdock  # noqa: PLC0415
+    from pocketdock.projects import list_instance_dirs  # noqa: PLC0415
 
-    root = pocket_dock.find_project_root()
+    root = pocketdock.find_project_root()
     if root is None:
-        from pocket_dock.errors import ProjectNotInitialized  # noqa: PLC0415
+        from pocketdock.errors import ProjectNotInitialized  # noqa: PLC0415
 
         err = ProjectNotInitialized()
         format_error(err)
@@ -321,7 +321,7 @@ def _build_create_kwargs(  # noqa: PLR0913
 
 
 @click.command("create")
-@click.option("--image", default=None, help="Container image (default: pocket-dock/minimal).")
+@click.option("--image", default=None, help="Container image (default: pocketdock/minimal).")
 @click.option("--name", default=None, help="Container name.")
 @click.option("--timeout", type=int, default=30, help="Default exec timeout in seconds.")
 @click.option("--mem-limit", default=None, help="Memory limit (e.g. '256m', '1g').")
@@ -355,7 +355,7 @@ def create_cmd(  # noqa: PLR0913
     """Create and start a new container."""
     import os  # noqa: PLC0415
 
-    import pocket_dock  # noqa: PLC0415
+    import pocketdock  # noqa: PLC0415
 
     cli_ctx = _get_ctx(ctx)
     kwargs = _build_create_kwargs(
@@ -375,8 +375,8 @@ def create_cmd(  # noqa: PLR0913
     if cli_ctx.socket:
         os.environ["POCKET_DOCK_SOCKET"] = cli_ctx.socket
     try:
-        c = pocket_dock.create_new_container(**kwargs)  # type: ignore[arg-type]
-    except pocket_dock.PocketDockError as exc:
+        c = pocketdock.create_new_container(**kwargs)  # type: ignore[arg-type]
+    except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
     finally:
@@ -432,13 +432,13 @@ def run_cmd(  # noqa: PLR0913
             kw["lang"] = lang
         result = c.run(cmd_str, **kw)  # type: ignore[call-overload]
     except Exception as exc:
-        from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+        from pocketdock.errors import PocketDockError  # noqa: PLC0415
 
         if isinstance(exc, PocketDockError):
             format_error(exc)
         raise SystemExit(1) from exc
 
-    from pocket_dock.cli._output import format_exec_result  # noqa: PLC0415
+    from pocketdock.cli._output import format_exec_result  # noqa: PLC0415
 
     format_exec_result(result)
     raise SystemExit(result.exit_code)
@@ -497,7 +497,7 @@ def push_cmd(ctx: click.Context, container: str, src: str, dst: str) -> None:
     try:
         c.push(src, dst)
     except Exception as exc:
-        from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+        from pocketdock.errors import PocketDockError  # noqa: PLC0415
 
         if isinstance(exc, PocketDockError):
             format_error(exc)
@@ -517,7 +517,7 @@ def pull_cmd(ctx: click.Context, container: str, src: str, dst: str) -> None:
     try:
         c.pull(src, dst)
     except Exception as exc:
-        from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+        from pocketdock.errors import PocketDockError  # noqa: PLC0415
 
         if isinstance(exc, PocketDockError):
             format_error(exc)
@@ -536,7 +536,7 @@ def reboot_cmd(ctx: click.Context, container: str, *, fresh: bool) -> None:
     try:
         c.reboot(fresh=fresh)
     except Exception as exc:
-        from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+        from pocketdock.errors import PocketDockError  # noqa: PLC0415
 
         if isinstance(exc, PocketDockError):
             format_error(exc)
@@ -550,12 +550,12 @@ def reboot_cmd(ctx: click.Context, container: str, *, fresh: bool) -> None:
 @click.pass_context
 def stop_cmd(ctx: click.Context, container: str) -> None:
     """Stop a running container (without removing)."""
-    import pocket_dock  # noqa: PLC0415
+    import pocketdock  # noqa: PLC0415
 
     cli_ctx = _get_ctx(ctx)
     try:
-        pocket_dock.stop_container(container, socket_path=cli_ctx.socket)
-    except pocket_dock.PocketDockError as exc:
+        pocketdock.stop_container(container, socket_path=cli_ctx.socket)
+    except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
     print_success(f"Container {container} stopped")
@@ -577,8 +577,8 @@ def resume_cmd(ctx: click.Context, container: str) -> None:
 @click.pass_context
 def shutdown_cmd(ctx: click.Context, container: str, *, yes: bool) -> None:
     """Stop and remove a container."""
-    import pocket_dock  # noqa: PLC0415
-    from pocket_dock.cli._output import confirm_destructive  # noqa: PLC0415
+    import pocketdock  # noqa: PLC0415
+    from pocketdock.cli._output import confirm_destructive  # noqa: PLC0415
 
     cli_ctx = _get_ctx(ctx)
     if not yes and not confirm_destructive(f"Shutdown and remove container '{container}'?"):
@@ -586,8 +586,8 @@ def shutdown_cmd(ctx: click.Context, container: str, *, yes: bool) -> None:
         return
 
     try:
-        pocket_dock.destroy_container(container, socket_path=cli_ctx.socket)
-    except pocket_dock.PocketDockError as exc:
+        pocketdock.destroy_container(container, socket_path=cli_ctx.socket)
+    except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
     print_success(f"Container {container} shut down and removed")
@@ -604,7 +604,7 @@ def snapshot_cmd(ctx: click.Context, container: str, image_name: str) -> None:
     try:
         image_id = c.snapshot(image_name)
     except Exception as exc:
-        from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+        from pocketdock.errors import PocketDockError  # noqa: PLC0415
 
         if isinstance(exc, PocketDockError):
             format_error(exc)
@@ -617,18 +617,18 @@ def snapshot_cmd(ctx: click.Context, container: str, image_name: str) -> None:
 @click.option("--project", default=None, help="Only prune containers in this project.")
 @click.pass_context
 def prune_cmd(ctx: click.Context, *, yes: bool, project: str | None) -> None:
-    """Remove all stopped pocket-dock containers."""
-    import pocket_dock  # noqa: PLC0415
-    from pocket_dock.cli._output import confirm_destructive  # noqa: PLC0415
+    """Remove all stopped pocketdock containers."""
+    import pocketdock  # noqa: PLC0415
+    from pocketdock.cli._output import confirm_destructive  # noqa: PLC0415
 
     cli_ctx = _get_ctx(ctx)
-    if not yes and not confirm_destructive("Remove all stopped pocket-dock containers?"):
+    if not yes and not confirm_destructive("Remove all stopped pocketdock containers?"):
         click.echo("Aborted.")
         return
 
     try:
-        count = pocket_dock.prune(socket_path=cli_ctx.socket, project=project)
-    except pocket_dock.PocketDockError as exc:
+        count = pocketdock.prune(socket_path=cli_ctx.socket, project=project)
+    except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
     print_success(f"Removed {count} container(s)")
@@ -695,8 +695,8 @@ def build_cmd(ctx: click.Context, profiles: tuple[str, ...], *, build_all: bool)
     """Build image profiles from Dockerfiles."""
     import asyncio  # noqa: PLC0415
 
-    from pocket_dock import _socket_client as sc  # noqa: PLC0415
-    from pocket_dock.profiles import (  # noqa: PLC0415
+    from pocketdock import _socket_client as sc  # noqa: PLC0415
+    from pocketdock.profiles import (  # noqa: PLC0415
         get_dockerfile_path,
         list_profiles,
         resolve_profile,
@@ -708,7 +708,7 @@ def build_cmd(ctx: click.Context, profiles: tuple[str, ...], *, build_all: bool)
 
     socket_path = cli_ctx.socket or sc.detect_socket()
     if socket_path is None:
-        from pocket_dock.errors import PodmanNotRunning  # noqa: PLC0415
+        from pocketdock.errors import PodmanNotRunning  # noqa: PLC0415
 
         err = PodmanNotRunning()
         format_error(err)
@@ -727,7 +727,7 @@ def build_cmd(ctx: click.Context, profiles: tuple[str, ...], *, build_all: bool)
         try:
             asyncio.run(sc.build_image(socket_path, context, info.image_tag))
         except Exception as exc:
-            from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+            from pocketdock.errors import PocketDockError  # noqa: PLC0415
 
             if isinstance(exc, PocketDockError):
                 format_error(exc)
@@ -759,12 +759,12 @@ def export_cmd(
     import asyncio  # noqa: PLC0415
     import gzip  # noqa: PLC0415
 
-    from pocket_dock import _socket_client as sc  # noqa: PLC0415
+    from pocketdock import _socket_client as sc  # noqa: PLC0415
 
     cli_ctx = _get_ctx(ctx)
     socket_path = cli_ctx.socket or sc.detect_socket()
     if socket_path is None:
-        from pocket_dock.errors import PodmanNotRunning  # noqa: PLC0415
+        from pocketdock.errors import PodmanNotRunning  # noqa: PLC0415
 
         err = PodmanNotRunning()
         format_error(err)
@@ -778,7 +778,7 @@ def export_cmd(
         try:
             tar_data = asyncio.run(sc.save_image(socket_path, img_name))
         except Exception as exc:
-            from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+            from pocketdock.errors import PocketDockError  # noqa: PLC0415
 
             if isinstance(exc, PocketDockError):
                 format_error(exc)
@@ -801,7 +801,7 @@ def _resolve_export_images(
     export_all: bool,
 ) -> list[str]:
     """Determine image names for export."""
-    from pocket_dock.profiles import list_profiles, resolve_profile  # noqa: PLC0415
+    from pocketdock.profiles import list_profiles, resolve_profile  # noqa: PLC0415
 
     if export_all:
         return [p.image_tag for p in list_profiles()]
@@ -821,12 +821,12 @@ def import_cmd(ctx: click.Context, file: str) -> None:
     import asyncio  # noqa: PLC0415
     import gzip  # noqa: PLC0415
 
-    from pocket_dock import _socket_client as sc  # noqa: PLC0415
+    from pocketdock import _socket_client as sc  # noqa: PLC0415
 
     cli_ctx = _get_ctx(ctx)
     socket_path = cli_ctx.socket or sc.detect_socket()
     if socket_path is None:
-        from pocket_dock.errors import PodmanNotRunning  # noqa: PLC0415
+        from pocketdock.errors import PodmanNotRunning  # noqa: PLC0415
 
         err = PodmanNotRunning()
         format_error(err)
@@ -841,7 +841,7 @@ def import_cmd(ctx: click.Context, file: str) -> None:
     try:
         asyncio.run(sc.load_image(socket_path, raw))
     except Exception as exc:
-        from pocket_dock.errors import PocketDockError  # noqa: PLC0415
+        from pocketdock.errors import PocketDockError  # noqa: PLC0415
 
         if isinstance(exc, PocketDockError):
             format_error(exc)
@@ -855,13 +855,13 @@ def import_cmd(ctx: click.Context, file: str) -> None:
 @click.option("--json", "json_output", is_flag=True, help="Output as JSON.")
 def profiles_cmd(*, json_output: bool) -> None:
     """List available image profiles."""
-    from pocket_dock.profiles import list_profiles  # noqa: PLC0415
+    from pocketdock.profiles import list_profiles  # noqa: PLC0415
 
     all_profiles = list_profiles()
     if json_output:
         import dataclasses  # noqa: PLC0415
 
-        from pocket_dock.cli._output import click_echo_json  # noqa: PLC0415
+        from pocketdock.cli._output import click_echo_json  # noqa: PLC0415
 
         click_echo_json([dataclasses.asdict(p) for p in all_profiles])
         return

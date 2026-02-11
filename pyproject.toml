@@ -6,8 +6,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pocket-dock"
-version = "1.0.1"
+name = "pocketdock"
+version = "1.1.0"
 description = "Portable, offline-first container sandboxes for LLM agents and dev workflows"
 readme = "README.md"
 license = "BSD-2-Clause"
@@ -52,14 +52,14 @@ dev = [
 ]
 
 [project.scripts]
-pocket-dock = "pocket_dock.cli.main:cli [cli]"
+pocketdock = "pocketdock.cli.main:cli [cli]"
 
 # ---------------------------------------------------------------------------
 # Tool configuration
 # ---------------------------------------------------------------------------
 
 [tool.hatch.build.targets.wheel]
-packages = ["python/pocket_dock"]
+packages = ["python/pocketdock"]
 
 [tool.ruff]
 target-version = "py310"
@@ -96,11 +96,11 @@ warn_unused_configs = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "--cov=pocket_dock --cov-report=term-missing -v --durations=10"
+addopts = "--cov=pocketdock --cov-report=term-missing -v --durations=10"
 
 [tool.coverage.run]
 branch = true
-source = ["pocket_dock"]
+source = ["pocketdock"]
 
 [tool.coverage.report]
 show_missing = true

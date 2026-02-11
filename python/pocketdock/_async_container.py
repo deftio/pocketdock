@@ -19,22 +19,22 @@ import tarfile
 import time
 from typing import TYPE_CHECKING, Any, Literal, overload
 
-from pocket_dock import _socket_client as sc
-from pocket_dock._callbacks import CallbackRegistry
-from pocket_dock._helpers import build_container_info, parse_mem_limit
-from pocket_dock._logger import InstanceLogger
-from pocket_dock._process import AsyncExecStream, AsyncProcess
-from pocket_dock._session import AsyncSession
-from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
+from pocketdock import _socket_client as sc
+from pocketdock._callbacks import CallbackRegistry
+from pocketdock._helpers import build_container_info, parse_mem_limit
+from pocketdock._logger import InstanceLogger
+from pocketdock._process import AsyncExecStream, AsyncProcess
+from pocketdock._session import AsyncSession
+from pocketdock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from typing_extensions import Self
 
-    from pocket_dock.types import ContainerInfo, ExecResult
+    from pocketdock.types import ContainerInfo, ExecResult
 
-_DEFAULT_IMAGE = "pocket-dock/minimal"
+_DEFAULT_IMAGE = "pocketdock/minimal"
 _DEFAULT_TIMEOUT = 30
 _DEFAULT_MAX_OUTPUT = 10 * 1024 * 1024  # 10 MB
 
@@ -54,17 +54,17 @@ def _build_command(command: str, lang: str | None) -> list[str]:
 def _build_labels(
     name: str, *, persist: bool, project: str = "", data_path: str = ""
 ) -> dict[str, str]:
-    """Build the standard pocket-dock container labels."""
+    """Build the standard pocketdock container labels."""
     labels = {
-        "pocket-dock.managed": "true",
-        "pocket-dock.instance": name,
-        "pocket-dock.persist": str(persist).lower(),
-        "pocket-dock.created-at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+        "pocketdock.managed": "true",
+        "pocketdock.instance": name,
+        "pocketdock.persist": str(persist).lower(),
+        "pocketdock.created-at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
     }
     if project:
-        labels["pocket-dock.project"] = project
+        labels["pocketdock.project"] = project
     if data_path:
-        labels["pocket-dock.data-path"] = data_path
+        labels["pocketdock.data-path"] = data_path
     return labels
 
 
@@ -101,7 +101,7 @@ def _augment_host_config(
 class AsyncContainer:
     """Async handle to a running container.
 
-    Created via :func:`pocket_dock.async_.create_new_container`.
+    Created via :func:`pocketdock.async_.create_new_container`.
     Do not instantiate directly.
     """
 
@@ -581,9 +581,9 @@ async def create_new_container(  # noqa: PLR0913
         cpu_percent: CPU usage cap as a percentage (e.g. ``50`` for 50%).
         persist: If ``True``, shutdown stops but does not remove the container.
         volumes: Host-to-container mount mappings (e.g. ``{"/host": "/container"}``).
-        project: Project name. Auto-detected from ``.pocket-dock/`` if ``None``.
+        project: Project name. Auto-detected from ``.pocketdock/`` if ``None``.
         profile: Image profile name (e.g. ``"dev"``, ``"agent"``). Resolved to
-            an image tag via :func:`pocket_dock.profiles.resolve_profile`. Ignored
+            an image tag via :func:`pocketdock.profiles.resolve_profile`. Ignored
             when *image* is explicitly set to a non-default value.
         devices: Host device paths to passthrough (e.g. ``["/dev/ttyUSB0"]``).
 
@@ -591,7 +591,7 @@ async def create_new_container(  # noqa: PLR0913
         A running :class:`AsyncContainer`.
 
     """
-    from pocket_dock.projects import (  # noqa: PLC0415
+    from pocketdock.projects import (  # noqa: PLC0415
         ensure_instance_dir,
         find_project_root,
         get_project_name,
@@ -603,7 +603,7 @@ async def create_new_container(  # noqa: PLR0913
 
     # Resolve profile → image tag when image was not explicitly overridden
     if profile is not None and image == _DEFAULT_IMAGE:
-        from pocket_dock.profiles import resolve_profile  # noqa: PLC0415
+        from pocketdock.profiles import resolve_profile  # noqa: PLC0415
 
         profile_info = resolve_profile(profile)
         image = profile_info.image_tag

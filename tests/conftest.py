@@ -1,4 +1,4 @@
-"""Shared fixtures for pocket-dock tests."""
+"""Shared fixtures for pocketdock tests."""
 
 from __future__ import annotations
 

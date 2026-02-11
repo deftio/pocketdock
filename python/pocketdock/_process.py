@@ -11,18 +11,18 @@ import json
 import time
 from typing import TYPE_CHECKING
 
-from pocket_dock._buffer import BufferSnapshot, RingBuffer
-from pocket_dock._stream import STREAM_STDOUT
-from pocket_dock.types import ExecResult, StreamChunk
+from pocketdock._buffer import BufferSnapshot, RingBuffer
+from pocketdock._stream import STREAM_STDOUT
+from pocketdock.types import ExecResult, StreamChunk
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from typing_extensions import Self
 
-    from pocket_dock._async_container import AsyncContainer
-    from pocket_dock._callbacks import CallbackRegistry
-    from pocket_dock._logger import DetachLogHandle
+    from pocketdock._async_container import AsyncContainer
+    from pocketdock._callbacks import CallbackRegistry
+    from pocketdock._logger import DetachLogHandle
 
 
 class AsyncExecStream:
@@ -76,7 +76,7 @@ class AsyncExecStream:
         self._writer.close()
         await self._writer.wait_closed()
 
-        from pocket_dock._socket_client import _exec_inspect_exit_code  # noqa: PLC0415
+        from pocketdock._socket_client import _exec_inspect_exit_code  # noqa: PLC0415
 
         exit_code = await _exec_inspect_exit_code(self._socket_path, self._exec_id)
         duration_ms = (time.monotonic() - self._start_time) * 1000
@@ -155,7 +155,7 @@ class AsyncProcess:
             self._writer.close()
             await self._writer.wait_closed()
 
-            from pocket_dock._socket_client import _exec_inspect_exit_code  # noqa: PLC0415
+            from pocketdock._socket_client import _exec_inspect_exit_code  # noqa: PLC0415
 
             with contextlib.suppress(Exception):
                 self._exit_code = await _exec_inspect_exit_code(self._socket_path, self._exec_id)
@@ -185,7 +185,7 @@ class AsyncProcess:
         if self._done.is_set():
             return
 
-        from pocket_dock._socket_client import _request, exec_command  # noqa: PLC0415
+        from pocketdock._socket_client import _request, exec_command  # noqa: PLC0415
 
         status, body = await _request(self._socket_path, "GET", f"/exec/{self._exec_id}/json")
         if status >= 400:  # noqa: PLR2004

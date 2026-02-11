@@ -1,6 +1,6 @@
 # Contributing
 
-See [CONTRIBUTING.md](https://github.com/deftio/pocket-dock/blob/main/CONTRIBUTING.md) for full details.
+See [CONTRIBUTING.md](https://github.com/deftio/pocketdock/blob/main/CONTRIBUTING.md) for full details.
 
 ## Quick Reference
 
@@ -9,7 +9,7 @@ uv sync --dev                           # Install dependencies
 uv run pytest                           # Run tests
 uv run ruff check .                     # Lint
 uv run ruff format --check .            # Format check
-uv run mypy --strict python/pocket_dock/ # Type check
+uv run mypy --strict python/pocketdock/ # Type check
 ```
 
 ## Quality Bar

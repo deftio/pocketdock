@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from pocket_dock._async_container import create_new_container
-from pocket_dock.types import ContainerInfo
+from pocketdock._async_container import create_new_container
+from pocketdock.types import ContainerInfo
 
 from .conftest import requires_engine
 
@@ -119,7 +119,7 @@ async def test_create_with_both_limits() -> None:
 async def test_info_after_stop() -> None:
     c = await create_new_container()
     try:
-        from pocket_dock import _socket_client as sc
+        from pocketdock import _socket_client as sc
 
         await sc.stop_container(c.socket_path, c.container_id)
         info = await c.info()
@@ -153,7 +153,7 @@ async def test_reboot_fresh_preserves_limits() -> None:
 
 @requires_engine
 def test_sync_info() -> None:
-    from pocket_dock import create_new_container as sync_create
+    from pocketdock import create_new_container as sync_create
 
     with sync_create() as c:
         info = c.info()
@@ -163,7 +163,7 @@ def test_sync_info() -> None:
 
 @requires_engine
 def test_sync_reboot() -> None:
-    from pocket_dock import create_new_container as sync_create
+    from pocketdock import create_new_container as sync_create
 
     with sync_create() as c:
         old_id = c.container_id

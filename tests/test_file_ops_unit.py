@@ -9,8 +9,8 @@ import tempfile
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from pocket_dock._async_container import AsyncContainer
-from pocket_dock.types import ExecResult
+from pocketdock._async_container import AsyncContainer
+from pocketdock.types import ExecResult
 
 
 def _make_container() -> AsyncContainer:
@@ -27,7 +27,7 @@ async def test_write_file_text_encodes_utf8() -> None:
     with (
         patch.object(c, "run", new_callable=AsyncMock, return_value=mock_run_result),
         patch(
-            "pocket_dock._async_container.sc.push_archive",
+            "pocketdock._async_container.sc.push_archive",
             new_callable=AsyncMock,
         ) as mock_push,
     ):
@@ -55,7 +55,7 @@ async def test_write_file_binary_passthrough() -> None:
     with (
         patch.object(c, "run", new_callable=AsyncMock, return_value=mock_run_result),
         patch(
-            "pocket_dock._async_container.sc.push_archive",
+            "pocketdock._async_container.sc.push_archive",
             new_callable=AsyncMock,
         ) as mock_push,
     ):
@@ -78,7 +78,7 @@ async def test_write_file_nested_path() -> None:
     with (
         patch.object(c, "run", new_callable=AsyncMock, return_value=mock_run_result),
         patch(
-            "pocket_dock._async_container.sc.push_archive",
+            "pocketdock._async_container.sc.push_archive",
             new_callable=AsyncMock,
         ) as mock_push,
     ):
@@ -104,7 +104,7 @@ async def test_read_file_extracts_from_tar() -> None:
     tar_bytes = buf.getvalue()
 
     with patch(
-        "pocket_dock._async_container.sc.pull_archive",
+        "pocketdock._async_container.sc.pull_archive",
         new_callable=AsyncMock,
         return_value=tar_bytes,
     ):
@@ -124,7 +124,7 @@ async def test_read_file_empty_tar_raises() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc.pull_archive",
+            "pocketdock._async_container.sc.pull_archive",
             new_callable=AsyncMock,
             return_value=empty_tar,
         ),
@@ -181,7 +181,7 @@ async def test_push_file_creates_tar() -> None:
 
     try:
         with patch(
-            "pocket_dock._async_container.sc.push_archive",
+            "pocketdock._async_container.sc.push_archive",
             new_callable=AsyncMock,
         ) as mock_push:
             await c.push(host_path, f"/container/{pathlib.Path(host_path).name}")
@@ -209,7 +209,7 @@ async def test_push_directory_creates_tar() -> None:
         dir_name = pathlib.Path(tmpdir).name
 
         with patch(
-            "pocket_dock._async_container.sc.push_archive",
+            "pocketdock._async_container.sc.push_archive",
             new_callable=AsyncMock,
         ) as mock_push:
             await c.push(tmpdir, f"/dest/{dir_name}")
@@ -248,7 +248,7 @@ async def test_pull_single_file() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc.pull_archive",
+            "pocketdock._async_container.sc.pull_archive",
             new_callable=AsyncMock,
             return_value=tar_bytes,
         ),
@@ -277,7 +277,7 @@ async def test_pull_directory() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc.pull_archive",
+            "pocketdock._async_container.sc.pull_archive",
             new_callable=AsyncMock,
             return_value=tar_bytes,
         ),

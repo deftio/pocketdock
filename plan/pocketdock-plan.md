@@ -1,4 +1,4 @@
-# pocket-dock
+# pocketdock
 
 > **This document lives at `plan/spec.md` in the repo.** It is the architecture and design spec, not the README. The README is a concise quickstart for users. This spec is the complete reference for contributors and the authoritative source of truth for architectural decisions. Docs, examples, and code are generated from decisions made here.
 
@@ -16,7 +16,7 @@ You're building something that needs to execute code in isolation — an LLM age
 - **Roll your own**: You end up rewriting the same ~200 lines of container SDK glue code every time — container lifecycle, exec, stream demuxing, cleanup, error handling.
 - **Open Interpreter**: Interactive assistant, not a sandbox. Runs code on your host.
 
-pocket-dock fills the gap: a thin, reusable library that talks directly to your container engine over its Unix socket, ships with pre-baked images you build once and keep locally, and works entirely offline after initial setup.
+pocketdock fills the gap: a thin, reusable library that talks directly to your container engine over its Unix socket, ships with pre-baked images you build once and keep locally, and works entirely offline after initial setup.
 
 ---
 
@@ -34,7 +34,7 @@ pocket-dock fills the gap: a thin, reusable library that talks directly to your 
 
 6. **A real CLI.** Not an afterthought. Beautiful help output, destructive-action confirmations, built-in structured logging, sensible defaults.
 
-7. **Project-rooted organization.** Containers are grouped into projects via labels. Instance data (logs, history, working files) lives in `.pocket-dock/` in the project directory, not in a global registry.
+7. **Project-rooted organization.** Containers are grouped into projects via labels. Instance data (logs, history, working files) lives in `.pocketdock/` in the project directory, not in a global registry.
 
 ---
 
@@ -42,41 +42,41 @@ pocket-dock fills the gap: a thin, reusable library that talks directly to your 
 
 - Not a container orchestrator. No Kubernetes. No Swarm. No service mesh. No scaling, load balancing, or service discovery.
 - Not a security-hardened sandbox for adversarial inputs. Container-level isolation (shared kernel). For truly untrusted code, use gVisor/Firecracker on top.
-- Not a process supervisor. pocket-dock manages container **lifecycle** (create, run, stop, resume, destroy) but not **restart policies** or **boot-time startup**. If you want a container to survive host reboot, use `pocket-dock resume` manually or write a systemd unit. pocket-dock doesn't manage system services.
+- Not a process supervisor. pocketdock manages container **lifecycle** (create, run, stop, resume, destroy) but not **restart policies** or **boot-time startup**. If you want a container to survive host reboot, use `pocketdock resume` manually or write a systemd unit. pocketdock doesn't manage system services.
 - No Windows container support (Linux containers on any host OS via Docker Desktop / Podman Machine is fine).
 
 ### Long-running containers
 
-If you `pocket-dock create --persist --port 8080:8080` and run a server inside, that container stays up until you stop it. It's not tied to your terminal session — closing your shell doesn't kill it. This is supported and expected.
+If you `pocketdock create --persist --port 8080:8080` and run a server inside, that container stays up until you stop it. It's not tied to your terminal session — closing your shell doesn't kill it. This is supported and expected.
 
 **Management tools:**
 
-- `pocket-dock list` — show all containers. `--running` for active only, `--all` for including stopped.
-- `pocket-dock info CONTAINER` — status, uptime, resource usage, last exec activity.
-- `pocket-dock logs CONTAINER --follow` — tail output in real-time.
-- `pocket-dock stop CONTAINER` / `pocket-dock stop --all` — bring down one or all containers.
-- `pocket-dock resume CONTAINER` — bring a stopped persistent container back up.
-- `pocket-dock doctor` — find orphaned containers, stale metadata, port conflicts.
+- `pocketdock list` — show all containers. `--running` for active only, `--all` for including stopped.
+- `pocketdock info CONTAINER` — status, uptime, resource usage, last exec activity.
+- `pocketdock logs CONTAINER --follow` — tail output in real-time.
+- `pocketdock stop CONTAINER` / `pocketdock stop --all` — bring down one or all containers.
+- `pocketdock resume CONTAINER` — bring a stopped persistent container back up.
+- `pocketdock doctor` — find orphaned containers, stale metadata, port conflicts.
 
 **Idle timeout (optional config):**
 
 ```yaml
-# .pocket-dock/pocket-dock.yaml
+# .pocketdock/pocketdock.yaml
 containers:
   idle_timeout: "4h"   # auto-stop containers with no exec activity for 4 hours
 ```
 
-This is auto-*stop*, not auto-*restart*. Prevents forgotten containers from consuming resources indefinitely. Disabled by default. Checked by `pocket-dock doctor` or a lightweight background poll.
+This is auto-*stop*, not auto-*restart*. Prevents forgotten containers from consuming resources indefinitely. Disabled by default. Checked by `pocketdock doctor` or a lightweight background poll.
 
-**What pocket-dock does NOT do:** auto-restart on crash, health checks, start on boot, restart policies. That's process supervision. If you need it, use systemd:
+**What pocketdock does NOT do:** auto-restart on crash, health checks, start on boot, restart policies. That's process supervision. If you need it, use systemd:
 
 ```bash
 # Generate a systemd user unit for a persistent container
-pocket-dock systemd CONTAINER > ~/.config/systemd/user/pocket-dock-myapp.service
-systemctl --user enable --now pocket-dock-myapp
+pocketdock systemd CONTAINER > ~/.config/systemd/user/pocketdock-myapp.service
+systemctl --user enable --now pocketdock-myapp
 ```
 
-`pocket-dock systemd` generates the unit file. The user installs and manages it. pocket-dock doesn't touch systemd directly.
+`pocketdock systemd` generates the unit file. The user installs and manages it. pocketdock doesn't touch systemd directly.
 
 ---
 
@@ -94,7 +94,7 @@ systemctl --user enable --now pocket-dock-myapp
                │
                ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  pocket-dock SDK                                                 │
+│  pocketdock SDK                                                 │
 │                                                                  │
 │  ┌──────────────────────────────────────┐                        │
 │  │  Sync Container ──► AsyncContainer   │  (facade pattern)      │
@@ -134,7 +134,7 @@ Podman is the recommended engine. Docker is fully supported via its compatible s
 | REST API | Docker-compatible | Docker-native |
 | License | Apache 2.0 | Apache 2.0 (Moby) |
 
-From pocket-dock's perspective, they're interchangeable. Both expose the same REST API over a Unix socket. The SDK auto-detects which is available.
+From pocketdock's perspective, they're interchangeable. Both expose the same REST API over a Unix socket. The SDK auto-detects which is available.
 
 ### Socket Auto-Detection
 
@@ -152,17 +152,17 @@ The SDK implements this detection using stdlib only. No libraries involved — j
 
 ## Shipping Images Offline
 
-We ship Dockerfiles in the repo. The first `pocket-dock build` pulls base images from a registry (requires internet). After that, built images are cached locally and all operations are offline — container lifecycle, exec, and file transfer are Unix socket calls with no network dependency.
+We ship Dockerfiles in the repo. The first `pocketdock build` pulls base images from a registry (requires internet). After that, built images are cached locally and all operations are offline — container lifecycle, exec, and file transfer are Unix socket calls with no network dependency.
 
 For air-gapped environments:
 
 ```bash
 # Connected machine
-pocket-dock build --all
-pocket-dock export --all -o pocket-dock-images.tar.gz
+pocketdock build --all
+pocketdock export --all -o pocketdock-images.tar.gz
 
 # Air-gapped machine
-pocket-dock import pocket-dock-images.tar.gz
+pocketdock import pocketdock-images.tar.gz
 ```
 
 Alpine is the base for `minimal` and `embedded` profiles (~25MB). `python:3.12-slim` (Debian) is the base for `dev` and `agent` profiles (~45MB) because many Python packages assume glibc.
@@ -175,17 +175,17 @@ Four profiles ship as Dockerfiles in `images/` in the repo. Each profile has:
 
 - A **profile name** used in the CLI and SDK: `minimal`, `dev`, `agent`, `embedded`
 - A **Dockerfile** in the repo at `images/{profile}/Dockerfile`
-- A **built image tag** in Podman's local registry: `pocket-dock/{profile}` (e.g. `pocket-dock/minimal`)
+- A **built image tag** in Podman's local registry: `pocketdock/{profile}` (e.g. `pocketdock/minimal`)
 
-`pocket-dock build` builds the Dockerfiles and tags them locally. After that, the profile name is all you use:
+`pocketdock build` builds the Dockerfiles and tags them locally. After that, the profile name is all you use:
 
 ```bash
-pocket-dock create --profile embedded        # uses image tagged pocket-dock/embedded
-pocket-dock shell dev                         # uses image tagged pocket-dock/dev
+pocketdock create --profile embedded        # uses image tagged pocketdock/embedded
+pocketdock shell dev                         # uses image tagged pocketdock/dev
 ```
 
 ```python
-create_new_container(profile="agent")         # uses image tagged pocket-dock/agent
+create_new_container(profile="agent")         # uses image tagged pocketdock/agent
 ```
 
 ### Profile: `minimal`
@@ -226,7 +226,7 @@ CMD ["sleep", "infinity"]
 - **Size:** ~250MB
 - **Contains:** Python 3.12, pip, git, curl, jq, vim, build tools, ipython
 - **Network:** Enabled by default
-- **Use case:** `pocket-dock shell dev` → disposable dev environment
+- **Use case:** `pocketdock shell dev` → disposable dev environment
 
 ### Profile: `agent`
 
@@ -338,12 +338,12 @@ c.pull("/home/sandbox/project/.pio/build/esp32dev/firmware.bin", "./firmware.bin
 For air-gapped setups, snapshot the fully-configured container and export it:
 
 ```bash
-pocket-dock snapshot esp-project my-embedded-env:v1
-pocket-dock export --image my-embedded-env:v1 -o embedded-env.tar.gz
+pocketdock snapshot esp-project my-embedded-env:v1
+pocketdock export --image my-embedded-env:v1 -o embedded-env.tar.gz
 # Transfer to air-gapped machine, import there
 ```
 
-Note: Flashing hardware from inside a container requires USB passthrough (`--device /dev/ttyUSB0`), which pocket-dock supports via the `devices` parameter:
+Note: Flashing hardware from inside a container requires USB passthrough (`--device /dev/ttyUSB0`), which pocketdock supports via the `devices` parameter:
 
 ```python
 c = create_new_container(profile="embedded", devices=["/dev/ttyUSB0"])
@@ -359,7 +359,7 @@ c = create_new_container(image="my-custom-image:latest")
 ```
 
 ```dockerfile
-FROM pocket-dock/embedded
+FROM pocketdock/embedded
 RUN apk add --no-cache avr-gcc avr-libc
 ```
 
@@ -377,10 +377,10 @@ The core implementation is async (`AsyncContainer`). A sync facade (`Container`)
 
 #### `create_new_container(**params) → Container`
 
-Factory function. Creates and starts a container, returns a handle. Automatically sets `pocket-dock.*` labels on the container for discovery (see Container Discovery section). If `persist=True`, creates an instance directory under `.pocket-dock/instances/` in the project root (or cwd).
+Factory function. Creates and starts a container, returns a handle. Automatically sets `pocketdock.*` labels on the container for discovery (see Container Discovery section). If `persist=True`, creates an instance directory under `.pocketdock/instances/` in the project root (or cwd).
 
 ```python
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 # All params have sensible defaults
 container = create_new_container()
@@ -390,8 +390,8 @@ container = create_new_container(
     profile="agent",              # "minimal" | "dev" | "agent" | "embedded" (default: "minimal")
     image=None,                   # override profile with any image string
     name=None,                    # auto-generated if not set (e.g. "pd-a1b2c3d4")
-    project=None,                 # project name for labeling (default: from pocket-dock.yaml or cwd name)
-    data_dir=None,                # where instance data lives (default: .pocket-dock/instances/{name}/)
+    project=None,                 # project name for labeling (default: from pocketdock.yaml or cwd name)
+    data_dir=None,                # where instance data lives (default: .pocketdock/instances/{name}/)
     mem_limit="256m",             # memory cap
     cpu_percent=50,               # percent of one core
     network=None,                 # default set by profile (minimal/agent=False, dev/embedded=True)
@@ -409,7 +409,7 @@ container = create_new_container(
 
 Execute a command inside the container and get the output. This is the method you'll call most, so it's worth understanding how output works.
 
-**How it works under the hood.** The container engine's exec API has two steps: (1) create an exec instance (`POST /containers/{id}/exec`), (2) start it and attach to the output stream (`POST /exec/{id}/start`). The output comes back as a multiplexed byte stream — 8-byte header per frame (1 byte stream type, 3 padding, 4-byte big-endian payload length) followed by the payload. pocket-dock demultiplexes this into separate stdout and stderr strings.
+**How it works under the hood.** The container engine's exec API has two steps: (1) create an exec instance (`POST /containers/{id}/exec`), (2) start it and attach to the output stream (`POST /exec/{id}/start`). The output comes back as a multiplexed byte stream — 8-byte header per frame (1 byte stream type, 3 padding, 4-byte big-endian payload length) followed by the payload. pocketdock demultiplexes this into separate stdout and stderr strings.
 
 **Three execution modes:**
 
@@ -440,7 +440,7 @@ result = container.run("make -j$(nproc)", timeout=300)
 result = container.run("cat /dev/urandom | base64", max_output="1m", timeout=5)
 ```
 
-If the command doesn't exit within `timeout` seconds, pocket-dock kills the exec process and returns an `ExecResult` with `exit_code=-1`, `ok=False`, and a timeout indicator in stderr. The container itself is not affected — only the exec process is killed.
+If the command doesn't exit within `timeout` seconds, pocketdock kills the exec process and returns an `ExecResult` with `exit_code=-1`, `ok=False`, and a timeout indicator in stderr. The container itself is not affected — only the exec process is killed.
 
 If output exceeds `max_output`, the stream is truncated and a warning is appended to stderr. This protects against an LLM agent accidentally running `cat` on a huge file.
 
@@ -503,7 +503,7 @@ container.shell("python")    # drops into Python REPL
 container.shell("vim foo.c") # opens vim
 ```
 
-`shell()` creates the exec with `Tty: true` and `AttachStdin: true`, then hands off to the terminal. In the CLI, `pocket-dock shell` does this. In the SDK, `shell()` takes over the calling process's stdin/stdout/stderr for the duration. It's explicitly not designed for programmatic use — there's no way to script it.
+`shell()` creates the exec with `Tty: true` and `AttachStdin: true`, then hands off to the terminal. In the CLI, `pocketdock shell` does this. In the SDK, `shell()` takes over the calling process's stdin/stdout/stderr for the duration. It's explicitly not designed for programmatic use — there's no way to script it.
 
 **For agents, the rule is simple:** use `run()` for everything. If you need to interact with a process, start it detached and talk to it via files, HTTP, or stdin piping (future feature). Don't try to script interactive tools.
 
@@ -526,7 +526,7 @@ container.shell("python")     # Python REPL
 container.shell("vim main.c") # vim
 ```
 
-This is fundamentally different from `run()` — it creates the exec with `Tty: true` and `AttachStdin: true`, connects stdin/stdout/stderr directly, and blocks until the user exits. The CLI command `pocket-dock shell` wraps this.
+This is fundamentally different from `run()` — it creates the exec with `Tty: true` and `AttachStdin: true`, connects stdin/stdout/stderr directly, and blocks until the user exits. The CLI command `pocketdock shell` wraps this.
 
 #### `container.info() → ContainerInfo`
 
@@ -539,7 +539,7 @@ info = container.info()
 info.id              # "a1b2c3d4e5f6"
 info.name            # "pd-a1b2c3d4"
 info.status          # "running" | "stopped" | "paused"
-info.image           # "pocket-dock/agent"
+info.image           # "pocketdock/agent"
 info.profile         # "agent"
 info.project         # "my-agent"
 info.created_at      # datetime
@@ -623,7 +623,7 @@ with create_new_container(profile="agent") as c:
 For high-throughput agent workloads where you're creating/destroying containers rapidly.
 
 ```python
-from pocket_dock import ContainerPool
+from pocketdock import ContainerPool
 
 pool = ContainerPool(size=5, profile="minimal")
 pool.start()                    # pre-creates 5 containers
@@ -722,7 +722,7 @@ The I/O is inherently async — you're sending HTTP requests and waiting for res
 
 ```python
 # --- Sync (default import, simple scripts, agent loops) ---
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 c1 = create_new_container(profile="minimal")
 c2 = create_new_container(profile="minimal")
@@ -736,7 +736,7 @@ c2.shutdown()
 
 ```python
 # --- Async (concurrent operations, high-throughput agents) ---
-from pocket_dock.async_ import create_new_container
+from pocketdock.async_ import create_new_container
 import asyncio
 
 async def main():
@@ -758,7 +758,7 @@ asyncio.run(main())
 
 ```python
 # --- Mixed: sync containers, but concurrent via threads ---
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 from concurrent.futures import ThreadPoolExecutor
 
 containers = [create_new_container() for _ in range(5)]
@@ -825,8 +825,8 @@ try:
     result = c.run("echo hello")
 except ContainerGone as e:
     print(e)
-    # "Container pd-a1b2c3d4 no longer exists. It was removed outside pocket-dock.
-    #  Instance metadata preserved at .pocket-dock/instances/pd-a1b2c3d4/
+    # "Container pd-a1b2c3d4 no longer exists. It was removed outside pocketdock.
+    #  Instance metadata preserved at .pocketdock/instances/pd-a1b2c3d4/
     #  Create a new container with create_new_container()."
 ```
 
@@ -865,7 +865,7 @@ When `shutdown()` is called (or the context manager exits, or `atexit` fires):
 5. Close all remaining connections
 6. Update local instance metadata
 
-If the Python process crashes hard (SIGKILL), steps 1-6 don't run. The container is still alive in Podman. This is where container labels help — `pocket-dock doctor` can find orphaned containers (labeled `pocket-dock.managed=true` but with no corresponding running pocket-dock process) and clean them up.
+If the Python process crashes hard (SIGKILL), steps 1-6 don't run. The container is still alive in Podman. This is where container labels help — `pocketdock doctor` can find orphaned containers (labeled `pocketdock.managed=true` but with no corresponding running pocketdock process) and clean them up.
 
 ### Output buffer and callbacks
 
@@ -1022,31 +1022,31 @@ c.on_stdout(lambda c, data: print(f"[server] {data}"))
 
 ## CLI
 
-The CLI is a first-class part of pocket-dock, not an afterthought. It's written in Python using `click` for command structure and `rich` for output formatting. It's installed alongside the SDK (`pip install pocket-dock` or `uv add pocket-dock` gives you both the library and the `pocket-dock` command).
+The CLI is a first-class part of pocketdock, not an afterthought. It's written in Python using `click` for command structure and `rich` for output formatting. It's installed alongside the SDK (`pip install pocketdock` or `uv add pocketdock` gives you both the library and the `pocketdock` command).
 
 ### Design Principles
 
 - **Beautiful defaults.** Rich-formatted tables, colored status indicators, clear error messages with suggestions.
 - **No silent destruction.** Any command that deletes data asks for confirmation. `--yes` / `-y` flag to skip in scripts.
-- **Built-in logging.** Every command logs structured output to `.pocket-dock/logs/` in the project root. Configurable log level via `--verbose` / `--quiet`. `--log-file` to redirect.
+- **Built-in logging.** Every command logs structured output to `.pocketdock/logs/` in the project root. Configurable log level via `--verbose` / `--quiet`. `--log-file` to redirect.
 - **Helpful errors.** If Podman isn't running, don't just say "connection refused" — say "Podman doesn't appear to be running. Try: systemctl --user start podman.socket"
 
 ### Commands
 
 ```
-pocket-dock build [PROFILE...]        Build image profiles (default: all)
-pocket-dock build minimal embedded    Build specific profiles
+pocketdock build [PROFILE...]        Build image profiles (default: all)
+pocketdock build minimal embedded    Build specific profiles
 
-pocket-dock init [OPTIONS]            Initialize a project (creates .pocket-dock/pocket-dock.yaml)
+pocketdock init [OPTIONS]            Initialize a project (creates .pocketdock/pocketdock.yaml)
   --profile TEXT                      Set default profile
   --name TEXT                         Project name (default: directory name)
 
-pocket-dock create [OPTIONS]          Create and start a new container
+pocketdock create [OPTIONS]          Create and start a new container
   --profile / -p TEXT                 Image profile (minimal/dev/agent/embedded)
   --image TEXT                        Custom image (overrides --profile)
-  --project TEXT                      Project label (default: from pocket-dock.yaml or cwd name)
+  --project TEXT                      Project label (default: from pocketdock.yaml or cwd name)
   --name TEXT                         Container name (auto-generated if omitted)
-  --data-dir PATH                     Instance data location (default: .pocket-dock/instances/{name}/)
+  --data-dir PATH                     Instance data location (default: .pocketdock/instances/{name}/)
   --mem TEXT                          Memory limit (e.g. "256m", "1g")
   --cpu INT                           CPU percent (1-100)
   --network / --no-network            Enable/disable networking
@@ -1058,57 +1058,57 @@ pocket-dock create [OPTIONS]          Create and start a new container
   --env TEXT                          Environment variable (KEY=VALUE), repeatable
   --workdir TEXT                      Working directory inside container
 
-pocket-dock list [OPTIONS]            List containers
+pocketdock list [OPTIONS]            List containers
   --project TEXT                      Filter by project label (default: current project if in one)
   --all-projects                      Show containers from all projects
   --running                           Show only running containers
   --all / -a                          Include stopped containers
   --json                              Output as JSON (for scripting)
 
-pocket-dock info CONTAINER            Show detailed container info
+pocketdock info CONTAINER            Show detailed container info
   --json                              Output as JSON
 
-pocket-dock run CONTAINER COMMAND     Execute a command
+pocketdock run CONTAINER COMMAND     Execute a command
   --lang TEXT                         Language (bash/python/node)
   --timeout INT                       Timeout in seconds
   --stream / -s                       Stream output in real-time
   --detach / -d                       Run in background, return immediately
   --max-output TEXT                   Cap output size (e.g. "1m", "10m")
 
-pocket-dock shell CONTAINER           Attach interactive shell
-pocket-dock shell --profile dev       Create ephemeral + attach (shortcut)
+pocketdock shell CONTAINER           Attach interactive shell
+pocketdock shell --profile dev       Create ephemeral + attach (shortcut)
 
-pocket-dock push CONTAINER SRC DST    Copy files host → container
-pocket-dock pull CONTAINER SRC DST    Copy files container → host
+pocketdock push CONTAINER SRC DST    Copy files host → container
+pocketdock pull CONTAINER SRC DST    Copy files container → host
 
-pocket-dock reboot CONTAINER          Restart container
+pocketdock reboot CONTAINER          Restart container
   --fresh                             Rebuild from clean image
 
-pocket-dock stop CONTAINER            Stop a persistent container
+pocketdock stop CONTAINER            Stop a persistent container
   --all                               Stop all running containers
-pocket-dock resume CONTAINER          Resume a stopped persistent container
-pocket-dock shutdown CONTAINER        Stop + remove (asks confirmation)
+pocketdock resume CONTAINER          Resume a stopped persistent container
+pocketdock shutdown CONTAINER        Stop + remove (asks confirmation)
   -y / --yes                          Skip confirmation
 
-pocket-dock snapshot CONTAINER NAME   Save container state as new image
-pocket-dock status [OPTIONS]          Show project summary (disk, counts, instance dirs)
+pocketdock snapshot CONTAINER NAME   Save container state as new image
+pocketdock status [OPTIONS]          Show project summary (disk, counts, instance dirs)
 
-pocket-dock systemd CONTAINER         Generate a systemd user unit file (stdout)
+pocketdock systemd CONTAINER         Generate a systemd user unit file (stdout)
 
-pocket-dock prune [OPTIONS]           Remove stopped containers and stale instance dirs
+pocketdock prune [OPTIONS]           Remove stopped containers and stale instance dirs
   --project TEXT                      Prune only containers in this project
-  --images                            Also remove unused pocket-dock images
+  --images                            Also remove unused pocketdock images
   -y / --yes                          Skip confirmation
 
-pocket-dock export [OPTIONS]          Export images as tarball
+pocketdock export [OPTIONS]          Export images as tarball
   --all                               All profiles
   --profile TEXT                      Specific profile(s)
   -o FILE                             Output file
 
-pocket-dock import FILE               Import images from tarball
+pocketdock import FILE               Import images from tarball
 
-pocket-dock logs [OPTIONS] [CONTAINER]  View logs
-  (no container)                       Show pocket-dock operational log
+pocketdock logs [OPTIONS] [CONTAINER]  View logs
+  (no container)                       Show pocketdock operational log
   CONTAINER                            Show stream logs for a container
   --history                            Show structured command history (from history.jsonl)
   --last INT                           Show last N operations (default: 10)
@@ -1116,12 +1116,12 @@ pocket-dock logs [OPTIONS] [CONTAINER]  View logs
   --follow / -f                        Follow log output
   --type TEXT                          Filter by type: run, session, detach
 
-pocket-dock doctor                     Reconcile labels and local instance data, find problems
+pocketdock doctor                     Reconcile labels and local instance data, find problems
                                        - Labeled containers whose data-path doesn't exist (orphaned data)
                                        - Instance dirs with no matching container (stale)
                                        - Label/metadata mismatches (project changed, etc.)
                                        - Port conflicts between running containers
-                                       - Disk usage summary for .pocket-dock/ in current project
+                                       - Disk usage summary for .pocketdock/ in current project
   --fix                               Auto-fix what it can (default: report only)
 ```
 
@@ -1129,34 +1129,34 @@ pocket-dock doctor                     Reconcile labels and local instance data,
 
 ```
 $ cd ~/my-widget
-$ pocket-dock init --profile embedded
-✓ Created .pocket-dock/pocket-dock.yaml (project: my-widget)
+$ pocketdock init --profile embedded
+✓ Created .pocketdock/pocketdock.yaml (project: my-widget)
 
-$ pocket-dock build
-Building pocket-dock/minimal ... done (25 MB)
-Building pocket-dock/dev ... done (248 MB)
-Building pocket-dock/agent ... done (347 MB)
-Building pocket-dock/embedded ... done (412 MB)
+$ pocketdock build
+Building pocketdock/minimal ... done (25 MB)
+Building pocketdock/dev ... done (248 MB)
+Building pocketdock/agent ... done (347 MB)
+Building pocketdock/embedded ... done (412 MB)
 
-$ pocket-dock create --name stm32-dev --persist
-✓ Created container stm32-dev (pocket-dock/embedded)
+$ pocketdock create --name stm32-dev --persist
+✓ Created container stm32-dev (pocketdock/embedded)
   Project: my-widget
-  Data:    .pocket-dock/instances/stm32-dev/
+  Data:    .pocketdock/instances/stm32-dev/
   Memory:  256 MB
   Network: enabled
 
-$ pocket-dock run stm32-dev "arm-none-eabi-gcc --version"
+$ pocketdock run stm32-dev "arm-none-eabi-gcc --version"
 arm-none-eabi-gcc (Alpine 13.2.0) 13.2.0
 
-$ pocket-dock list
+$ pocketdock list
   NAME        STATUS   PROFILE    AGE      MEMORY
   stm32-dev   running  embedded   2m ago   18.4 MB / 256 MB
 
-$ pocket-dock shutdown stm32-dev
+$ pocketdock shutdown stm32-dev
 Container stm32-dev is persistent. Stop without removing? [Y/n]
 ✓ Stopped stm32-dev (filesystem preserved, 34 MB on disk)
 
-$ pocket-dock resume stm32-dev
+$ pocketdock resume stm32-dev
 ✓ Resumed stm32-dev
 ```
 
@@ -1164,7 +1164,7 @@ $ pocket-dock resume stm32-dev
 
 ## Persistence
 
-Containers are ephemeral by default — `shutdown()` removes them completely. pocket-dock supports four levels of persistence:
+Containers are ephemeral by default — `shutdown()` removes them completely. pocketdock supports four levels of persistence:
 
 ### Level 0: Ephemeral (default)
 
@@ -1187,7 +1187,7 @@ container.run("pip install flask")
 container.shutdown()                     # stopped, NOT removed
 
 # Session 2
-from pocket_dock import resume_container
+from pocketdock import resume_container
 container = resume_container("my-workspace")
 container.run("python -c 'import flask; print(flask.__version__)'")  # still there
 ```
@@ -1239,54 +1239,54 @@ Three concepts, clearly separated:
 | Term | What it is | Where it lives | Scope |
 |---|---|---|---|
 | **Container** | The actual Podman/Docker container (running or stopped) | Podman's container registry | Machine-wide. Visible from any terminal, any directory, any user with access to the Podman socket. A container with port 8080 mapped is reachable from anywhere on the machine (and the LAN if the firewall allows). |
-| **Instance** | pocket-dock's metadata record for a container it created | `.pocket-dock/instances/{name}/` in the project directory | Local to the project. Contains provenance, command history, stream logs. Created only for persistent containers. |
-| **Project** | A directory containing `.pocket-dock/pocket-dock.yaml` | Any directory the user works in | Defines default profile, project name (used in container labels), and data layout. Similar to `.git/` — pocket-dock walks up from cwd to find it. |
+| **Instance** | pocketdock's metadata record for a container it created | `.pocketdock/instances/{name}/` in the project directory | Local to the project. Contains provenance, command history, stream logs. Created only for persistent containers. |
+| **Project** | A directory containing `.pocketdock/pocketdock.yaml` | Any directory the user works in | Defines default profile, project name (used in container labels), and data layout. Similar to `.git/` — pocketdock walks up from cwd to find it. |
 
 ### No global registry
 
-There is no `~/.pocket-dock/projects/` directory. No centralized instance store. Instance data lives in the project tree, next to the code it belongs to.
+There is no `~/.pocketdock/projects/` directory. No centralized instance store. Instance data lives in the project tree, next to the code it belongs to.
 
-The only global file is `~/.pocket-dock/pocket-dock.yaml` — optional install-level preferences (socket path, default profile, log level). It contains no instance data.
+The only global file is `~/.pocketdock/pocketdock.yaml` — optional install-level preferences (socket path, default profile, log level). It contains no instance data.
 
-### Container discovery: how pocket-dock finds its containers
+### Container discovery: how pocketdock finds its containers
 
-Podman keeps a flat, machine-wide list of all containers. pocket-dock needs to know which of those are "ours." Two mechanisms work together:
+Podman keeps a flat, machine-wide list of all containers. pocketdock needs to know which of those are "ours." Two mechanisms work together:
 
-**1. Podman labels (source of truth for identity).** When pocket-dock creates a container, it sets OCI labels on it:
+**1. Podman labels (source of truth for identity).** When pocketdock creates a container, it sets OCI labels on it:
 
 ```
-pocket-dock.managed = "true"
-pocket-dock.project = "my-widget"
-pocket-dock.instance = "pd-a1b2c3d4"
-pocket-dock.profile = "embedded"
-pocket-dock.data-path = "/home/alice/my-widget/.pocket-dock/instances/pd-a1b2c3d4"
-pocket-dock.created-at = "2026-02-05T09:15:00Z"
+pocketdock.managed = "true"
+pocketdock.project = "my-widget"
+pocketdock.instance = "pd-a1b2c3d4"
+pocketdock.profile = "embedded"
+pocketdock.data-path = "/home/alice/my-widget/.pocketdock/instances/pd-a1b2c3d4"
+pocketdock.created-at = "2026-02-05T09:15:00Z"
 ```
 
-These labels are stored by Podman on the container itself. They survive stop/start cycles. They're queryable via `podman ps --filter label=pocket-dock.managed=true`. The `pocket-dock.data-path` label records where instance data lives on disk so `pocket-dock doctor` can find it from anywhere.
+These labels are stored by Podman on the container itself. They survive stop/start cycles. They're queryable via `podman ps --filter label=pocketdock.managed=true`. The `pocketdock.data-path` label records where instance data lives on disk so `pocketdock doctor` can find it from anywhere.
 
-**2. Local instance data (source of truth for history).** `.pocket-dock/instances/{name}/` in the project directory contains `instance.toml`, stream logs, command history, and the `data/` volume mount. Labels tell you *what* a container is; local data tells you *what happened inside it*.
+**2. Local instance data (source of truth for history).** `.pocketdock/instances/{name}/` in the project directory contains `instance.toml`, stream logs, command history, and the `data/` volume mount. Labels tell you *what* a container is; local data tells you *what happened inside it*.
 
 **Discovery behavior:**
 
-- `pocket-dock list` (from a project directory): queries Podman for containers with `pocket-dock.managed=true`, scopes to current project by matching `pocket-dock.project` label. Shows all this project's containers regardless of state.
-- `pocket-dock list --all-projects`: queries Podman for all pocket-dock containers across every project on the machine.
-- `pocket-dock resume stm32-dev`: tells Podman to start a container by name. Works from anywhere — Podman's name registry is machine-wide.
-- `pocket-dock doctor` (from a project directory): reconciles labels against local `.pocket-dock/instances/` directory. Finds labeled containers whose data-path doesn't exist, instance dirs with no matching container, and label/metadata mismatches.
+- `pocketdock list` (from a project directory): queries Podman for containers with `pocketdock.managed=true`, scopes to current project by matching `pocketdock.project` label. Shows all this project's containers regardless of state.
+- `pocketdock list --all-projects`: queries Podman for all pocketdock containers across every project on the machine.
+- `pocketdock resume stm32-dev`: tells Podman to start a container by name. Works from anywhere — Podman's name registry is machine-wide.
+- `pocketdock doctor` (from a project directory): reconciles labels against local `.pocketdock/instances/` directory. Finds labeled containers whose data-path doesn't exist, instance dirs with no matching container, and label/metadata mismatches.
 
-**What pocket-dock does NOT do:**
+**What pocketdock does NOT do:**
 
-- Does not provide network isolation between projects. If two containers both map port 8080, the second one fails with a port conflict (Podman error, surfaced clearly by pocket-dock).
-- Does not restrict cross-project access. Any script on the machine can talk to any pocket-dock container.
-- Does not track instance data globally. `pocket-dock doctor` only reconciles the current project. Stale `.pocket-dock/` dirs in abandoned projects are just files taking up space — `podman system prune` handles the container side.
+- Does not provide network isolation between projects. If two containers both map port 8080, the second one fails with a port conflict (Podman error, surfaced clearly by pocketdock).
+- Does not restrict cross-project access. Any script on the machine can talk to any pocketdock container.
+- Does not track instance data globally. `pocketdock doctor` only reconciles the current project. Stale `.pocketdock/` dirs in abandoned projects are just files taking up space — `podman system prune` handles the container side.
 
-### How pocket-dock finds the project root
+### How pocketdock finds the project root
 
-pocket-dock walks up from cwd looking for `.pocket-dock/pocket-dock.yaml`, similar to how git looks for `.git/`. If found, that directory is the project root. If not found, cwd is used as the project root.
+pocketdock walks up from cwd looking for `.pocketdock/pocketdock.yaml`, similar to how git looks for `.git/`. If found, that directory is the project root. If not found, cwd is used as the project root.
 
-When `pocket-dock init` is run, it creates `.pocket-dock/pocket-dock.yaml` in the current directory, establishing it as a project root.
+When `pocketdock init` is run, it creates `.pocketdock/pocketdock.yaml` in the current directory, establishing it as a project root.
 
-When a persistent container is created without a project root, `.pocket-dock/instances/{name}/` is created relative to cwd. This works but the data ends up wherever you happened to be — same as `git init` in a random directory.
+When a persistent container is created without a project root, `.pocketdock/instances/{name}/` is created relative to cwd. This works but the data ends up wherever you happened to be — same as `git init` in a random directory.
 
 ### Directory structure
 
@@ -1294,10 +1294,10 @@ When a persistent container is created without a project root, `.pocket-dock/ins
 
 ```
 ~/my-widget/
-├── .pocket-dock/
-│   ├── pocket-dock.yaml               # project config (human-authored, maybe committed)
+├── .pocketdock/
+│   ├── pocketdock.yaml               # project config (human-authored, maybe committed)
 │   ├── logs/
-│   │   └── pocket-dock.log            # CLI/SDK operational log (rotated)
+│   │   └── pocketdock.log            # CLI/SDK operational log (rotated)
 │   │
 │   └── instances/                     # one subdir per persistent container (gitignored)
 │       ├── stm32-dev/
@@ -1315,7 +1315,7 @@ When a persistent container is created without a project root, `.pocket-dock/ins
 │           ├── history.jsonl
 │           └── data/
 │
-├── .gitignore                         # should contain: .pocket-dock/instances/
+├── .gitignore                         # should contain: .pocketdock/instances/
 ├── src/
 └── ...
 ```
@@ -1323,25 +1323,25 @@ When a persistent container is created without a project root, `.pocket-dock/ins
 **Install-level (optional global preferences):**
 
 ```
-~/.pocket-dock/
-└── pocket-dock.yaml                   # install-level defaults (socket path, default profile, log level)
+~/.pocketdock/
+└── pocketdock.yaml                   # install-level defaults (socket path, default profile, log level)
 ```
 
 No instance data. No project directories. Just preferences.
 
 **Gitignore pattern:**
 
-`.pocket-dock/instances/` should be gitignored — instance data is personal (your container IDs, your logs, your command history). `.pocket-dock/pocket-dock.yaml` is optionally committed — it's project policy (default profile, data layout) that the team might share. Projects that treat container build artifacts as deliverables manage their `.gitignore` accordingly.
+`.pocketdock/instances/` should be gitignored — instance data is personal (your container IDs, your logs, your command history). `.pocketdock/pocketdock.yaml` is optionally committed — it's project policy (default profile, data layout) that the team might share. Projects that treat container build artifacts as deliverables manage their `.gitignore` accordingly.
 
-### What's in `pocket-dock.yaml`
+### What's in `pocketdock.yaml`
 
-**Project-level** (`.pocket-dock/pocket-dock.yaml`):
+**Project-level** (`.pocketdock/pocketdock.yaml`):
 
 ```yaml
-# Project configuration for pocket-dock
+# Project configuration for pocketdock
 project_name: my-widget              # used in container labels (default: directory name)
-default_profile: embedded            # default --profile for pocket-dock create
-default_persist: false               # default --persist for pocket-dock create
+default_profile: embedded            # default --profile for pocketdock create
+default_persist: false               # default --persist for pocketdock create
 
 logging:
   auto_log: true                     # log all streams to disk (default: true)
@@ -1353,7 +1353,7 @@ containers:
   idle_timeout: ""                   # auto-stop after no exec activity (e.g. "4h", disabled by default)
 ```
 
-**Install-level** (`~/.pocket-dock/pocket-dock.yaml`):
+**Install-level** (`~/.pocketdock/pocketdock.yaml`):
 
 ```yaml
 # Install-level defaults — apply when no project config is found
@@ -1362,7 +1362,7 @@ default_profile: minimal
 log_level: info                              # debug | info | warning | error
 ```
 
-Project-level config overrides install-level config. Both are optional — pocket-dock works with zero configuration.
+Project-level config overrides install-level config. Both are optional — pocketdock works with zero configuration.
 
 ### Automatic Stream Logging
 
@@ -1375,7 +1375,7 @@ Types: `run`, `session`, `detach`. Timestamps use second precision, sanitized fo
 **What's in a log file:**
 
 ```
-=== pocket-dock run log ===
+=== pocketdock run log ===
 container: pd-a1b2c3d4
 command: python -c "import pandas; print(pandas.__version__)"
 started: 2026-02-05T09:15:00.123Z
@@ -1392,7 +1392,7 @@ truncated: false
 **Session logs capture the full dialogue:**
 
 ```
-=== pocket-dock session log ===
+=== pocketdock session log ===
 container: pd-a1b2c3d4
 started: 2026-02-05T09:20:00.000Z
 ---
@@ -1410,7 +1410,7 @@ closed: 2026-02-05T09:25:00.000Z
 **Detached process logs are the full stream, timestamped:**
 
 ```
-=== pocket-dock detach log ===
+=== pocketdock detach log ===
 container: pd-a1b2c3d4
 command: python training_job.py
 started: 2026-02-05T09:25:00.000Z
@@ -1427,7 +1427,7 @@ duration_ms: 28500
 
 ### Structured Command History
 
-Separate from stream logs, `history.jsonl` records a structured one-line-per-operation summary. This is what `pocket-dock logs --history pd-a1b2c3d4` reads.
+Separate from stream logs, `history.jsonl` records a structured one-line-per-operation summary. This is what `pocketdock logs --history pd-a1b2c3d4` reads.
 
 ```jsonl
 {"ts":"2026-02-05T09:15:00Z","type":"run","cmd":"python -c \"import pandas; print(pandas.__version__)\"","exit":0,"ms":334,"log":"run-2026-02-05T09-15-00Z.log"}
@@ -1440,10 +1440,10 @@ JSONL (one JSON object per line) because: parseable by any tool, appendable with
 
 ### Logging Configuration
 
-Logging is configured in `.pocket-dock/pocket-dock.yaml` (project-level) or `~/.pocket-dock/pocket-dock.yaml` (install-level). See the `logging:` section in "What's in pocket-dock.yaml" above.
+Logging is configured in `.pocketdock/pocketdock.yaml` (project-level) or `~/.pocketdock/pocketdock.yaml` (install-level). See the `logging:` section in "What's in pocketdock.yaml" above.
 
 ```yaml
-# .pocket-dock/pocket-dock.yaml (excerpt)
+# .pocketdock/pocketdock.yaml (excerpt)
 logging:
   auto_log: true
   log_stdout: true
@@ -1464,18 +1464,18 @@ The buffer is for real-time in-memory consumption. Callbacks are for real-time p
 
 ### What's in `instance.toml`
 
-Machine-generated metadata for one container. Cross-references the Podman container by ID and name. The container itself also carries `pocket-dock.*` labels with the same identity info — `instance.toml` adds what labels can't store (provenance, volume paths, history).
+Machine-generated metadata for one container. Cross-references the Podman container by ID and name. The container itself also carries `pocketdock.*` labels with the same identity info — `instance.toml` adds what labels can't store (provenance, volume paths, history).
 
 ```toml
-# This file is maintained by pocket-dock. Do not edit manually.
-# Changes may be overwritten. See pocket-dock.yaml for project configuration.
+# This file is maintained by pocketdock. Do not edit manually.
+# Changes may be overwritten. See pocketdock.yaml for project configuration.
 
 [container]
 id = "a1b2c3d4e5f6..."        # Podman container ID
-name = "pd-a1b2c3d4"           # Podman container name (matches pocket-dock.instance label)
-image = "pocket-dock/agent"
+name = "pd-a1b2c3d4"           # Podman container name (matches pocketdock.instance label)
+image = "pocketdock/agent"
 profile = "agent"
-project = "my-widget"           # matches pocket-dock.project label
+project = "my-widget"           # matches pocketdock.project label
 created_at = "2026-02-05T09:15:00Z"
 persist = true
 
@@ -1490,30 +1490,30 @@ created_by = "python llm_agent.py"   # best-effort: argv of the calling process
 pid = 48291
 
 [volumes]
-"/home/sandbox/data" = "/home/alice/my-widget/.pocket-dock/instances/pd-a1b2c3d4/data"
+"/home/sandbox/data" = "/home/alice/my-widget/.pocketdock/instances/pd-a1b2c3d4/data"
 ```
 
 ### What local instance data adds beyond Podman labels
 
-Podman labels identify containers and their project assignment. Local instance data under `.pocket-dock/instances/` stores what labels can't:
+Podman labels identify containers and their project assignment. Local instance data under `.pocketdock/instances/` stores what labels can't:
 
 - **Command history** (`history.jsonl`): greppable timeline of every command, exit code, and duration.
 - **Full stream logs** (`logs/`): complete output of every operation, timestamped. When an agent does something unexpected, you can replay exactly what happened.
 - **Provenance** (`instance.toml`): which process created the container and when. Machine-generated, not for human editing.
 - **Persistent workspace** (`data/`): automatically volume-mounted if it exists. Survives container stop/start.
-- **Browsable structure**: `ls .pocket-dock/instances/` shows what containers belong to this project.
+- **Browsable structure**: `ls .pocketdock/instances/` shows what containers belong to this project.
 
 ### Persistence Management API
 
 ```python
-from pocket_dock import (
+from pocketdock import (
     list_containers,
     resume_container,
     destroy_container,
     prune,
 )
 
-# List all pocket-dock containers on this machine (queries Podman labels)
+# List all pocketdock containers on this machine (queries Podman labels)
 for c in list_containers():
     print(f"{c.project}/{c.name}  {c.status}  {c.image}  {c.created_at}")
 
@@ -1527,12 +1527,12 @@ container = resume_container("stm32-dev")
 # Destroy a container (removes instance directory too)
 destroy_container("stm32-dev")   # asks confirmation if persist=True
 
-# Clean up all stopped pocket-dock containers
+# Clean up all stopped pocketdock containers
 prune()                          # all projects
 prune(project="my-widget")       # just one project
 ```
 
-All pocket-dock containers are labeled with `pocket-dock.managed=true` and `pocket-dock.project=<n>` so they can be identified without interfering with other containers on the system. Podman labels are the source of truth for container identity; local `.pocket-dock/instances/` directories store history and working data.
+All pocketdock containers are labeled with `pocketdock.managed=true` and `pocketdock.project=<n>` so they can be identified without interfering with other containers on the system. Podman labels are the source of truth for container identity; local `.pocketdock/instances/` directories store history and working data.
 
 ### Ephemeral containers leave no trace
 
@@ -1545,7 +1545,7 @@ Instance directories are only created for persistent containers (`persist=True`)
 ## File Structure
 
 ```
-pocket-dock/
+pocketdock/
 ├── README.md                           # Zero-to-running quickstart, badges, feature overview
 ├── LICENSE                             # BSD-2-Clause, (c) deftio llc
 ├── CHANGELOG.md                        # Keep-a-changelog format, updated every PR
@@ -1569,7 +1569,7 @@ pocket-dock/
 │   ├── index.md                        # Home — same content as README.md
 │   ├── quickstart.md                   # Detailed getting started guide
 │   ├── concepts/
-│   │   ├── architecture.md             # How pocket-dock talks to Podman
+│   │   ├── architecture.md             # How pocketdock talks to Podman
 │   │   ├── connection-model.md         # Connection-per-operation, async core
 │   │   ├── output-model.md             # Buffer, callbacks, logging, how they compose
 │   │   ├── sessions.md                 # Persistent shell vs run()
@@ -1582,7 +1582,7 @@ pocket-dock/
 │   ├── reference/
 │   │   ├── api.md                      # Full SDK API reference
 │   │   ├── cli.md                      # All CLI commands
-│   │   ├── config.md                   # pocket-dock.yaml / instance.toml reference
+│   │   ├── config.md                   # pocketdock.yaml / instance.toml reference
 │   │   └── errors.md                   # Error types and recovery
 │   └── contributing.md                 # Mirrors CONTRIBUTING.md
 │
@@ -1597,7 +1597,7 @@ pocket-dock/
 │       └── Dockerfile                  # Alpine + GCC/CMake/ARM toolchain
 │
 ├── python/
-│   └── pocket_dock/
+│   └── pocketdock/
 │       ├── __init__.py                 # sync public exports (default)
 │       ├── py.typed                    # PEP 561 marker for mypy
 │       ├── async_.py                   # async public exports
@@ -1612,7 +1612,7 @@ pocket-dock/
 │       ├── _logger.py                  # automatic stream-to-disk logger
 │       ├── pool.py                     # ContainerPool
 │       ├── persistence.py              # resume, snapshot, list, prune
-│       ├── projects.py                 # .pocket-dock/ dir management, pocket-dock.yaml parsing, instance dirs
+│       ├── projects.py                 # .pocketdock/ dir management, pocketdock.yaml parsing, instance dirs
 │       ├── profiles.py                 # image name resolution
 │       ├── errors.py                   # ContainerNotRunning, ContainerGone, etc.
 │       ├── types.py                    # ExecResult, ContainerInfo, StreamChunk, SessionResult
@@ -1621,7 +1621,7 @@ pocket-dock/
 │           ├── __init__.py
 │           ├── main.py                 # click group + top-level commands
 │           ├── commands/
-│           │   ├── init.py              # pocket-dock init — create .pocket-dock/pocket-dock.yaml
+│           │   ├── init.py              # pocketdock init — create .pocketdock/pocketdock.yaml
 │           │   ├── build.py
 │           │   ├── create.py
 │           │   ├── run.py
@@ -1704,15 +1704,15 @@ pocket-dock/
 │   │  # ===== CLI examples (shell scripts) =====
 │   ├── cli/
 │   │   ├── README.md                      # CLI examples index, prerequisites
-│   │   ├── 01_hello_world.sh              # pocket-dock create → run → shutdown
-│   │   ├── 02_run_python.sh               # pocket-dock run CONTAINER "python -c ..."
-│   │   ├── 03_file_operations.sh          # pocket-dock push/pull
-│   │   ├── 04_resource_limits.sh          # pocket-dock create --mem 128m --cpu 25
-│   │   ├── 05_streaming.sh                # pocket-dock run --stream CONTAINER "make all"
-│   │   ├── 06_persistence.sh              # pocket-dock create --persist → stop → resume → snapshot
-│   │   ├── 07_project_workflow.sh         # pocket-dock init → create --persist → list → status
+│   │   ├── 01_hello_world.sh              # pocketdock create → run → shutdown
+│   │   ├── 02_run_python.sh               # pocketdock run CONTAINER "python -c ..."
+│   │   ├── 03_file_operations.sh          # pocketdock push/pull
+│   │   ├── 04_resource_limits.sh          # pocketdock create --mem 128m --cpu 25
+│   │   ├── 05_streaming.sh                # pocketdock run --stream CONTAINER "make all"
+│   │   ├── 06_persistence.sh              # pocketdock create --persist → stop → resume → snapshot
+│   │   ├── 07_project_workflow.sh         # pocketdock init → create --persist → list → status
 │   │   ├── 08_embedded_build.sh           # Full embedded workflow: create, push, compile, pull
-│   │   ├── 09_logs_and_history.sh         # pocket-dock logs CONTAINER --history / --last 5
+│   │   ├── 09_logs_and_history.sh         # pocketdock logs CONTAINER --history / --last 5
 │   │   └── 10_full_lifecycle.sh           # Complete demo: build → create → run → push → pull → snapshot → export
 │   │
 │   │  # ===== Project templates (copy and modify) =====
@@ -1721,7 +1721,7 @@ pocket-dock/
 │       ├── llm-agent/                          # Template: LLM agent with sandboxed code execution
 │       │   ├── README.md
 │       │   ├── agent.py                        # Minimal agent loop (works with any LLM API)
-│       │   ├── pocket-dock.yaml                # Pre-configured project settings
+│       │   ├── pocketdock.yaml                # Pre-configured project settings
 │       │   └── prompts/
 │       │       └── system.txt                  # System prompt with sandbox usage instructions
 │       ├── data-pipeline/                      # Template: Process untrusted data in isolation
@@ -1755,23 +1755,23 @@ pocket-dock/
 
 ## Templates and Examples
 
-pocket-dock ships with two kinds of learning material: **templates** and **examples**. They serve different purposes.
+pocketdock ships with two kinds of learning material: **templates** and **examples**. They serve different purposes.
 
 ### Templates: complete starting points
 
 A template is a working project directory you copy and modify. Each one has its own README, is self-contained, and demonstrates a real workflow end-to-end.
 
-**`examples/templates/llm-agent/`** — The most common use case. A minimal agent loop that generates code with any LLM API, executes it in a pocket-dock container, reads the result, and feeds it back. Includes a system prompt that teaches the LLM about the sandbox's capabilities and constraints. Works with OpenAI, Anthropic, local models — no framework dependency.
+**`examples/templates/llm-agent/`** — The most common use case. A minimal agent loop that generates code with any LLM API, executes it in a pocketdock container, reads the result, and feeds it back. Includes a system prompt that teaches the LLM about the sandbox's capabilities and constraints. Works with OpenAI, Anthropic, local models — no framework dependency.
 
 **`examples/templates/data-pipeline/`** — Process untrusted data (uploaded CSVs, scraped HTML, user-provided scripts) in isolation. Shows how to push files in, run analysis, pull results out, and destroy the container. Includes a custom Dockerfile that extends the agent profile.
 
-**`examples/templates/microservice/`** — Run a FastAPI app inside a pocket-dock container with networking, port mapping, and detached mode. Query it from the host. Shows the pattern for containerized services that your code talks to — useful for sandboxing any server component, not just web apps.
+**`examples/templates/microservice/`** — Run a FastAPI app inside a pocketdock container with networking, port mapping, and detached mode. Query it from the host. Shows the pattern for containerized services that your code talks to — useful for sandboxing any server component, not just web apps.
 
-**`examples/templates/embedded-firmware/`** — Create a persistent embedded dev container, install Arduino/PlatformIO platforms, compile firmware, pull the binary back to the host for flashing. Shows the full workflow from `pocket-dock build` to `esptool.py write_flash`.
+**`examples/templates/embedded-firmware/`** — Create a persistent embedded dev container, install Arduino/PlatformIO platforms, compile firmware, pull the binary back to the host for flashing. Shows the full workflow from `pocketdock build` to `esptool.py write_flash`.
 
-**`examples/templates/local-llm/`** — Run a small language model (Qwen2.5-0.5B) inside a persistent container using llama-cpp-python's OpenAI-compatible server. Shows persistent containers, volume mounts for model files, resource allocation, and the detached + callback pattern. README is honest about limitations: CPU-only is slow, this demonstrates pocket-dock capabilities, not a production inference setup.
+**`examples/templates/local-llm/`** — Run a small language model (Qwen2.5-0.5B) inside a persistent container using llama-cpp-python's OpenAI-compatible server. Shows persistent containers, volume mounts for model files, resource allocation, and the detached + callback pattern. README is honest about limitations: CPU-only is slow, this demonstrates pocketdock capabilities, not a production inference setup.
 
-**`examples/templates/dev-sandbox/`** — One-command disposable dev environment. Run `pocket-dock shell dev` and you're in a container with git, curl, vim, Python, and your dotfiles synced in. When you're done, it's gone.
+**`examples/templates/dev-sandbox/`** — One-command disposable dev environment. Run `pocketdock shell dev` and you're in a container with git, curl, vim, Python, and your dotfiles synced in. When you're done, it's gone.
 
 **`examples/templates/multi-agent/`** — Orchestrate multiple agents, each in its own container, running simultaneously. Shows the async pattern with `asyncio.gather`, callbacks for real-time monitoring, and results aggregation. The canonical example of why the connection model matters.
 
@@ -1784,7 +1784,7 @@ Each example is a single file that demonstrates one thing. Numbered for reading 
 - Handles cleanup even on error
 - Is under 50 lines (with comments)
 
-**Two paths through the same concepts.** The Python SDK examples (root of `examples/`) show programmatic usage — this is what agent developers and library consumers use. The CLI examples (`examples/cli/`) show the same workflows using the `pocket-dock` command — this is what terminal users, scripters, and people evaluating the tool use.
+**Two paths through the same concepts.** The Python SDK examples (root of `examples/`) show programmatic usage — this is what agent developers and library consumers use. The CLI examples (`examples/cli/`) show the same workflows using the `pocketdock` command — this is what terminal users, scripters, and people evaluating the tool use.
 
 Not every concept has both: callbacks, async, sessions, and pools are SDK-only. CLI examples cover the getting-started workflow, persistence, projects, logs, and complete lifecycle demos.
 
@@ -1794,15 +1794,15 @@ Notable examples worth calling out:
 
 **`54_fastapi_server.py`** — Runs a FastAPI server inside a container with networking enabled, detached mode, and callbacks watching the server log. Queries it from the host with `httpx`. Demonstrates port mapping, detached processes, and the "container as a service" pattern. Every developer understands a web server.
 
-**`55_local_llm_inference.py`** — Runs `llama-cpp-python` server inside a persistent container with a small model (~500MB Qwen2.5-0.5B Q4). Demonstrates persistent containers (install once, keep), volume mounts (model files are large, mount from host), resource limits (LLMs need RAM), and detached + callback pattern. **Honest caveat in the example:** CPU-only inference is slow (~10 tok/s for 0.5B). This is a "look what's possible" demo, not a production setup. For real local LLM use, point users at Ollama/llama.cpp directly. The example's value is showing pocket-dock's capabilities, not replacing dedicated inference tools.
+**`55_local_llm_inference.py`** — Runs `llama-cpp-python` server inside a persistent container with a small model (~500MB Qwen2.5-0.5B Q4). Demonstrates persistent containers (install once, keep), volume mounts (model files are large, mount from host), resource limits (LLMs need RAM), and detached + callback pattern. **Honest caveat in the example:** CPU-only inference is slow (~10 tok/s for 0.5B). This is a "look what's possible" demo, not a production setup. For real local LLM use, point users at Ollama/llama.cpp directly. The example's value is showing pocketdock's capabilities, not replacing dedicated inference tools.
 
-**`cli/10_full_lifecycle.sh`** — The CLI equivalent of "read this one script to understand the whole tool." Builds images, creates a persistent container, runs commands, pushes/pulls files, checks logs, snapshots, exports, and cleans up. Someone can copy-paste this into a terminal in 5 minutes and see everything pocket-dock does.
+**`cli/10_full_lifecycle.sh`** — The CLI equivalent of "read this one script to understand the whole tool." Builds images, creates a persistent container, runs commands, pushes/pulls files, checks logs, snapshots, exports, and cleans up. Someone can copy-paste this into a terminal in 5 minutes and see everything pocketdock does.
 
 The `examples/README.md` is an index with one-line descriptions and prerequisites (which image profile each example needs). It explicitly tells people: "If you prefer Python, start with `01_hello_world.py`. If you prefer the terminal, start with `cli/01_hello_world.sh`."
 
 ### Why templates, SDK examples, and CLI examples?
 
-Three entry points for three types of users. **Templates** answer "how do I build X with pocket-dock?" — they're project scaffolding for someone who knows what they want. **Python SDK examples** answer "how does feature Y work in code?" — they're reference material for library consumers. **CLI examples** answer "how do I use this from my terminal?" — they're for people who want to evaluate, script, or use pocket-dock without writing Python.
+Three entry points for three types of users. **Templates** answer "how do I build X with pocketdock?" — they're project scaffolding for someone who knows what they want. **Python SDK examples** answer "how does feature Y work in code?" — they're reference material for library consumers. **CLI examples** answer "how do I use this from my terminal?" — they're for people who want to evaluate, script, or use pocketdock without writing Python.
 
 A new user picks their path: reads `01_hello_world.py` or `cli/01_hello_world.sh` first, then copies `examples/templates/llm-agent/` to start their project, then refers back to specific examples when they need streaming, callbacks, or persistence.
 
@@ -1816,17 +1816,17 @@ Being honest about what already exists:
 
 The most direct competitor. 100k+ downloads on PyPI, actively maintained, supports Docker/Podman/Kubernetes. Has container pools, security policies, artifact capture, MCP server, and IPython-based interactive sessions. Integrates with LangChain, LlamaIndex, OpenAI.
 
-**Where it overlaps with pocket-dock:** Container creation, code execution, stdout/stderr capture, resource limits, pools, Podman support.
+**Where it overlaps with pocketdock:** Container creation, code execution, stdout/stderr capture, resource limits, pools, Podman support.
 
-**Where pocket-dock is different:**
+**Where pocketdock is different:**
 
-| Concern | llm-sandbox | pocket-dock |
+| Concern | llm-sandbox | pocketdock |
 |---|---|---|
 | Dependencies | `docker-py` or `podman-py` or `kubernetes` | Zero (stdlib socket client) |
 | Offline-first | Not a design goal | Core principle — pre-built images, no runtime pulls |
 | Image management | Uses stock images, installs at runtime | Ships Dockerfiles, builds once, works offline |
 | Embedded/C++ | No | Dedicated profile with ARM, Arduino CLI, PlatformIO |
-| Project organization | None | Project-rooted `.pocket-dock/` with provenance, history |
+| Project organization | None | Project-rooted `.pocketdock/` with provenance, history |
 | Output model | stdout/stderr, basic streaming | Ring buffer + callbacks + detached processes + sessions |
 | CLI | None (library + MCP server) | First-class, `click` + `rich` |
 | Persistence model | `commit_container` flag | 4 levels with metadata, export/import |
@@ -1841,11 +1841,11 @@ The most direct competitor. 100k+ downloads on PyPI, actively maintained, suppor
 
 **`cohere-terrarium`** — Pyodide-based (WebAssembly), designed for GCP Cloud Run. Not for local use.
 
-### Where pocket-dock sits
+### Where pocketdock sits
 
 `llm-sandbox` is a good library for "run LLM-generated Python in a Docker container." If that's your only need and you want something that works today with LangChain, it's the right choice.
 
-pocket-dock is a broader tool: a local container management library + CLI that's designed for offline use, embedded development, persistent workspaces, and project organization — and also happens to be excellent for LLM agent sandboxing. The zero-dependency socket client, the offline architecture, the embedded profile, and the project system are things `llm-sandbox` doesn't do and likely won't — they're solving different problems.
+pocketdock is a broader tool: a local container management library + CLI that's designed for offline use, embedded development, persistent workspaces, and project organization — and also happens to be excellent for LLM agent sandboxing. The zero-dependency socket client, the offline architecture, the embedded profile, and the project system are things `llm-sandbox` doesn't do and likely won't — they're solving different problems.
 
 You're not reinventing the wheel. You're building a different vehicle.
 
@@ -1855,15 +1855,15 @@ You're not reinventing the wheel. You're building a different vehicle.
 
 In priority order by audience size and fit:
 
-**1. LLM agent developers who run generated code.** The largest audience. These people are currently using `llm-sandbox`, raw `docker-py`, or nothing (YOLO-ing code execution on the host). pocket-dock's pitch: zero dependencies (no more `pip install docker` breaking), offline-first (agents on laptops without reliable internet), and the output model (buffer + callbacks for real-time agent feedback loops). The `examples/templates/llm-agent/` is their entry point.
+**1. LLM agent developers who run generated code.** The largest audience. These people are currently using `llm-sandbox`, raw `docker-py`, or nothing (YOLO-ing code execution on the host). pocketdock's pitch: zero dependencies (no more `pip install docker` breaking), offline-first (agents on laptops without reliable internet), and the output model (buffer + callbacks for real-time agent feedback loops). The `examples/templates/llm-agent/` is their entry point.
 
-**2. Solo developers who want disposable environments.** "I need a clean Python to test something without polluting my system." Currently: `docker run -it python:3.12 bash` with manual volume mounts and no persistence. pocket-dock makes this `pocket-dock shell dev` with automatic cleanup, project organization, and session logging. Smaller audience, high per-person value.
+**2. Solo developers who want disposable environments.** "I need a clean Python to test something without polluting my system." Currently: `docker run -it python:3.12 bash` with manual volume mounts and no persistence. pocketdock makes this `pocketdock shell dev` with automatic cleanup, project organization, and session logging. Smaller audience, high per-person value.
 
-**3. Embedded developers who cross-compile.** Arduino/ESP32/STM32 developers who want reproducible build environments. Currently: custom Dockerfiles cobbled together from Stack Overflow, no tooling. pocket-dock's embedded profile with USB passthrough is genuinely unique. Small audience, zero competition.
+**3. Embedded developers who cross-compile.** Arduino/ESP32/STM32 developers who want reproducible build environments. Currently: custom Dockerfiles cobbled together from Stack Overflow, no tooling. pocketdock's embedded profile with USB passthrough is genuinely unique. Small audience, zero competition.
 
-**4. Education and code evaluation.** Teachers, bootcamps, interview platforms that need to run untrusted student code safely. They need sandboxing, resource limits, timeout, output capture — all core pocket-dock features. Usually they build this from scratch with raw Docker. Small-to-medium audience, real willingness to adopt.
+**4. Education and code evaluation.** Teachers, bootcamps, interview platforms that need to run untrusted student code safely. They need sandboxing, resource limits, timeout, output capture — all core pocketdock features. Usually they build this from scratch with raw Docker. Small-to-medium audience, real willingness to adopt.
 
-**5. Local CI/testing.** Run test suites in clean containers before pushing. Overlaps with GitHub Actions etc., but pocket-dock's snapshot model (freeze a known-good environment, spin up fresh per test run) is useful for local pre-commit workflows or self-hosted runners.
+**5. Local CI/testing.** Run test suites in clean containers before pushing. Overlaps with GitHub Actions etc., but pocketdock's snapshot model (freeze a known-good environment, spin up fresh per test run) is useful for local pre-commit workflows or self-hosted runners.
 
 **Where adoption starts:** Tiers 1 and 2 are volume. Tier 3 is passion (you). Tiers 4 and 5 happen organically once the tool exists and has good examples. The README should lead with Tier 1 (agent sandbox), show Tier 2 (dev sandbox) as the second example, and link to the embedded profile for Tier 3.
 
@@ -1881,8 +1881,8 @@ Summarizing the choices made:
 | 4 | `container.info()` | Point-in-time polled snapshot | Simple, user controls frequency, no streaming complexity for v1 |
 | 5 | `container.update()` | Removed — use `run()` directly | Least magic. `run("pip install flask")` is clearer than `update(pip=["flask"])` |
 | 6 | Streaming output | `run(stream=True)` → async iterator | Async HTTP model, essential for long-running agent tasks |
-| 7 | Instance data | Project-rooted `.pocket-dock/instances/` directory | Instance data lives next to the code it belongs to, not in a global registry. Projects can see, manage, and quota container data. No `~/.pocket-dock/projects/`. |
-| 8 | Organization | Project directory with `pocket-dock.yaml` | `pocket-dock init` creates `.pocket-dock/pocket-dock.yaml`. pocket-dock walks up from cwd to find it (like `.git/`). Project name defaults to directory name. |
+| 7 | Instance data | Project-rooted `.pocketdock/instances/` directory | Instance data lives next to the code it belongs to, not in a global registry. Projects can see, manage, and quota container data. No `~/.pocketdock/projects/`. |
+| 8 | Organization | Project directory with `pocketdock.yaml` | `pocketdock init` creates `.pocketdock/pocketdock.yaml`. pocketdock walks up from cwd to find it (like `.git/`). Project name defaults to directory name. |
 | 9 | Bun/TS SDK | Deferred | One language, one codebase. Can be ported later if there's actual demand from JS/TS consumers. |
 | 10 | Concurrency | Async core, sync facade | Async is the natural fit for socket I/O. Sync wrapper for the 80% case. Users choose. |
 | 11 | Connections | One per operation, not shared | Unix sockets are free. Isolation prevents streaming/detach from blocking other ops. |
@@ -1899,10 +1899,10 @@ Summarizing the choices made:
 | 22 | Project tooling | `uv` for venvs, deps, lockfile, commands | Mandated. Single tool for Python version management, virtual environments, dependency resolution, and command execution. |
 | 23 | Documentation | mkdocs-material → GitHub Pages | Mandated. Renders markdown to HTML. Builds in CI, deploys on merge to main. Does not author content — content accuracy is enforced by dev cycle step 7. |
 | 24 | Python version | 3.10+ | 3.9 EOL Oct 2025. 3.10 gives union types, match, better errors. `tomllib` still needs fallback (3.11+). |
-| 25 | Long-running containers | Lifecycle management yes, process supervision no | `list`, `stop --all`, `info`, `logs --follow` for management. Idle timeout as optional config. `pocket-dock systemd` generates unit files but doesn't manage systemd. Auto-restart, health checks, start-on-boot are out of scope. |
-| 26 | Container discovery | Podman labels (identity) + project-local instance data (history) | `pocket-dock.*` OCI labels including `data-path`. `pocket-dock list` queries labels, scopes to current project by default, `--all-projects` for machine-wide. No global registry. |
-| 27 | `pocket-dock doctor` | Report-only by default, `--fix` to act | Reconciles labels against project-local instance dirs (using `pocket-dock.data-path` label). Scoped to current project. `--fix` creates missing dirs, removes stale ones. Cannot fix port conflicts (user decision). |
-| 28 | Config file format | YAML for human-authored config, TOML for machine-generated metadata | `pocket-dock.yaml` is hierarchical, supports comments, humans edit it. `instance.toml` is flat, machine-generated, auto-commented "do not edit." PyYAML is a CLI dependency. SDK stays zero-dep. |
+| 25 | Long-running containers | Lifecycle management yes, process supervision no | `list`, `stop --all`, `info`, `logs --follow` for management. Idle timeout as optional config. `pocketdock systemd` generates unit files but doesn't manage systemd. Auto-restart, health checks, start-on-boot are out of scope. |
+| 26 | Container discovery | Podman labels (identity) + project-local instance data (history) | `pocketdock.*` OCI labels including `data-path`. `pocketdock list` queries labels, scopes to current project by default, `--all-projects` for machine-wide. No global registry. |
+| 27 | `pocketdock doctor` | Report-only by default, `--fix` to act | Reconciles labels against project-local instance dirs (using `pocketdock.data-path` label). Scoped to current project. `--fix` creates missing dirs, removes stale ones. Cannot fix port conflicts (user decision). |
+| 28 | Config file format | YAML for human-authored config, TOML for machine-generated metadata | `pocketdock.yaml` is hierarchical, supports comments, humans edit it. `instance.toml` is flat, machine-generated, auto-commented "do not edit." PyYAML is a CLI dependency. SDK stays zero-dep. |
 | 29 | Ephemeral containers | Leave no trace on disk | `persist=False` (default) creates no instance directory, no logs, no metadata. Same clean model as llm-sandbox. Instance dirs only for persistent containers. |
 
 ---
@@ -1911,7 +1911,7 @@ Summarizing the choices made:
 
 1. **Embedded profile scope.** The `embedded` profile currently includes ARM cross-compiler from Alpine repos. Should it also include ESP-IDF, AVR, RISC-V? These are large and specialized. Recommendation: keep base lean (GCC + ARM), document extending for specific targets.
 
-2. **Multi-architecture support.** Should pocket-dock images be built for both amd64 and arm64? Relevant for Apple Silicon Macs. Podman handles this via QEMU but native is faster. Recommendation: document `podman build --platform linux/arm64`, don't mandate multi-arch.
+2. **Multi-architecture support.** Should pocketdock images be built for both amd64 and arm64? Relevant for Apple Silicon Macs. Podman handles this via QEMU but native is faster. Recommendation: document `podman build --platform linux/arm64`, don't mandate multi-arch.
 
 3. **Session sentinel reliability.** Sessions detect command completion by appending `echo __PD_SENTINEL_$?__` after each command and scanning output for it. This breaks if the command itself outputs the sentinel string, or if the command reads all of stdin (consuming the sentinel). Alternative approaches: use a unique per-command UUID in the sentinel, or use a side-channel (write exit code to a temp file and poll it). Recommendation: UUID-based sentinel for v1, document the edge cases, revisit if it's a real problem.
 
@@ -1927,7 +1927,7 @@ Summarizing the choices made:
 | Python 3.10+ | PSF | Yes | Pre-installed on most systems |
 | `click` | BSD-3 | Yes (CLI only) | CLI framework |
 | `rich` | MIT | Yes (CLI only) | Pretty output |
-| `PyYAML` | MIT | Yes (CLI only) | Config file parsing (`pocket-dock.yaml`) |
+| `PyYAML` | MIT | Yes (CLI only) | Config file parsing (`pocketdock.yaml`) |
 
 **SDK dependencies**: 0 (stdlib only: `http.client`, `json`, `socket`, `tarfile`)
 **CLI dependencies**: 3 (`click`, `rich`, `PyYAML`)
@@ -1993,12 +1993,12 @@ All tests are integration tests against a real Podman socket. No mocks, no fakes
 | `test_error_handling.py` | ContainerNotRunning, ContainerGone, timeout, recovery | Yes |
 | `test_pool.py` | Pre-warming, acquire/release, pool exhaustion | Yes |
 | `test_persistence.py` | persist=True, resume, snapshot, volume mounts | Yes |
-| `test_projects.py` | .pocket-dock/ structure, pocket-dock.yaml, instance.toml, provenance, prune | Partial (filesystem only for some) |
+| `test_projects.py` | .pocketdock/ structure, pocketdock.yaml, instance.toml, provenance, prune | Partial (filesystem only for some) |
 | `test_cli.py` | All CLI commands via click.testing.CliRunner | Yes |
 
 ### Automation tools
 
-Everything runs through `pyproject.toml` configuration. No separate config files except `.pre-commit-config.yaml` (git hooks) and `.pocket-dock/pocket-dock.yaml` (project settings — not a dev tool config).
+Everything runs through `pyproject.toml` configuration. No separate config files except `.pre-commit-config.yaml` (git hooks) and `.pocketdock/pocketdock.yaml` (project settings — not a dev tool config).
 
 ```toml
 # pyproject.toml (relevant sections)
@@ -2022,11 +2022,11 @@ warn_unused_configs = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "--cov=pocket_dock --cov-report=term-missing --cov-fail-under=100 -v"
+addopts = "--cov=pocketdock --cov-report=term-missing --cov-fail-under=100 -v"
 
 [tool.coverage.run]
 branch = true
-source = ["pocket_dock"]
+source = ["pocketdock"]
 
 [tool.coverage.report]
 fail_under = 100
@@ -2090,11 +2090,11 @@ jobs:
       - run: uv sync --dev
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run mypy --strict python/pocket_dock/
-      - run: uv run bandit -r python/pocket_dock/ -c pyproject.toml
+      - run: uv run mypy --strict python/pocketdock/
+      - run: uv run bandit -r python/pocketdock/ -c pyproject.toml
       - name: Check license headers
         run: |
-          find python/pocket_dock -name '*.py' | while read f; do
+          find python/pocketdock -name '*.py' | while read f; do
             head -2 "$f" | grep -q 'SPDX-License-Identifier: BSD-2-Clause' || \
               (echo "Missing license header: $f" && exit 1)
           done
@@ -2110,7 +2110,7 @@ jobs:
       - run: uv python install ${{ matrix.python-version }}
       - run: uv sync --dev --python ${{ matrix.python-version }}
       - run: systemctl --user start podman.socket
-      - run: podman build -t pocket-dock/minimal images/minimal/
+      - run: podman build -t pocketdock/minimal images/minimal/
       - run: uv run pytest
         # pytest is configured in pyproject.toml to enforce 100% coverage
 
@@ -2270,8 +2270,8 @@ Step 7 is the one everyone skips. Don't. Stale docs are worse than no docs — t
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Create project
-uv init pocket-dock
-cd pocket-dock
+uv init pocketdock
+cd pocketdock
 
 # Set Python version
 uv python pin 3.12
@@ -2298,8 +2298,8 @@ uv run pytest
 # Run linters
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy --strict python/pocket_dock/
-uv run bandit -r python/pocket_dock/ -c pyproject.toml
+uv run mypy --strict python/pocketdock/
+uv run bandit -r python/pocketdock/ -c pyproject.toml
 
 # Run everything (what CI does)
 uv run pre-commit run --all-files && uv run pytest
@@ -2313,7 +2313,7 @@ uv build
 
 ### Source file license headers
 
-Every `.py` source file in `python/pocket_dock/` must include this header:
+Every `.py` source file in `python/pocketdock/` must include this header:
 
 ```python
 # Copyright (c) deftio llc
@@ -2326,7 +2326,7 @@ Two lines. SPDX identifier is machine-readable. No boilerplate essay. `ruff` won
 # In ci.yml
 - name: Check license headers
   run: |
-    find python/pocket_dock -name '*.py' | while read f; do
+    find python/pocketdock -name '*.py' | while read f; do
       head -2 "$f" | grep -q 'SPDX-License-Identifier: BSD-2-Clause' || \
         (echo "Missing license header: $f" && exit 1)
     done
@@ -2341,7 +2341,7 @@ Documentation is built with [mkdocs-material](https://squidfunk.github.io/mkdocs
 **Docs structure:**
 
 - `docs/index.md` — mirrors README (one source of truth, symlinked or generated)
-- `docs/quickstart.md` — detailed getting started (install uv, install pocket-dock, build images, run first container)
+- `docs/quickstart.md` — detailed getting started (install uv, install pocketdock, build images, run first container)
 - `docs/concepts/` — architecture, connection model, output model, sessions, persistence (extracted from this spec)
 - `docs/guides/` — task-oriented: build an LLM agent, set up embedded dev, run local LLM, air-gap setup
 - `docs/reference/` — API reference, CLI commands, config files, error types
@@ -2377,7 +2377,7 @@ jobs:
 Before writing any code:
 
 ```
-[ ] Create GitHub repo: deftio/pocket-dock (or preferred namespace)
+[ ] Create GitHub repo: deftio/pocketdock (or preferred namespace)
 [ ] Initialize with LICENSE (BSD-2-Clause, (c) deftio llc), README.md, .gitignore
 [ ] Set up branch protection on main (require PR, require CI, no force push)
 [ ] Create milestone labels in GitHub Issues: M0 through M10
@@ -2392,7 +2392,7 @@ Before writing any code:
 [ ] Create mkdocs.yml at repo root and docs/ directory with placeholder pages
 [ ] Create plan/ directory, move this spec to plan/spec.md
 [ ] Create images/minimal/Dockerfile
-[ ] Create empty python/pocket_dock/__init__.py with license header and py.typed
+[ ] Create empty python/pocketdock/__init__.py with license header and py.typed
 [ ] First commit: empty package structure with passing CI (zero tests, zero code, but lint/mypy/bandit/docs all clean)
 [ ] Verify: push, CI runs, docs deploy, everything green on an empty project
 [ ] Begin M0: create feat/m0-socket-client branch, write test_socket_client.py first
@@ -2405,7 +2405,7 @@ The first commit should have zero code and passing CI. This proves the automatio
 ## What This Is Not
 
 - **Not E2B / Daytona / Modal.** Those are cloud platforms. This is a local library + CLI.
-- **Not a Docker wrapper framework.** No service definitions, no compose. `pocket-dock.yaml` configures pocket-dock itself (profiles, logging), not container orchestration.
+- **Not a Docker wrapper framework.** No service definitions, no compose. `pocketdock.yaml` configures pocketdock itself (profiles, logging), not container orchestration.
 - **Not testcontainers.** Similar energy, but testcontainers is for integration testing. This is for code execution sandboxing and dev environments.
 - **Not a security product.** Container isolation is good enough for "my own LLM agent might generate bad code" but not for "adversarial users are trying to escape."
 
@@ -2413,9 +2413,9 @@ The first commit should have zero code and passing CI. This proves the automatio
 
 ## Success Criteria
 
-pocket-dock is done when:
+pocketdock is done when:
 
-- [ ] `pip install pocket-dock` gives you both library and CLI
+- [ ] `pip install pocketdock` gives you both library and CLI
 - [ ] `create_new_container().run("print(1)").stdout == "1\n"` works
 - [ ] SDK is zero-dependency (stdlib-only socket client)
 - [ ] Works with Podman. Works with Docker. Auto-detects which.
@@ -2430,10 +2430,10 @@ pocket-dock is done when:
 - [ ] Sessions: `c.session().send("cd /tmp && pwd")` returns `/tmp`, state persists across sends
 - [ ] Persistence: `persist=True` → shutdown → `resume_container()` round-trips
 - [ ] Persistence: `container.snapshot()` creates a reusable image
-- [ ] Persistence: volume mounts and `.pocket-dock/instances/` directory structure work
-- [ ] Projects: `pocket-dock init` creates config, containers scope to project, list/prune work
+- [ ] Persistence: volume mounts and `.pocketdock/instances/` directory structure work
+- [ ] Projects: `pocketdock init` creates config, containers scope to project, list/prune work
 - [ ] CLI: all commands work, help is beautiful, destructive actions confirm
-- [ ] CLI: `pocket-dock export` / `import` works for air-gapped transfer
+- [ ] CLI: `pocketdock export` / `import` works for air-gapped transfer
 - [ ] Pool pre-warming reduces per-execution latency to <100ms
 - [ ] Clean container cleanup on normal exit, crash, and KeyboardInterrupt
 - [ ] Total library code under 1000 lines (excluding CLI)
@@ -2460,13 +2460,13 @@ pocket-dock is done when:
 
 **The problem is real.** Anyone building LLM agents that execute code rewrites the same container glue code. The pattern is always: create container, exec into it, demux the output stream, handle timeouts, clean up. It's 200-400 lines of fiddly code that everyone writes from scratch.
 
-**The offline-first angle is differentiating.** E2B, Daytona, Modal — all cloud-first. If you're on a plane, behind a corporate firewall, or just philosophically opposed to sending your code to someone else's server, there's nothing good in this space. pocket-dock would be the only serious option.
+**The offline-first angle is differentiating.** E2B, Daytona, Modal — all cloud-first. If you're on a plane, behind a corporate firewall, or just philosophically opposed to sending your code to someone else's server, there's nothing good in this space. pocketdock would be the only serious option.
 
 **Zero-dependency socket SDK is elegant.** Most people reach for `docker-py` without realizing the REST API is simple enough to talk to directly. The socket client is the kind of thing that, once written well, never needs to change. It's a genuine technical contribution.
 
 **The embedded profile is a niche no one else serves.** E2B doesn't have GCC. Daytona doesn't have Arduino CLI. This is a real gap for embedded developers who want reproducible build environments.
 
-**The project-rooted data model is thoughtful.** Being able to `ls .pocket-dock/instances/` in a project and see what containers belong to it, who created them, and what ran inside them — that's the kind of thing that separates a tool you actually use from a tool you try once. Data lives next to the code it belongs to, not hidden in a global dot-directory.
+**The project-rooted data model is thoughtful.** Being able to `ls .pocketdock/instances/` in a project and see what containers belong to it, who created them, and what ran inside them — that's the kind of thing that separates a tool you actually use from a tool you try once. Data lives next to the code it belongs to, not hidden in a global dot-directory.
 
 ### What's hard
 
@@ -2519,7 +2519,7 @@ Two parts. **Part A: scaffolding.** GitHub repo, LICENSE (BSD-2-Clause, © defti
 `persist=True`, `resume_container()`, `snapshot()`, volume mounts. `list_containers()`, `destroy_container()`, `prune()`. You can now keep state across sessions.
 
 **M7 — Projects and local data.**
-`pocket-dock init` creates `.pocket-dock/pocket-dock.yaml`. Instance directories under `.pocket-dock/instances/` with `instance.toml` provenance and `history.jsonl`. Project-scoped listing and cleanup via Podman labels. `pocket-dock doctor` for reconciliation. You can now manage multiple workstreams.
+`pocketdock init` creates `.pocketdock/pocketdock.yaml`. Instance directories under `.pocketdock/instances/` with `instance.toml` provenance and `history.jsonl`. Project-scoped listing and cleanup via Podman labels. `pocketdock doctor` for reconciliation. You can now manage multiple workstreams.
 
 **M8 — CLI.**
 `click` + `rich`. All commands. Beautiful help. Confirmations. Logging. This is the polish layer — everything under it already works via the SDK.

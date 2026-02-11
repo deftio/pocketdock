@@ -10,10 +10,10 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
 import pytest
-from pocket_dock._callbacks import CallbackRegistry
-from pocket_dock._process import AsyncExecStream, AsyncProcess
-from pocket_dock._stream import STREAM_STDERR, STREAM_STDOUT
-from pocket_dock.types import ExecResult, StreamChunk
+from pocketdock._callbacks import CallbackRegistry
+from pocketdock._process import AsyncExecStream, AsyncProcess
+from pocketdock._stream import STREAM_STDERR, STREAM_STDOUT
+from pocketdock.types import ExecResult, StreamChunk
 
 # --- Helpers ---
 
@@ -48,7 +48,7 @@ async def test_exec_stream_yields_chunks() -> None:
     writer = _mock_writer()
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -65,7 +65,7 @@ async def test_exec_stream_result_after_iteration() -> None:
     writer = _mock_writer()
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -114,7 +114,7 @@ async def test_exec_stream_finalize_idempotent() -> None:
     writer = _mock_writer()
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -138,7 +138,7 @@ async def test_exec_stream_close_before_iteration_ends() -> None:
 
     # Now iterate — finalize should be a no-op (line 73 coverage)
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -159,7 +159,7 @@ async def test_process_id() -> None:
     callbacks = CallbackRegistry()
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -175,7 +175,7 @@ async def test_process_read_peek() -> None:
     frames = [(STREAM_STDOUT, b"hello")]
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -202,7 +202,7 @@ async def test_process_is_running() -> None:
     frames = [(STREAM_STDOUT, b"x")]
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -220,7 +220,7 @@ async def test_process_wait_returns_exec_result() -> None:
     frames = [(STREAM_STDOUT, b"output"), (STREAM_STDERR, b"err")]
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=42,
     ):
@@ -239,7 +239,7 @@ async def test_process_buffer_size_and_overflow() -> None:
     frames = [(STREAM_STDOUT, b"x" * 100)]
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -270,7 +270,7 @@ async def test_process_callbacks_fire() -> None:
     frames = [(STREAM_STDOUT, b"out"), (STREAM_STDERR, b"err")]
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -288,7 +288,7 @@ async def test_process_cancel() -> None:
     callbacks = CallbackRegistry()
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -310,17 +310,17 @@ async def test_process_kill() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=-1,
         ),
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(200, b'{"Pid": 42}'),
         ),
         patch(
-            "pocket_dock._socket_client.exec_command",
+            "pocketdock._socket_client.exec_command",
             new_callable=AsyncMock,
         ) as mock_exec,
     ):
@@ -343,7 +343,7 @@ async def test_process_kill_already_done() -> None:
     callbacks = CallbackRegistry()
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -364,12 +364,12 @@ async def test_process_kill_inspect_error() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=-1,
         ),
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"error"),
         ),
@@ -393,17 +393,17 @@ async def test_process_kill_pid_zero() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=-1,
         ),
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(200, b'{"Pid": 0}'),
         ),
         patch(
-            "pocket_dock._socket_client.exec_command",
+            "pocketdock._socket_client.exec_command",
             new_callable=AsyncMock,
         ) as mock_exec,
     ):
@@ -421,7 +421,7 @@ async def test_process_wait_with_timeout() -> None:
     callbacks = CallbackRegistry()
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):

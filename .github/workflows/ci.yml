@@ -15,11 +15,11 @@ jobs:
       - run: uv sync --dev --all-extras
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run mypy --strict python/pocket_dock/
-      - run: uv run bandit -r python/pocket_dock/ -c pyproject.toml
+      - run: uv run mypy --strict python/pocketdock/
+      - run: uv run bandit -r python/pocketdock/ -c pyproject.toml
       - name: Check license headers
         run: |
-          find python/pocket_dock -name '*.py' | while read f; do
+          find python/pocketdock -name '*.py' | while read f; do
             head -2 "$f" | grep -q 'SPDX-License-Identifier: BSD-2-Clause' || \
               (echo "Missing license header: $f" && exit 1)
           done
@@ -35,7 +35,7 @@ jobs:
       - run: uv python install ${{ matrix.python-version }}
       - run: uv sync --dev --all-extras --python ${{ matrix.python-version }}
       - run: systemctl --user start podman.socket
-      - run: podman build -t pocket-dock/minimal images/minimal/
+      - run: podman build -t pocketdock/minimal images/minimal/
       - name: Run parallel-safe tests
         run: uv run pytest -n auto --ignore=tests/test_persistence_integration.py
       - name: Run serial tests (race-prone)

@@ -1,8 +1,8 @@
-# pocket-dock
+# pocketdock
 
 **Portable, offline-first container sandboxes for LLM agents and dev workflows.**
 
-pocket-dock is a Python SDK and CLI that talks directly to Podman or Docker over its Unix socket. No cloud. No API keys. No external dependencies for the core SDK.
+pocketdock is a Python SDK and CLI that talks directly to Podman or Docker over its Unix socket. No cloud. No API keys. No external dependencies for the core SDK.
 
 ---
 
@@ -23,7 +23,7 @@ pocket-dock is a Python SDK and CLI that talks directly to Podman or Docker over
 | **Persistent sessions** | Long-lived shells with state (cwd, env vars, history) |
 | **Resource limits** | Memory caps and CPU throttling per container |
 | **Persistence** | Stop/resume containers, snapshot to images, volume mounts |
-| **Project management** | `.pocket-dock/` directories with config, logging, health checks |
+| **Project management** | `.pocketdock/` directories with config, logging, health checks |
 | **Image profiles** | Four pre-baked Dockerfiles: minimal, dev, agent, embedded |
 | **Full CLI** | 21 commands for lifecycle, file ops, and project management |
 | **Async-first** | Sync facade over async core — use either API |
@@ -32,7 +32,7 @@ pocket-dock is a Python SDK and CLI that talks directly to Podman or Docker over
 ## Quick Example
 
 ```python
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 with create_new_container() as c:
     # Run a command
@@ -55,13 +55,13 @@ with create_new_container() as c:
 === "SDK only"
 
     ```bash
-    pip install pocket-dock
+    pip install pocketdock
     ```
 
 === "SDK + CLI"
 
     ```bash
-    pip install pocket-dock[cli]
+    pip install pocketdock[cli]
     ```
 
 Requires [Podman](https://podman.io/getting-started/installation) (recommended) or [Docker](https://docs.docker.com/get-docker/).

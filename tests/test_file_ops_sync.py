@@ -6,7 +6,7 @@ import pathlib
 import tempfile
 
 import pytest
-from pocket_dock import Container, create_new_container
+from pocketdock import Container, create_new_container
 
 from .conftest import requires_engine
 

@@ -11,7 +11,7 @@ import contextlib
 from typing import TYPE_CHECKING
 
 import pytest
-from pocket_dock._socket_client import (
+from pocketdock._socket_client import (
     create_container,
     detect_socket,
     exec_command,
@@ -20,10 +20,10 @@ from pocket_dock._socket_client import (
     start_container,
     stop_container,
 )
-from pocket_dock._socket_client import (
+from pocketdock._socket_client import (
     ping as socket_ping,
 )
-from pocket_dock.errors import (
+from pocketdock.errors import (
     ContainerNotFound,
     ContainerNotRunning,
     ImageNotFound,
@@ -35,8 +35,8 @@ from .conftest import requires_engine
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-IMAGE = "pocket-dock/minimal"
-LABEL_KEY = "pocket-dock.test"
+IMAGE = "pocketdock/minimal"
+LABEL_KEY = "pocketdock.test"
 LABEL_VALUE = "true"
 
 
@@ -93,7 +93,7 @@ async def test_ping_success(socket_path: str) -> None:
 @requires_engine
 async def test_ping_bad_socket() -> None:
     with pytest.raises(SocketConnectionError):
-        await socket_ping("/tmp/nonexistent-pocket-dock-test.sock")
+        await socket_ping("/tmp/nonexistent-pocketdock-test.sock")
 
 
 # -- Container lifecycle --
@@ -159,7 +159,7 @@ async def test_create_container_bad_image(socket_path: str) -> None:
     with pytest.raises(ImageNotFound):
         await create_container(
             socket_path,
-            image="pocket-dock/nonexistent-image-xyz-12345",
+            image="pocketdock/nonexistent-image-xyz-12345",
             command=["sleep", "infinity"],
         )
 

@@ -11,11 +11,11 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pocket_dock._session import _SENTINEL_RE, AsyncSession, _PendingCommand
-from pocket_dock._stream import STREAM_STDERR, STREAM_STDOUT
-from pocket_dock._sync_container import Container, SyncSession, _LoopThread
-from pocket_dock.errors import SessionClosed
-from pocket_dock.types import ExecResult
+from pocketdock._session import _SENTINEL_RE, AsyncSession, _PendingCommand
+from pocketdock._stream import STREAM_STDERR, STREAM_STDOUT
+from pocketdock._sync_container import Container, SyncSession, _LoopThread
+from pocketdock.errors import SessionClosed
+from pocketdock.types import ExecResult
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -144,7 +144,7 @@ async def test_send_and_wait_basic() -> None:
     writer = _mock_writer()
     sess = AsyncSession("eid", _delayed_gen(frames, gate), writer, "/tmp/s.sock", "cid")
 
-    with patch("pocket_dock._session.uuid.uuid4") as mock_uuid:
+    with patch("pocketdock._session.uuid.uuid4") as mock_uuid:
         mock_uuid.return_value = MagicMock(hex=uuid_hex + "extrastuff")
         task = asyncio.ensure_future(sess.send_and_wait("echo hello world"))
         await asyncio.sleep(0.01)
@@ -168,7 +168,7 @@ async def test_send_and_wait_nonzero_exit() -> None:
     writer = _mock_writer()
     sess = AsyncSession("eid", _delayed_gen(frames, gate), writer, "/tmp/s.sock", "cid")
 
-    with patch("pocket_dock._session.uuid.uuid4") as mock_uuid:
+    with patch("pocketdock._session.uuid.uuid4") as mock_uuid:
         mock_uuid.return_value = MagicMock(hex=uuid_hex + "extrastuff")
         task = asyncio.ensure_future(sess.send_and_wait("false"))
         await asyncio.sleep(0.01)
@@ -191,7 +191,7 @@ async def test_send_and_wait_captures_stderr() -> None:
     writer = _mock_writer()
     sess = AsyncSession("eid", _delayed_gen(frames, gate), writer, "/tmp/s.sock", "cid")
 
-    with patch("pocket_dock._session.uuid.uuid4") as mock_uuid:
+    with patch("pocketdock._session.uuid.uuid4") as mock_uuid:
         mock_uuid.return_value = MagicMock(hex=uuid_hex + "extrastuff")
         task = asyncio.ensure_future(sess.send_and_wait("echo err >&2"))
         await asyncio.sleep(0.01)
@@ -228,7 +228,7 @@ async def test_send_and_wait_double_pending_raises() -> None:
     writer = _mock_writer()
     sess = AsyncSession("eid", _slow_gen(), writer, "/tmp/s.sock", "cid")
 
-    with patch("pocket_dock._session.uuid.uuid4") as mock_uuid:
+    with patch("pocketdock._session.uuid.uuid4") as mock_uuid:
         mock_uuid.return_value = MagicMock(hex=uuid_hex + "extrastuff")
 
         # Start first send_and_wait (will timeout)
@@ -354,7 +354,7 @@ async def test_unexpected_eof_signals_pending() -> None:
     writer = _mock_writer()
     sess = AsyncSession("eid", _delayed_gen(frames, gate), writer, "/tmp/s.sock", "cid")
 
-    with patch("pocket_dock._session.uuid.uuid4") as mock_uuid:
+    with patch("pocketdock._session.uuid.uuid4") as mock_uuid:
         mock_uuid.return_value = MagicMock(hex=uuid_hex + "extrastuff")
         task = asyncio.ensure_future(sess.send_and_wait("echo x"))
         await asyncio.sleep(0.01)
@@ -379,7 +379,7 @@ async def test_sentinel_not_in_general_output() -> None:
     writer = _mock_writer()
     sess = AsyncSession("eid", _delayed_gen(frames, gate), writer, "/tmp/s.sock", "cid")
 
-    with patch("pocket_dock._session.uuid.uuid4") as mock_uuid:
+    with patch("pocketdock._session.uuid.uuid4") as mock_uuid:
         mock_uuid.return_value = MagicMock(hex=uuid_hex + "extrastuff")
         task = asyncio.ensure_future(sess.send_and_wait("echo real output"))
         await asyncio.sleep(0.01)
@@ -417,7 +417,7 @@ async def test_check_sentinel_wrong_uuid() -> None:
 
 
 async def test_async_container_session() -> None:
-    from pocket_dock._async_container import AsyncContainer
+    from pocketdock._async_container import AsyncContainer
 
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test")
     writer = _mock_writer()
@@ -425,12 +425,12 @@ async def test_async_container_session() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
@@ -443,19 +443,19 @@ async def test_async_container_session() -> None:
 
 
 async def test_async_container_shutdown_cleans_sessions() -> None:
-    from pocket_dock._async_container import AsyncContainer
+    from pocketdock._async_container import AsyncContainer
 
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test")
     writer = _mock_writer()
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list([]), writer),
         ),
@@ -463,8 +463,8 @@ async def test_async_container_shutdown_cleans_sessions() -> None:
         await ac.session()
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
-        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.remove_container", new_callable=AsyncMock),
     ):
         await ac.shutdown()
 
@@ -497,7 +497,7 @@ def test_sync_session_send_and_wait() -> None:
 
 
 def test_sync_session_via_container() -> None:
-    from pocket_dock._async_container import AsyncContainer
+    from pocketdock._async_container import AsyncContainer
 
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test")
     lt = _LoopThread.get()
@@ -506,12 +506,12 @@ def test_sync_session_via_container() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list([]), writer),
         ),
@@ -564,18 +564,18 @@ def test_sync_session_send() -> None:
 
 
 def test_exports_session_alias() -> None:
-    from pocket_dock import Session
+    from pocketdock import Session
 
     assert Session is SyncSession
 
 
 def test_exports_session_closed_error() -> None:
-    from pocket_dock import SessionClosed as ExportedError
+    from pocketdock import SessionClosed as ExportedError
 
     assert ExportedError is SessionClosed
 
 
 def test_exports_async_session() -> None:
-    from pocket_dock.async_ import AsyncSession as ExportedSession
+    from pocketdock.async_ import AsyncSession as ExportedSession
 
     assert ExportedSession is AsyncSession

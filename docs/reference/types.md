@@ -1,13 +1,13 @@
 # Types Reference
 
-All types are frozen dataclasses importable from `pocket_dock`.
+All types are frozen dataclasses importable from `pocketdock`.
 
 ## ExecResult
 
 Result of a command execution.
 
 ```python
-from pocket_dock import ExecResult
+from pocketdock import ExecResult
 ```
 
 | Field | Type | Default | Description |
@@ -64,7 +64,7 @@ info = c.info()
 Summary of a container from `list_containers()`.
 
 ```python
-from pocket_dock import list_containers
+from pocketdock import list_containers
 
 items = list_containers()
 ```
@@ -112,7 +112,7 @@ output = proc.peek()
 Result of `doctor()` health check.
 
 ```python
-from pocket_dock import doctor
+from pocketdock import doctor
 
 report = doctor()
 ```
@@ -128,7 +128,7 @@ report = doctor()
 Metadata about an image profile.
 
 ```python
-from pocket_dock import resolve_profile
+from pocketdock import resolve_profile
 
 info = resolve_profile("minimal")
 ```

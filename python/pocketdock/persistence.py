@@ -9,10 +9,10 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from pocket_dock import _socket_client as sc
-from pocket_dock._async_container import AsyncContainer
-from pocket_dock.errors import ContainerNotFound, PodmanNotRunning
-from pocket_dock.types import ContainerListItem
+from pocketdock import _socket_client as sc
+from pocketdock._async_container import AsyncContainer
+from pocketdock.errors import ContainerNotFound, PodmanNotRunning
+from pocketdock.types import ContainerListItem
 
 
 async def resume_container(
@@ -24,7 +24,7 @@ async def resume_container(
     """Resume a stopped persistent container by name.
 
     Args:
-        name: The container name (``pocket-dock.instance`` label value).
+        name: The container name (``pocketdock.instance`` label value).
         socket_path: Path to the engine socket. Auto-detected if ``None``.
         timeout: Default exec timeout for the resumed container.
 
@@ -40,7 +40,7 @@ async def resume_container(
 
     containers = await sc.list_containers(
         socket_path,
-        label_filter=f"pocket-dock.instance={name}",
+        label_filter=f"pocketdock.instance={name}",
     )
     if not containers:
         raise ContainerNotFound(name)
@@ -60,9 +60,9 @@ async def resume_container(
 
     mem_limit_bytes = int(host_config.get("Memory", 0))
     nano_cpus = int(host_config.get("NanoCpus", 0))
-    persist = labels.get("pocket-dock.persist", "false").lower() == "true"
-    project = labels.get("pocket-dock.project", "")
-    data_path = labels.get("pocket-dock.data-path", "")
+    persist = labels.get("pocketdock.persist", "false").lower() == "true"
+    project = labels.get("pocketdock.project", "")
+    data_path = labels.get("pocketdock.data-path", "")
 
     return AsyncContainer(
         container_id,
@@ -83,7 +83,7 @@ async def list_containers(
     socket_path: str | None = None,
     project: str | None = None,
 ) -> list[ContainerListItem]:
-    """List all pocket-dock managed containers.
+    """List all pocketdock managed containers.
 
     Args:
         socket_path: Path to the engine socket. Auto-detected if ``None``.
@@ -97,9 +97,9 @@ async def list_containers(
 
     """
     socket_path = _resolve_socket(socket_path)
-    label_filter = "pocket-dock.managed=true"
+    label_filter = "pocketdock.managed=true"
     if project is not None:
-        label_filter = f"pocket-dock.project={project}"
+        label_filter = f"pocketdock.project={project}"
     raw = await sc.list_containers(
         socket_path,
         label_filter=label_filter,
@@ -127,7 +127,7 @@ async def destroy_container(
 
     containers = await sc.list_containers(
         socket_path,
-        label_filter=f"pocket-dock.instance={name}",
+        label_filter=f"pocketdock.instance={name}",
     )
     if not containers:
         raise ContainerNotFound(name)
@@ -138,7 +138,7 @@ async def destroy_container(
     # Check for data-path label to clean up instance directory
     inspect_data = await sc.inspect_container(socket_path, container_id)
     labels = inspect_data.get("Config", {}).get("Labels", {}) or {}
-    data_path = labels.get("pocket-dock.data-path", "")
+    data_path = labels.get("pocketdock.data-path", "")
 
     await sc.remove_container(socket_path, container_id, force=True)
 
@@ -153,7 +153,7 @@ async def prune(
     socket_path: str | None = None,
     project: str | None = None,
 ) -> int:
-    """Remove all stopped pocket-dock containers.
+    """Remove all stopped pocketdock containers.
 
     Args:
         socket_path: Path to the engine socket. Auto-detected if ``None``.
@@ -168,9 +168,9 @@ async def prune(
     """
     socket_path = _resolve_socket(socket_path)
 
-    label_filter = "pocket-dock.managed=true"
+    label_filter = "pocketdock.managed=true"
     if project is not None:
-        label_filter = f"pocket-dock.project={project}"
+        label_filter = f"pocketdock.project={project}"
     raw = await sc.list_containers(
         socket_path,
         label_filter=label_filter,
@@ -192,7 +192,7 @@ async def stop_container(
     """Stop a running container by name (without removing).
 
     Args:
-        name: The container name (``pocket-dock.instance`` label value).
+        name: The container name (``pocketdock.instance`` label value).
         socket_path: Path to the engine socket. Auto-detected if ``None``.
 
     Raises:
@@ -204,7 +204,7 @@ async def stop_container(
 
     containers = await sc.list_containers(
         socket_path,
-        label_filter=f"pocket-dock.instance={name}",
+        label_filter=f"pocketdock.instance={name}",
     )
     if not containers:
         raise ContainerNotFound(name)
@@ -233,7 +233,7 @@ def _parse_container_list_item(data: dict[str, Any]) -> ContainerListItem:
     labels = data.get("Labels") or {}
     names = data.get("Names") or []
 
-    name = labels.get("pocket-dock.instance", "")
+    name = labels.get("pocketdock.instance", "")
     if not name and names:
         # Docker prefixes names with "/"; Podman does not
         name = names[0].lstrip("/")
@@ -243,7 +243,7 @@ def _parse_container_list_item(data: dict[str, Any]) -> ContainerListItem:
         name=name,
         status=data.get("State", "unknown"),
         image=data.get("Image", ""),
-        created_at=labels.get("pocket-dock.created-at", ""),
-        persist=labels.get("pocket-dock.persist", "false").lower() == "true",
-        project=labels.get("pocket-dock.project", ""),
+        created_at=labels.get("pocketdock.created-at", ""),
+        persist=labels.get("pocketdock.persist", "false").lower() == "true",
+        project=labels.get("pocketdock.project", ""),
     )

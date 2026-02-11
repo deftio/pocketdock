@@ -1,13 +1,13 @@
-"""Tests for pocket-dock data types."""
+"""Tests for pocketdock data types."""
 
 from __future__ import annotations
 
 import dataclasses
 import datetime
 
-import pocket_dock
+import pocketdock
 import pytest
-from pocket_dock.types import ContainerInfo, ExecResult, StreamChunk
+from pocketdock.types import ContainerInfo, ExecResult, StreamChunk
 
 
 def test_exec_result_defaults() -> None:
@@ -63,7 +63,7 @@ def test_exec_result_is_dataclass() -> None:
 
 
 def test_exec_result_exported_from_package() -> None:
-    assert pocket_dock.ExecResult is ExecResult
+    assert pocketdock.ExecResult is ExecResult
 
 
 # --- ContainerInfo ---
@@ -140,7 +140,7 @@ def test_container_info_is_dataclass() -> None:
 
 
 def test_container_info_exported_from_package() -> None:
-    assert pocket_dock.ContainerInfo is ContainerInfo
+    assert pocketdock.ContainerInfo is ContainerInfo
 
 
 # --- StreamChunk ---
@@ -163,4 +163,4 @@ def test_stream_chunk_is_dataclass() -> None:
 
 
 def test_stream_chunk_exported_from_package() -> None:
-    assert pocket_dock.StreamChunk is StreamChunk
+    assert pocketdock.StreamChunk is StreamChunk
