@@ -1,6 +1,6 @@
 # Architecture
 
-pocket-dock talks directly to Podman (or Docker) over its Unix socket using raw HTTP/1.1. The core SDK has zero external dependencies — it uses only Python stdlib modules.
+pocketdock talks directly to Podman (or Docker) over its Unix socket using raw HTTP/1.1. The core SDK has zero external dependencies — it uses only Python stdlib modules.
 
 ## System Diagram
 
@@ -8,11 +8,11 @@ pocket-dock talks directly to Podman (or Docker) over its Unix socket using raw 
 User Code / LLM Agent / CLI
         │
         ▼
-  pocket-dock SDK
+  pocketdock SDK
   ┌──────────────────────────────────────┐
   │ Container (sync) ──► AsyncContainer  │  facade pattern
   │   └─ _socket_client (raw HTTP/Unix) │
-  ├─ ProjectManager (.pocket-dock/)      │
+  ├─ ProjectManager (.pocketdock/)      │
   ├─ Persistence (resume, snapshot)      │
   ├─ Sessions (persistent shells)        │
   ├─ Profiles (image registry)           │
@@ -26,7 +26,7 @@ User Code / LLM Agent / CLI
 ## Module Map
 
 ```
-python/pocket_dock/
+python/pocketdock/
 ├── __init__.py              # Sync public exports
 ├── async_.py                # Async public exports
 ├── _async_container.py      # AsyncContainer (core implementation)
@@ -39,10 +39,10 @@ python/pocket_dock/
 ├── _session.py              # Persistent shell via long-lived exec
 ├── _callbacks.py            # Callback registry
 ├── _logger.py               # Auto stream-to-disk logging
-├── _config.py               # Config loading (pocket-dock.yaml)
+├── _config.py               # Config loading (pocketdock.yaml)
 ├── pool.py                  # ContainerPool (future)
 ├── persistence.py           # resume, snapshot, list, destroy, prune
-├── projects.py              # .pocket-dock/ management
+├── projects.py              # .pocketdock/ management
 ├── profiles.py              # Image profiles registry
 ├── errors.py                # Exception hierarchy
 ├── types.py                 # Data classes (ExecResult, ContainerInfo, etc.)
@@ -77,7 +77,7 @@ The `_LoopThread` is a singleton — all sync containers share one background ev
 
 ### No Cached State
 
-pocket-dock never caches container state. Every `info()` call, every `is_running()` check, every operation hits the engine live. The container might have been killed externally by another process, a resource limit, or an OOM event. Caching would hide these failures.
+pocketdock never caches container state. Every `info()` call, every `is_running()` check, every operation hits the engine live. The container might have been killed externally by another process, a resource limit, or an OOM event. Caching would hide these failures.
 
 ### HTTP Over Unix Socket
 

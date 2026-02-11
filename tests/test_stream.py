@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import struct
 
-from pocket_dock._stream import (
+from pocketdock._stream import (
     HEADER_SIZE,
     STREAM_STDERR,
     STREAM_STDOUT,

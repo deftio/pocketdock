@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from pocket_dock.errors import ProjectNotInitialized
-from pocket_dock.projects import doctor, init_project
-from pocket_dock.types import ContainerListItem
+from pocketdock.errors import ProjectNotInitialized
+from pocketdock.projects import doctor, init_project
+from pocketdock.types import ContainerListItem
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,7 +22,7 @@ def _make_item(name: str, project: str = "myproj") -> ContainerListItem:
         id="abc123",
         name=name,
         status="running",
-        image="pocket-dock/minimal",
+        image="pocketdock/minimal",
         created_at="2026-01-01T00:00:00Z",
         persist=True,
         project=project,
@@ -46,7 +46,7 @@ async def test_doctor_empty_project(tmp_path: Path) -> None:
     init_project(tmp_path, project_name="myproj")
 
     with patch(
-        "pocket_dock.persistence.list_containers",
+        "pocketdock.persistence.list_containers",
         new_callable=AsyncMock,
         return_value=[],
     ):
@@ -63,11 +63,11 @@ async def test_doctor_empty_project(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_doctor_all_healthy(tmp_path: Path) -> None:
     init_project(tmp_path, project_name="myproj")
-    inst_dir = tmp_path / ".pocket-dock" / "instances" / "inst-a"
+    inst_dir = tmp_path / ".pocketdock" / "instances" / "inst-a"
     inst_dir.mkdir(parents=True)
 
     with patch(
-        "pocket_dock.persistence.list_containers",
+        "pocketdock.persistence.list_containers",
         new_callable=AsyncMock,
         return_value=[_make_item("inst-a")],
     ):
@@ -86,7 +86,7 @@ async def test_doctor_orphaned_containers(tmp_path: Path) -> None:
     init_project(tmp_path, project_name="myproj")
 
     with patch(
-        "pocket_dock.persistence.list_containers",
+        "pocketdock.persistence.list_containers",
         new_callable=AsyncMock,
         return_value=[_make_item("orphan-a"), _make_item("orphan-b")],
     ):
@@ -103,11 +103,11 @@ async def test_doctor_orphaned_containers(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_doctor_stale_instance_dirs(tmp_path: Path) -> None:
     init_project(tmp_path, project_name="myproj")
-    (tmp_path / ".pocket-dock" / "instances" / "stale-x").mkdir(parents=True)
-    (tmp_path / ".pocket-dock" / "instances" / "stale-y").mkdir(parents=True)
+    (tmp_path / ".pocketdock" / "instances" / "stale-x").mkdir(parents=True)
+    (tmp_path / ".pocketdock" / "instances" / "stale-y").mkdir(parents=True)
 
     with patch(
-        "pocket_dock.persistence.list_containers",
+        "pocketdock.persistence.list_containers",
         new_callable=AsyncMock,
         return_value=[],
     ):
@@ -124,11 +124,11 @@ async def test_doctor_stale_instance_dirs(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_doctor_mixed_state(tmp_path: Path) -> None:
     init_project(tmp_path, project_name="myproj")
-    (tmp_path / ".pocket-dock" / "instances" / "healthy-a").mkdir(parents=True)
-    (tmp_path / ".pocket-dock" / "instances" / "stale-z").mkdir(parents=True)
+    (tmp_path / ".pocketdock" / "instances" / "healthy-a").mkdir(parents=True)
+    (tmp_path / ".pocketdock" / "instances" / "stale-z").mkdir(parents=True)
 
     with patch(
-        "pocket_dock.persistence.list_containers",
+        "pocketdock.persistence.list_containers",
         new_callable=AsyncMock,
         return_value=[_make_item("healthy-a"), _make_item("orphan-q")],
     ):
@@ -147,9 +147,9 @@ async def test_doctor_auto_detects_project_root(tmp_path: Path) -> None:
     init_project(tmp_path, project_name="auto")
 
     with (
-        patch("pocket_dock.projects.find_project_root", return_value=tmp_path),
+        patch("pocketdock.projects.find_project_root", return_value=tmp_path),
         patch(
-            "pocket_dock.persistence.list_containers",
+            "pocketdock.persistence.list_containers",
             new_callable=AsyncMock,
             return_value=[],
         ),
@@ -165,7 +165,7 @@ async def test_doctor_auto_detects_project_root(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_doctor_auto_detect_none_raises() -> None:
     with (
-        patch("pocket_dock.projects.find_project_root", return_value=None),
+        patch("pocketdock.projects.find_project_root", return_value=None),
         pytest.raises(ProjectNotInitialized),
     ):
         await doctor(socket_path="/fake.sock")
@@ -178,10 +178,10 @@ async def test_doctor_auto_detect_none_raises() -> None:
 async def test_doctor_multiple_healthy(tmp_path: Path) -> None:
     init_project(tmp_path, project_name="myproj")
     for name in ("a", "b", "c"):
-        (tmp_path / ".pocket-dock" / "instances" / name).mkdir(parents=True)
+        (tmp_path / ".pocketdock" / "instances" / name).mkdir(parents=True)
 
     with patch(
-        "pocket_dock.persistence.list_containers",
+        "pocketdock.persistence.list_containers",
         new_callable=AsyncMock,
         return_value=[_make_item("a"), _make_item("b"), _make_item("c")],
     ):
@@ -198,10 +198,10 @@ async def test_doctor_multiple_healthy(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_doctor_uses_project_name_from_yaml(tmp_path: Path) -> None:
     init_project(tmp_path, project_name="custom-name")
-    (tmp_path / ".pocket-dock" / "instances" / "x").mkdir(parents=True)
+    (tmp_path / ".pocketdock" / "instances" / "x").mkdir(parents=True)
 
     mock_lc = AsyncMock(return_value=[_make_item("x", project="custom-name")])
-    with patch("pocket_dock.persistence.list_containers", mock_lc):
+    with patch("pocketdock.persistence.list_containers", mock_lc):
         await doctor(project_root=tmp_path, socket_path="/fake.sock")
 
     # Verify list_containers was called with the project name from yaml
@@ -212,16 +212,16 @@ async def test_doctor_uses_project_name_from_yaml(tmp_path: Path) -> None:
 
 
 def test_sync_doctor_wrapper(tmp_path: Path) -> None:
-    import pocket_dock
+    import pocketdock
 
     init_project(tmp_path, project_name="sync-proj")
 
     with patch(
-        "pocket_dock.persistence.list_containers",
+        "pocketdock.persistence.list_containers",
         new_callable=AsyncMock,
         return_value=[],
     ):
-        report = pocket_dock.doctor(project_root=tmp_path, socket_path="/fake.sock")
+        report = pocketdock.doctor(project_root=tmp_path, socket_path="/fake.sock")
 
     assert report.healthy == 0
     assert report.orphaned_containers == ()

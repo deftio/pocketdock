@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-02-11
+
+### Changed
+
+- Renamed project from `pocket-dock` to `pocketdock` — package, imports, CLI command, labels, image tags, project directories, and all references
+- PyPI package name: `pocketdock` (was `pocket-dock`)
+- CLI command: `pocketdock` (was `pocket-dock`)
+- Python import: `import pocketdock` (was `import pocket_dock`)
+- Image tags: `pocketdock/minimal` etc. (was `pocket-dock/minimal`)
+- Project directory: `.pocketdock/` (was `.pocket-dock/`)
+- Config file: `pocketdock.yaml` (was `pocket-dock.yaml`)
+- Container labels: `pocketdock.*` (was `pocket-dock.*`)
+
 ## [1.0.1] - 2026-02-11
 
 ### Changed
@@ -30,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CLI `import` command — load images from tar/tar.gz files
 - CLI `profiles` command — list available profiles (table or `--json`)
 - `--profile` and `--device` options on CLI `create` command
-- Exported `ProfileInfo`, `resolve_profile`, `list_profiles` from `pocket_dock` and `pocket_dock.async_`
+- Exported `ProfileInfo`, `resolve_profile`, `list_profiles` from `pocketdock` and `pocketdock.async_`
 
 ### Changed
 
@@ -48,29 +61,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `--socket` global option and `POCKET_DOCK_SOCKET` env var for engine socket override
 - Rich-formatted output: tables for container lists, panels for info/doctor, colored success/error messages
 - `shell` command — interactive shell via engine CLI passthrough (`podman`/`docker exec -it`)
-- Entry point: `pocket-dock` (via `pyproject.toml` console script)
+- Entry point: `pocketdock` (via `pyproject.toml` console script)
 - `click` and `rich` CLI dependencies (optional `[cli]` extra)
 
 ## [0.8.0] - 2026-02-10
 
 ### Added
 
-- `.pocket-dock/` project management — `init_project()`, `find_project_root()`, `get_project_name()`
+- `.pocketdock/` project management — `init_project()`, `find_project_root()`, `get_project_name()`
 - Instance directory lifecycle — `ensure_instance_dir()`, `write_instance_metadata()`, `read_instance_metadata()`, `remove_instance_dir()`, `list_instance_dirs()`
 - `PocketDockConfig` dataclass and `load_config()` with install-level → project-level precedence
-- `pocket-dock.yaml` project configuration file with logging and persistence defaults
+- `pocketdock.yaml` project configuration file with logging and persistence defaults
 - `instance.toml` metadata files per persistent container (container info, resources, provenance)
 - `project` parameter on `create_new_container()` — associates containers with a project
-- `pocket-dock.project` and `pocket-dock.data-path` labels on persistent containers
+- `pocketdock.project` and `pocketdock.data-path` labels on persistent containers
 - `list_containers(project=...)` and `prune(project=...)` — filter by project name
-- `destroy_container()` now cleans up the instance directory when `pocket-dock.data-path` label is present
+- `destroy_container()` now cleans up the instance directory when `pocketdock.data-path` label is present
 - `InstanceLogger` — auto-logging of `run()` results, session I/O, and detached process output to disk
 - `history.jsonl` command history per instance
 - `doctor()` — cross-references local instance dirs with engine containers to find orphaned containers and stale dirs
 - `DoctorReport` dataclass with `orphaned_containers`, `stale_instance_dirs`, `healthy`
 - `ProjectNotInitialized` exception
 - `PyYAML` and `tomli` (Python < 3.11) added as core dependencies for config/metadata parsing
-- All new functions available as sync (from `pocket_dock`) and async (from `pocket_dock.async_`)
+- All new functions available as sync (from `pocketdock`) and async (from `pocketdock.async_`)
 
 ## [0.7.0] - 2026-02-10
 
@@ -81,13 +94,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `container.snapshot(image_name)` — commit container filesystem as a new reusable image
 - `container.persist` property — check if container is persistent
 - `resume_container(name)` — resume a stopped persistent container by name
-- `list_containers()` — list all pocket-dock managed containers (running and stopped)
+- `list_containers()` — list all pocketdock managed containers (running and stopped)
 - `destroy_container(name)` — permanently remove a container regardless of persist setting
-- `prune()` — remove all stopped pocket-dock managed containers
+- `prune()` — remove all stopped pocketdock managed containers
 - `ContainerListItem` dataclass with `id`, `name`, `status`, `image`, `created_at`, `persist`
-- `pocket-dock.persist` and `pocket-dock.created-at` labels on all containers
+- `pocketdock.persist` and `pocketdock.created-at` labels on all containers
 - `list_containers()` and `commit_container()` socket client methods
-- All new functions available as sync (from `pocket_dock`) and async (from `pocket_dock.async_`)
+- All new functions available as sync (from `pocketdock`) and async (from `pocketdock.async_`)
 
 ## [0.6.0] - 2026-02-09
 
@@ -104,7 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `SessionClosed` error for operations on closed sessions
 - `attach_stdin` support in socket client `_exec_create()` for bidirectional exec connections
 - Automatic session cleanup during `shutdown()`
-- Exported `AsyncSession` from `pocket_dock.async_` and `Session` (alias for `SyncSession`) from `pocket_dock`
+- Exported `AsyncSession` from `pocketdock.async_` and `Session` (alias for `SyncSession`) from `pocketdock`
 
 ## [0.5.0] - 2026-02-08
 
@@ -124,8 +137,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `_demux_chunked_stream()` — handles misalignment between HTTP chunk and demux frame boundaries
 - Automatic cleanup of active streams and processes in `shutdown()`
 - `@overload` type signatures on `run()` for all three output modes
-- Exported `ExecStream`, `Process`, `BufferSnapshot`, `StreamChunk` from `pocket_dock`
-- Exported `AsyncExecStream`, `AsyncProcess` from `pocket_dock.async_`
+- Exported `ExecStream`, `Process`, `BufferSnapshot`, `StreamChunk` from `pocketdock`
+- Exported `AsyncExecStream`, `AsyncProcess` from `pocketdock.async_`
 
 ## [0.4.0] - 2026-02-08
 
@@ -159,11 +172,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - `AsyncContainer` class with async `run()`, `shutdown()`, and context manager
 - `Container` class (sync facade) with background event loop thread
-- `create_new_container()` factory function (sync in `pocket_dock`, async in `pocket_dock.async_`)
+- `create_new_container()` factory function (sync in `pocketdock`, async in `pocketdock.async_`)
 - Blocking `run()` with configurable timeout and output capping
 - `lang` parameter for `run()` (e.g. `lang="python"` wraps command with `python3 -c`)
 - Timeout support in `exec_command` via `asyncio.wait_for`
-- Container labels (`pocket-dock.managed`, `pocket-dock.instance`) for discovery
+- Container labels (`pocketdock.managed`, `pocketdock.instance`) for discovery
 - Auto-generated container names (`pd-{8 hex}`)
 - Multiple independent containers from a single process
 - Thread-safe sync facade via `asyncio.run_coroutine_threadsafe`

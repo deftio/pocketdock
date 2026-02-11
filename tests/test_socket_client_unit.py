@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     import pathlib
 
 import pytest
-from pocket_dock._socket_client import (
+from pocketdock._socket_client import (
     _check_container_response,
     _demux_chunked_stream,
     _exec_create,
@@ -49,7 +49,7 @@ from pocket_dock._socket_client import (
     start_container,
     stop_container,
 )
-from pocket_dock.errors import (
+from pocketdock.errors import (
     ContainerNotFound,
     ContainerNotRunning,
     ImageNotFound,
@@ -78,7 +78,7 @@ def test_detect_socket_env_var_nonexistent() -> None:
 def test_detect_socket_no_env_no_candidates() -> None:
     with (
         patch.dict(os.environ, {"POCKET_DOCK_SOCKET": "", "XDG_RUNTIME_DIR": "/tmp/fake_xdg"}),
-        patch("pocket_dock._socket_client.pathlib.Path.exists", return_value=False),
+        patch("pocketdock._socket_client.pathlib.Path.exists", return_value=False),
     ):
         assert detect_socket() is None
 
@@ -336,12 +336,12 @@ async def test_request_reraises_socket_connection_error() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._open_connection",
+            "pocketdock._socket_client._open_connection",
             new_callable=AsyncMock,
             return_value=(mock_reader, mock_writer),
         ),
         patch(
-            "pocket_dock._socket_client._send_request",
+            "pocketdock._socket_client._send_request",
             new_callable=AsyncMock,
             side_effect=SocketConnectionError("/tmp/s.sock", "test"),
         ),
@@ -356,12 +356,12 @@ async def test_request_wraps_oserror() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._open_connection",
+            "pocketdock._socket_client._open_connection",
             new_callable=AsyncMock,
             return_value=(mock_reader, mock_writer),
         ),
         patch(
-            "pocket_dock._socket_client._send_request",
+            "pocketdock._socket_client._send_request",
             new_callable=AsyncMock,
             side_effect=OSError("broken pipe"),
         ),
@@ -379,12 +379,12 @@ async def test_request_stream_cleans_up_on_exception() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._open_connection",
+            "pocketdock._socket_client._open_connection",
             new_callable=AsyncMock,
             return_value=(mock_reader, mock_writer),
         ),
         patch(
-            "pocket_dock._socket_client._send_request",
+            "pocketdock._socket_client._send_request",
             new_callable=AsyncMock,
             side_effect=OSError("connection reset"),
         ),
@@ -405,12 +405,12 @@ async def test_request_raw_reraises_socket_connection_error() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._open_connection",
+            "pocketdock._socket_client._open_connection",
             new_callable=AsyncMock,
             return_value=(mock_reader, mock_writer),
         ),
         patch(
-            "pocket_dock._socket_client._send_request",
+            "pocketdock._socket_client._send_request",
             new_callable=AsyncMock,
             side_effect=SocketConnectionError("/tmp/s.sock", "test"),
         ),
@@ -425,12 +425,12 @@ async def test_request_raw_wraps_oserror() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._open_connection",
+            "pocketdock._socket_client._open_connection",
             new_callable=AsyncMock,
             return_value=(mock_reader, mock_writer),
         ),
         patch(
-            "pocket_dock._socket_client._send_request",
+            "pocketdock._socket_client._send_request",
             new_callable=AsyncMock,
             side_effect=OSError("write error"),
         ),
@@ -445,7 +445,7 @@ async def test_request_raw_wraps_oserror() -> None:
 async def test_ping_failure() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"error"),
         ),
@@ -459,7 +459,7 @@ async def test_ping_failure() -> None:
 
 async def test_create_container_no_command_no_labels() -> None:
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(201, b'{"Id": "abc123"}'),
     ):
@@ -470,7 +470,7 @@ async def test_create_container_no_command_no_labels() -> None:
 async def test_create_container_image_not_found() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(404, b"not found"),
         ),
@@ -482,7 +482,7 @@ async def test_create_container_image_not_found() -> None:
 async def test_create_container_generic_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"internal error"),
         ),
@@ -497,7 +497,7 @@ async def test_create_container_generic_error() -> None:
 async def test_start_container_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"error"),
         ),
@@ -512,7 +512,7 @@ async def test_start_container_error() -> None:
 async def test_stop_container_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"error"),
         ),
@@ -527,7 +527,7 @@ async def test_stop_container_error() -> None:
 async def test_remove_container_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"error"),
         ),
@@ -542,7 +542,7 @@ async def test_remove_container_error() -> None:
 async def test_exec_create_404() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(404, b"not found"),
         ),
@@ -554,7 +554,7 @@ async def test_exec_create_404() -> None:
 async def test_exec_create_409() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(409, b"not running"),
         ),
@@ -566,7 +566,7 @@ async def test_exec_create_409() -> None:
 async def test_exec_create_podman_500_container_state() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"container state improper"),
         ),
@@ -578,7 +578,7 @@ async def test_exec_create_podman_500_container_state() -> None:
 async def test_exec_create_generic_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"some other error"),
         ),
@@ -598,7 +598,7 @@ async def test_exec_start_error() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._request_stream",
+            "pocketdock._socket_client._request_stream",
             new_callable=AsyncMock,
             return_value=(500, {}, reader, mock_writer),
         ),
@@ -616,7 +616,7 @@ async def test_exec_start_non_chunked_stream() -> None:
     mock_writer = _make_mock_writer()
 
     with patch(
-        "pocket_dock._socket_client._request_stream",
+        "pocketdock._socket_client._request_stream",
         new_callable=AsyncMock,
         return_value=(200, {}, reader, mock_writer),
     ):
@@ -637,7 +637,7 @@ async def test_exec_start_chunked_stream() -> None:
     mock_writer = _make_mock_writer()
 
     with patch(
-        "pocket_dock._socket_client._request_stream",
+        "pocketdock._socket_client._request_stream",
         new_callable=AsyncMock,
         return_value=(200, {"transfer-encoding": "chunked"}, reader, mock_writer),
     ):
@@ -652,7 +652,7 @@ async def test_exec_start_chunked_stream() -> None:
 async def test_exec_inspect_exit_code_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"inspect error"),
         ),
@@ -667,7 +667,7 @@ async def test_exec_inspect_exit_code_error() -> None:
 async def test_push_archive_404() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request_raw",
+            "pocketdock._socket_client._request_raw",
             new_callable=AsyncMock,
             return_value=(404, b"not found"),
         ),
@@ -682,7 +682,7 @@ async def test_push_archive_404() -> None:
 async def test_pull_archive_404() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(404, b"not found"),
         ),
@@ -697,7 +697,7 @@ async def test_pull_archive_404() -> None:
 async def test_get_container_stats_success() -> None:
     stats_json = b'{"memory_stats":{"usage":1024}}'
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(200, stats_json),
     ):
@@ -708,7 +708,7 @@ async def test_get_container_stats_success() -> None:
 async def test_get_container_stats_not_found() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(404, b"not found"),
         ),
@@ -720,7 +720,7 @@ async def test_get_container_stats_not_found() -> None:
 async def test_get_container_stats_not_running() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(409, b"not running"),
         ),
@@ -735,7 +735,7 @@ async def test_get_container_stats_not_running() -> None:
 async def test_get_container_top_success() -> None:
     top_json = b'{"Titles":["PID"],"Processes":[["1"]]}'
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(200, top_json),
     ):
@@ -746,7 +746,7 @@ async def test_get_container_top_success() -> None:
 async def test_get_container_top_not_running() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(409, b"not running"),
         ),
@@ -760,7 +760,7 @@ async def test_get_container_top_not_running() -> None:
 
 async def test_restart_container_success() -> None:
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(204, b""),
     ):
@@ -770,7 +770,7 @@ async def test_restart_container_success() -> None:
 async def test_restart_container_not_found() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(404, b"not found"),
         ),
@@ -781,7 +781,7 @@ async def test_restart_container_not_found() -> None:
 
 async def test_restart_container_custom_timeout() -> None:
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(204, b""),
     ) as mock_req:
@@ -796,7 +796,7 @@ async def test_restart_container_custom_timeout() -> None:
 
 async def test_create_container_with_host_config() -> None:
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(201, b'{"Id": "abc123"}'),
     ) as mock_req:
@@ -812,7 +812,7 @@ async def test_create_container_with_host_config() -> None:
 
 async def test_create_container_no_host_config() -> None:
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(201, b'{"Id": "abc123"}'),
     ) as mock_req:
@@ -945,7 +945,7 @@ async def test_exec_start_stream_podman_raw() -> None:
     mock_writer.wait_closed = AsyncMock()
 
     with patch(
-        "pocket_dock._socket_client._request_stream",
+        "pocketdock._socket_client._request_stream",
         new_callable=AsyncMock,
         return_value=(200, {}, reader, mock_writer),
     ):
@@ -969,7 +969,7 @@ async def test_exec_start_stream_docker_chunked() -> None:
     mock_writer.wait_closed = AsyncMock()
 
     with patch(
-        "pocket_dock._socket_client._request_stream",
+        "pocketdock._socket_client._request_stream",
         new_callable=AsyncMock,
         return_value=(200, {"transfer-encoding": "chunked"}, reader, mock_writer),
     ):
@@ -990,7 +990,7 @@ async def test_exec_start_stream_error_status() -> None:
 
     with (
         patch(
-            "pocket_dock._socket_client._request_stream",
+            "pocketdock._socket_client._request_stream",
             new_callable=AsyncMock,
             return_value=(404, {}, reader, mock_writer),
         ),
@@ -1007,7 +1007,7 @@ async def test_list_containers_no_filter() -> None:
 
     result_body = json.dumps([{"Id": "abc", "State": "running"}]).encode()
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(200, result_body),
     ) as mock:
@@ -1025,26 +1025,26 @@ async def test_list_containers_with_label_filter() -> None:
 
     result_body = json.dumps([]).encode()
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(200, result_body),
     ) as mock:
         result = await list_containers(
             "/tmp/s.sock",
-            label_filter="pocket-dock.managed=true",
+            label_filter="pocketdock.managed=true",
         )
 
     assert result == []
     call_path = mock.call_args[0][2]
     assert "filters=" in call_path
     decoded = urllib.parse.unquote(call_path)
-    assert "pocket-dock.managed=true" in decoded
+    assert "pocketdock.managed=true" in decoded
 
 
 async def test_list_containers_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(500, b"internal error"),
         ),
@@ -1061,7 +1061,7 @@ async def test_commit_container_success() -> None:
 
     result_body = json.dumps({"Id": "sha256:newimage123"}).encode()
     with patch(
-        "pocket_dock._socket_client._request",
+        "pocketdock._socket_client._request",
         new_callable=AsyncMock,
         return_value=(201, result_body),
     ) as mock:
@@ -1077,7 +1077,7 @@ async def test_commit_container_success() -> None:
 async def test_commit_container_not_found() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(404, b"not found"),
         ),
@@ -1089,7 +1089,7 @@ async def test_commit_container_not_found() -> None:
 async def test_commit_container_not_running() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request",
+            "pocketdock._socket_client._request",
             new_callable=AsyncMock,
             return_value=(409, b"conflict"),
         ),
@@ -1103,18 +1103,18 @@ async def test_commit_container_not_running() -> None:
 
 async def test_build_image_success() -> None:
     with patch(
-        "pocket_dock._socket_client._request_raw",
+        "pocketdock._socket_client._request_raw",
         new_callable=AsyncMock,
         return_value=(200, b'{"stream":"Step 1/1 : FROM alpine"}'),
     ):
-        result = await build_image("/tmp/s.sock", b"tar-data", "pocket-dock/test")
+        result = await build_image("/tmp/s.sock", b"tar-data", "pocketdock/test")
     assert "Step 1/1" in result
 
 
 async def test_build_image_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request_raw",
+            "pocketdock._socket_client._request_raw",
             new_callable=AsyncMock,
             return_value=(500, b"build error"),
         ),
@@ -1129,18 +1129,18 @@ async def test_build_image_error() -> None:
 async def test_save_image_success() -> None:
     fake_tar = b"fake-tar-bytes"
     with patch(
-        "pocket_dock._socket_client._request_raw",
+        "pocketdock._socket_client._request_raw",
         new_callable=AsyncMock,
         return_value=(200, fake_tar),
     ):
-        result = await save_image("/tmp/s.sock", "pocket-dock/minimal")
+        result = await save_image("/tmp/s.sock", "pocketdock/minimal")
     assert result == fake_tar
 
 
 async def test_save_image_not_found() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request_raw",
+            "pocketdock._socket_client._request_raw",
             new_callable=AsyncMock,
             return_value=(404, b"not found"),
         ),
@@ -1152,7 +1152,7 @@ async def test_save_image_not_found() -> None:
 async def test_save_image_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request_raw",
+            "pocketdock._socket_client._request_raw",
             new_callable=AsyncMock,
             return_value=(500, b"server error"),
         ),
@@ -1166,7 +1166,7 @@ async def test_save_image_error() -> None:
 
 async def test_load_image_success() -> None:
     with patch(
-        "pocket_dock._socket_client._request_raw",
+        "pocketdock._socket_client._request_raw",
         new_callable=AsyncMock,
         return_value=(200, b'{"stream":"Loaded image"}'),
     ):
@@ -1177,7 +1177,7 @@ async def test_load_image_success() -> None:
 async def test_load_image_error() -> None:
     with (
         patch(
-            "pocket_dock._socket_client._request_raw",
+            "pocketdock._socket_client._request_raw",
             new_callable=AsyncMock,
             return_value=(500, b"load error"),
         ),

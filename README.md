@@ -1,17 +1,17 @@
-# pocket-dock
+# pocketdock
 
-[![CI](https://github.com/deftio/pocket-dock/actions/workflows/ci.yml/badge.svg)](https://github.com/deftio/pocket-dock/actions/workflows/ci.yml)
-[![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/deftio/pocket-dock/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-deftio.github.io%2Fpocket--dock-blue)](https://deftio.github.io/pocket-dock/)
+[![CI](https://github.com/deftio/pocketdock/actions/workflows/ci.yml/badge.svg)](https://github.com/deftio/pocketdock/actions/workflows/ci.yml)
+[![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/deftio/pocketdock/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-deftio.github.io%2Fpocket--dock-blue)](https://deftio.github.io/pocketdock/)
 [![License: BSD-2-Clause](https://img.shields.io/badge/License-BSD_2--Clause-blue.svg)](https://opensource.org/licenses/BSD-2-Clause)
 
 **Portable, offline-first container sandboxes for LLM agents and dev workflows.**
 
 One Container class. Podman-first, Docker-compatible. Python SDK + CLI. Zero cloud. Zero API keys.
 
-## Why pocket-dock?
+## Why pocketdock?
 
-Managed sandbox platforms require API keys, cloud accounts, and an internet connection. Rolling your own container glue means rewriting hundreds of lines of boilerplate every time. pocket-dock sits in between: a clean Python SDK that talks directly to your container engine over its Unix socket, works entirely offline, and has zero external dependencies for the core SDK.
+Managed sandbox platforms require API keys, cloud accounts, and an internet connection. Rolling your own container glue means rewriting hundreds of lines of boilerplate every time. pocketdock sits in between: a clean Python SDK that talks directly to your container engine over its Unix socket, works entirely offline, and has zero external dependencies for the core SDK.
 
 ## Features
 
@@ -20,7 +20,7 @@ Managed sandbox platforms require API keys, cloud accounts, and an internet conn
 - **Persistent sessions** — long-lived shell sessions with state (cwd, env vars, history)
 - **Resource limits** — memory caps, CPU throttling, per-container isolation
 - **Container persistence** — stop/resume, snapshot to image, volume mounts
-- **Project management** — `.pocket-dock/` project directories with config, logging, and health checks
+- **Project management** — `.pocketdock/` project directories with config, logging, and health checks
 - **Image profiles** — four pre-baked Dockerfiles: minimal, dev, agent, embedded
 - **Full CLI** — 21 commands for container lifecycle, file ops, and project management
 - **Async-first** — sync facade over async core; use either API style
@@ -29,7 +29,7 @@ Managed sandbox platforms require API keys, cloud accounts, and an internet conn
 ## Quick Example
 
 ```python
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 with create_new_container() as c:
     result = c.run("echo hello")
@@ -40,25 +40,25 @@ with create_new_container() as c:
 ## Install
 
 ```bash
-pip install pocket-dock          # SDK only (zero dependencies)
-pip install pocket-dock[cli]     # SDK + CLI (click, rich)
+pip install pocketdock          # SDK only (zero dependencies)
+pip install pocketdock[cli]     # SDK + CLI (click, rich)
 ```
 
 Requires [Podman](https://podman.io/getting-started/installation) (recommended) or [Docker](https://docs.docker.com/get-docker/).
 
 ```bash
 # Build the minimal image (~25MB, <500ms startup)
-pocket-dock build minimal
+pocketdock build minimal
 ```
 
 ## Documentation
 
-Full documentation is available at **[deftio.github.io/pocket-dock](https://deftio.github.io/pocket-dock/)**.
+Full documentation is available at **[deftio.github.io/pocketdock](https://deftio.github.io/pocketdock/)**.
 
-- [Quickstart](https://deftio.github.io/pocket-dock/quickstart/) — install, build, run your first container
-- [User Guide](https://deftio.github.io/pocket-dock/guide/containers/) — containers, commands, files, sessions, persistence, profiles
-- [CLI Reference](https://deftio.github.io/pocket-dock/cli/) — all 21 commands with examples
-- [API Reference](https://deftio.github.io/pocket-dock/reference/api/) — full SDK reference
+- [Quickstart](https://deftio.github.io/pocketdock/quickstart/) — install, build, run your first container
+- [User Guide](https://deftio.github.io/pocketdock/guide/containers/) — containers, commands, files, sessions, persistence, profiles
+- [CLI Reference](https://deftio.github.io/pocketdock/cli/) — all 21 commands with examples
+- [API Reference](https://deftio.github.io/pocketdock/reference/api/) — full SDK reference
 
 ## Architecture
 
@@ -66,11 +66,11 @@ Full documentation is available at **[deftio.github.io/pocket-dock](https://deft
 User Code / LLM Agent / CLI
         |
         v
-  pocket-dock SDK
+  pocketdock SDK
   +--------------------------------------+
   | Container (sync)  -> AsyncContainer  |  facade pattern
   |   +- _socket_client (raw HTTP/Unix)  |
-  +- ProjectManager (.pocket-dock/)      |
+  +- ProjectManager (.pocketdock/)      |
   +- Persistence (resume, snapshot)      |
   +- Sessions (persistent shells)        |
   +--------------------------------------+

@@ -33,8 +33,8 @@
 # Run everything — this is what CI does
 uv run ruff check .                                    # lint
 uv run ruff format --check .                           # format
-uv run mypy --strict python/pocket_dock/               # types
-uv run bandit -r python/pocket_dock/ -c pyproject.toml # security
+uv run mypy --strict python/pocketdock/               # types
+uv run bandit -r python/pocketdock/ -c pyproject.toml # security
 uv run pytest                                          # tests + coverage
 ```
 
@@ -99,7 +99,7 @@ uv run pre-commit run --all-files && uv run pytest
 |---|---|
 | Public SDK API | `docs/reference/api.md`, README if it's a core function |
 | CLI command | `docs/reference/cli.md`, relevant `examples/cli/` script |
-| Config field | `docs/reference/config.md`, `pocket-dock.yaml` example in spec |
+| Config field | `docs/reference/config.md`, `pocketdock.yaml` example in spec |
 | Error type | `docs/reference/errors.md` |
 | New concept | Appropriate `docs/concepts/` page |
 | Image profile | `docs/guides/` for the relevant workflow |

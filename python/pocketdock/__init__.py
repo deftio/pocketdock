@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path
 
-from pocket_dock._buffer import BufferSnapshot
-from pocket_dock._sync_container import (
+from pocketdock._buffer import BufferSnapshot
+from pocketdock._sync_container import (
     Container,
     SyncExecStream,
     SyncProcess,
@@ -18,7 +18,7 @@ from pocket_dock._sync_container import (
     _LoopThread,
     create_new_container,
 )
-from pocket_dock.errors import (
+from pocketdock.errors import (
     ContainerError,
     ContainerGone,
     ContainerNotFound,
@@ -32,30 +32,30 @@ from pocket_dock.errors import (
     SocketConnectionError,
     SocketError,
 )
-from pocket_dock.persistence import (
+from pocketdock.persistence import (
     destroy_container as _async_destroy_container,
 )
-from pocket_dock.persistence import (
+from pocketdock.persistence import (
     list_containers as _async_list_containers,
 )
-from pocket_dock.persistence import (
+from pocketdock.persistence import (
     prune as _async_prune,
 )
-from pocket_dock.persistence import (
+from pocketdock.persistence import (
     resume_container as _async_resume_container,
 )
-from pocket_dock.persistence import (
+from pocketdock.persistence import (
     stop_container as _async_stop_container,
 )
-from pocket_dock.profiles import ProfileInfo, list_profiles, resolve_profile
-from pocket_dock.projects import (
+from pocketdock.profiles import ProfileInfo, list_profiles, resolve_profile
+from pocketdock.projects import (
     doctor as _async_doctor,
 )
-from pocket_dock.projects import (
+from pocketdock.projects import (
     find_project_root,
     init_project,
 )
-from pocket_dock.types import (
+from pocketdock.types import (
     ContainerInfo,
     ContainerListItem,
     DoctorReport,
@@ -63,11 +63,11 @@ from pocket_dock.types import (
     StreamChunk,
 )
 
-__version__ = version("pocket-dock")
+__version__ = version("pocketdock")
 
 
 def get_version() -> str:
-    """Return the pocket-dock package version string."""
+    """Return the pocketdock package version string."""
     return __version__
 
 
@@ -88,7 +88,7 @@ def list_containers(
     socket_path: str | None = None,
     project: str | None = None,
 ) -> list[ContainerListItem]:
-    """List all pocket-dock managed containers (sync)."""
+    """List all pocketdock managed containers (sync)."""
     lt = _LoopThread.get()
     return lt.run(  # type: ignore[return-value]
         _async_list_containers(socket_path=socket_path, project=project)
@@ -120,7 +120,7 @@ def prune(
     socket_path: str | None = None,
     project: str | None = None,
 ) -> int:
-    """Remove all stopped pocket-dock containers (sync)."""
+    """Remove all stopped pocketdock containers (sync)."""
     lt = _LoopThread.get()
     return lt.run(  # type: ignore[return-value]
         _async_prune(socket_path=socket_path, project=project)

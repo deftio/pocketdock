@@ -8,18 +8,18 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 
-from pocket_dock import _socket_client as sc
+from pocketdock import _socket_client as sc
 
 if TYPE_CHECKING:
     import pytest
-from pocket_dock.async_ import create_new_container
-from pocket_dock.persistence import (
+from pocketdock.async_ import create_new_container
+from pocketdock.persistence import (
     destroy_container,
     list_containers,
     prune,
     resume_container,
 )
-from pocket_dock.projects import init_project
+from pocketdock.projects import init_project
 
 from .conftest import requires_engine
 
@@ -33,7 +33,7 @@ async def _force_cleanup(name: str) -> None:
         return
     with contextlib.suppress(Exception):
         containers = await sc.list_containers(
-            socket_path, label_filter=f"pocket-dock.instance={name}"
+            socket_path, label_filter=f"pocketdock.instance={name}"
         )
         for ct in containers:
             with contextlib.suppress(Exception):
@@ -70,7 +70,7 @@ async def test_persist_shutdown_resume_preserves_state() -> None:
 @requires_engine
 async def test_snapshot_creates_usable_image() -> None:
     c = await create_new_container()
-    image_name = "pocket-dock-test/snapshot-test:v1"
+    image_name = "pocketdock-test/snapshot-test:v1"
     try:
         result = await c.run("touch /tmp/snapshot-marker && echo ok")
         assert result.ok
@@ -192,11 +192,11 @@ async def test_persist_with_project_sets_labels(
         # Verify project label is set
         socket_path = c.socket_path
         containers = await sc.list_containers(
-            socket_path, label_filter=f"pocket-dock.instance={name}"
+            socket_path, label_filter=f"pocketdock.instance={name}"
         )
         assert len(containers) == 1
         labels = containers[0].get("Labels", {})
-        assert labels.get("pocket-dock.project") == "integ-test"
+        assert labels.get("pocketdock.project") == "integ-test"
     finally:
         await c.shutdown()
         await destroy_container(name)

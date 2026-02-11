@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import TextIO
 
-    from pocket_dock.types import ExecResult
+    from pocketdock.types import ExecResult
 
 
 class InstanceLogger:

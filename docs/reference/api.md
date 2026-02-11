@@ -1,6 +1,6 @@
 # API Reference
 
-## Module: `pocket_dock`
+## Module: `pocketdock`
 
 Sync API. All container operations are blocking.
 
@@ -11,10 +11,10 @@ Sync API. All container operations are blocking.
 Create and start a new container.
 
 ```python
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 c = create_new_container(
-    image="pocket-dock/minimal",  # Container image tag
+    image="pocketdock/minimal",  # Container image tag
     name=None,                     # Auto-generated if None
     timeout=30,                    # Default exec timeout (seconds)
     mem_limit=None,                # Memory limit ("256m", "1g")
@@ -37,7 +37,7 @@ Resume a stopped persistent container by name.
 
 #### `list_containers(*, socket_path=None, project=None) -> list[ContainerListItem]`
 
-List all pocket-dock managed containers (running and stopped).
+List all pocketdock managed containers (running and stopped).
 
 #### `stop_container(name, *, socket_path=None) -> None`
 
@@ -49,7 +49,7 @@ Permanently remove a container.
 
 #### `prune(*, socket_path=None, project=None) -> int`
 
-Remove all stopped pocket-dock containers. Returns the count of removed containers.
+Remove all stopped pocketdock containers. Returns the count of removed containers.
 
 #### `doctor(*, project_root=None, socket_path=None) -> DoctorReport`
 
@@ -59,11 +59,11 @@ Cross-reference local instance directories with the container engine.
 
 #### `find_project_root(start=None) -> Path | None`
 
-Walk up from `start` (default: cwd) looking for `.pocket-dock/pocket-dock.yaml`. Returns the project root directory, or `None`.
+Walk up from `start` (default: cwd) looking for `.pocketdock/pocketdock.yaml`. Returns the project root directory, or `None`.
 
 #### `init_project(path=None, *, project_name=None) -> Path`
 
-Create a `.pocket-dock/pocket-dock.yaml` file. Returns the project root path.
+Create a `.pocketdock/pocketdock.yaml` file. Returns the project root path.
 
 ### Profile Management
 
@@ -257,7 +257,7 @@ Read without consuming.
 
 ---
 
-## Module: `pocket_dock.async_`
+## Module: `pocketdock.async_`
 
 Async API. All methods are coroutines (use `await`).
 

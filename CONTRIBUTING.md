@@ -1,11 +1,11 @@
-# Contributing to pocket-dock
+# Contributing to pocketdock
 
 ## Development Setup
 
 ```bash
 # Clone the repo
-git clone https://github.com/deftio/pocket-dock.git
-cd pocket-dock
+git clone https://github.com/deftio/pocketdock.git
+cd pocketdock
 
 # Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -25,15 +25,15 @@ Every commit must pass:
 - **Zero ruff warnings** — `select = ["ALL"]`, `ignore = ["D1"]`
 - **mypy --strict clean** — every function has type annotations
 - **bandit clean** — security linting for socket/file/tar operations
-- **BSD-2-Clause SPDX header** in every `.py` source file under `python/pocket_dock/`
+- **BSD-2-Clause SPDX header** in every `.py` source file under `python/pocketdock/`
 
 ## Running Checks
 
 ```bash
 uv run ruff check .                                 # Lint
 uv run ruff format --check .                        # Format check
-uv run mypy --strict python/pocket_dock/            # Type check
-uv run bandit -r python/pocket_dock/ -c pyproject.toml  # Security lint
+uv run mypy --strict python/pocketdock/            # Type check
+uv run bandit -r python/pocketdock/ -c pyproject.toml  # Security lint
 uv run pytest                                       # Tests (100% coverage)
 ```
 

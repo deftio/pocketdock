@@ -3,7 +3,7 @@
 ## Basic Usage
 
 ```python
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 c = create_new_container()
 result = c.run("echo hello")
@@ -24,20 +24,20 @@ with create_new_container() as c:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `image` | `str` | `"pocket-dock/minimal"` | Container image tag |
+| `image` | `str` | `"pocketdock/minimal"` | Container image tag |
 | `name` | `str \| None` | `None` | Container name (auto-generated as `pd-{hex}` if `None`) |
 | `timeout` | `int` | `30` | Default exec timeout in seconds |
 | `mem_limit` | `str \| None` | `None` | Memory limit (e.g., `"256m"`, `"1g"`) |
 | `cpu_percent` | `int \| None` | `None` | CPU cap as percentage (e.g., `50`) |
 | `persist` | `bool` | `False` | If `True`, `shutdown()` stops but doesn't remove |
 | `volumes` | `dict[str, str] \| None` | `None` | Host-to-container mounts |
-| `project` | `str \| None` | `None` | Project name (auto-detected from `.pocket-dock/`) |
+| `project` | `str \| None` | `None` | Project name (auto-detected from `.pocketdock/`) |
 | `profile` | `str \| None` | `None` | Image profile name (`"minimal"`, `"dev"`, `"agent"`, `"embedded"`) |
 | `devices` | `list[str] \| None` | `None` | Host devices to passthrough (e.g., `["/dev/ttyUSB0"]`) |
 
 ```python
 c = create_new_container(
-    image="pocket-dock/dev",
+    image="pocketdock/dev",
     name="my-sandbox",
     timeout=60,
     mem_limit="512m",
@@ -66,7 +66,7 @@ Get a live snapshot of the container's state:
 info = c.info()
 
 info.status          # "running"
-info.image           # "pocket-dock/minimal"
+info.image           # "pocketdock/minimal"
 info.memory_usage    # "42.1 MB"
 info.memory_limit    # "256 MB"
 info.memory_percent  # 16.4

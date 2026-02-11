@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pocket_dock._callbacks import CallbackRegistry
+from pocketdock._callbacks import CallbackRegistry
 
 # --- Registration and dispatch ---
 

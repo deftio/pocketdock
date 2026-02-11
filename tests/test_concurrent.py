@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-from pocket_dock import create_new_container
-from pocket_dock._async_container import create_new_container as async_create
-from pocket_dock.errors import ContainerNotFound, ContainerNotRunning
+from pocketdock import create_new_container
+from pocketdock._async_container import create_new_container as async_create
+from pocketdock.errors import ContainerNotFound, ContainerNotRunning
 
 from .conftest import requires_engine
 

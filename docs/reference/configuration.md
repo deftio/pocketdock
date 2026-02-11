@@ -1,10 +1,10 @@
 # Configuration
 
-pocket-dock uses a layered configuration system with project-level and environment-level settings.
+pocketdock uses a layered configuration system with project-level and environment-level settings.
 
-## pocket-dock.yaml
+## pocketdock.yaml
 
-The primary configuration file, located at `.pocket-dock/pocket-dock.yaml` in your project root:
+The primary configuration file, located at `.pocketdock/pocketdock.yaml` in your project root:
 
 ```yaml
 project_name: my-app
@@ -44,12 +44,12 @@ Configuration is resolved in this order (highest priority first):
 
 1. **Explicit parameters** — `socket_path` passed to functions
 2. **Environment variables** — `POCKET_DOCK_SOCKET`
-3. **Project config** — `.pocket-dock/pocket-dock.yaml`
+3. **Project config** — `.pocketdock/pocketdock.yaml`
 4. **Auto-detection** — built-in socket discovery
 
 ## Socket Auto-Detection
 
-If no socket is specified, pocket-dock searches in this order:
+If no socket is specified, pocketdock searches in this order:
 
 1. `POCKET_DOCK_SOCKET` environment variable
 2. Podman rootless: `$XDG_RUNTIME_DIR/podman/podman.sock`
@@ -59,7 +59,7 @@ If no socket is specified, pocket-dock searches in this order:
 ## Loading Config Programmatically
 
 ```python
-from pocket_dock._config import load_config, PocketDockConfig
+from pocketdock._config import load_config, PocketDockConfig
 
 config = load_config()  # Auto-discovers project root
 config = load_config(project_root=Path("/path/to/project"))
@@ -88,13 +88,13 @@ config.auto_log          # True
 Each persistent container in a project gets an `instance.toml` metadata file:
 
 ```
-.pocket-dock/instances/my-sandbox/instance.toml
+.pocketdock/instances/my-sandbox/instance.toml
 ```
 
 ```toml
 container_id = "abc123def456..."
 name = "my-sandbox"
-image = "pocket-dock/minimal"
+image = "pocketdock/minimal"
 project = "my-app"
 created_at = "2026-01-15T10:30:00"
 persist = true
@@ -102,14 +102,14 @@ mem_limit = "256m"
 cpu_percent = 50
 ```
 
-This file is managed automatically by pocket-dock. It tracks container provenance and configuration for resumption and health checks.
+This file is managed automatically by pocketdock. It tracks container provenance and configuration for resumption and health checks.
 
 ## Project Directory Structure
 
 ```
 my-project/
-├── .pocket-dock/
-│   ├── pocket-dock.yaml          # Project configuration
+├── .pocketdock/
+│   ├── pocketdock.yaml          # Project configuration
 │   └── instances/
 │       └── my-sandbox/
 │           ├── instance.toml     # Container metadata

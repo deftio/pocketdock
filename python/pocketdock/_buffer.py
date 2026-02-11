@@ -8,7 +8,7 @@ from __future__ import annotations
 import dataclasses
 import threading
 
-from pocket_dock._stream import STREAM_STDOUT
+from pocketdock._stream import STREAM_STDOUT
 
 
 @dataclasses.dataclass(frozen=True)

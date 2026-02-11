@@ -8,9 +8,9 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from click.testing import CliRunner
-from pocket_dock.cli.main import CliContext, cli
-from pocket_dock.errors import ContainerNotFound, PodmanNotRunning, ProjectNotInitialized
-from pocket_dock.types import ContainerInfo, ContainerListItem, DoctorReport
+from pocketdock.cli.main import CliContext, cli
+from pocketdock.errors import ContainerNotFound, PodmanNotRunning, ProjectNotInitialized
+from pocketdock.types import ContainerInfo, ContainerListItem, DoctorReport
 
 # --- Scaffold tests ---
 
@@ -19,14 +19,14 @@ def test_cli_help() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
-    assert "pocket-dock" in result.output.lower() or "Usage" in result.output
+    assert "pocketdock" in result.output.lower() or "Usage" in result.output
 
 
 def test_cli_version() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert "1.0.1" in result.output
+    assert "1.1.0" in result.output
 
 
 def test_cli_socket_option() -> None:
@@ -76,7 +76,7 @@ def test_init_default_cwd(tmp_path: Path) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.init_project")
+@patch("pocketdock.init_project")
 def test_init_error(mock_init: MagicMock) -> None:
     mock_init.side_effect = PodmanNotRunning()
     runner = CliRunner()
@@ -94,7 +94,7 @@ def test_init_help() -> None:
 # --- list command ---
 
 
-@patch("pocket_dock.list_containers")
+@patch("pocketdock.list_containers")
 def test_list_empty(mock_list: MagicMock) -> None:
     mock_list.return_value = []
     runner = CliRunner()
@@ -102,7 +102,7 @@ def test_list_empty(mock_list: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.list_containers")
+@patch("pocketdock.list_containers")
 def test_list_with_containers(mock_list: MagicMock) -> None:
     mock_list.return_value = [
         ContainerListItem(
@@ -120,7 +120,7 @@ def test_list_with_containers(mock_list: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.list_containers")
+@patch("pocketdock.list_containers")
 def test_list_json(mock_list: MagicMock) -> None:
     mock_list.return_value = [
         ContainerListItem(
@@ -141,7 +141,7 @@ def test_list_json(mock_list: MagicMock) -> None:
     assert data[0]["name"] == "test-1"
 
 
-@patch("pocket_dock.list_containers")
+@patch("pocketdock.list_containers")
 def test_list_with_project_filter(mock_list: MagicMock) -> None:
     mock_list.return_value = []
     runner = CliRunner()
@@ -150,7 +150,7 @@ def test_list_with_project_filter(mock_list: MagicMock) -> None:
     mock_list.assert_called_once_with(socket_path=None, project="myproj")
 
 
-@patch("pocket_dock.list_containers")
+@patch("pocketdock.list_containers")
 def test_list_with_socket(mock_list: MagicMock) -> None:
     mock_list.return_value = []
     runner = CliRunner()
@@ -159,7 +159,7 @@ def test_list_with_socket(mock_list: MagicMock) -> None:
     mock_list.assert_called_once_with(socket_path="/tmp/test.sock", project=None)
 
 
-@patch("pocket_dock.list_containers")
+@patch("pocketdock.list_containers")
 def test_list_engine_error(mock_list: MagicMock) -> None:
     mock_list.side_effect = PodmanNotRunning()
     runner = CliRunner()
@@ -193,7 +193,7 @@ def _make_container_mock() -> MagicMock:
     return container
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_info_success(mock_resume: MagicMock) -> None:
     mock_resume.return_value = _make_container_mock()
     runner = CliRunner()
@@ -201,7 +201,7 @@ def test_info_success(mock_resume: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_info_json(mock_resume: MagicMock) -> None:
     mock_resume.return_value = _make_container_mock()
     runner = CliRunner()
@@ -211,7 +211,7 @@ def test_info_json(mock_resume: MagicMock) -> None:
     assert data["name"] == "test-container"
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_info_not_found(mock_resume: MagicMock) -> None:
     mock_resume.side_effect = ContainerNotFound("missing")
     runner = CliRunner()
@@ -219,7 +219,7 @@ def test_info_not_found(mock_resume: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_info_runtime_error(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.info.side_effect = RuntimeError("boom")
@@ -229,9 +229,9 @@ def test_info_runtime_error(mock_resume: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.resume_container")
-def test_info_pocket_dock_error(mock_resume: MagicMock) -> None:
-    from pocket_dock.errors import ContainerGone
+@patch("pocketdock.resume_container")
+def test_info_pocketdock_error(mock_resume: MagicMock) -> None:
+    from pocketdock.errors import ContainerGone
 
     container = MagicMock()
     container.info.side_effect = ContainerGone("abc123")
@@ -250,7 +250,7 @@ def test_info_help() -> None:
 # --- doctor command ---
 
 
-@patch("pocket_dock.doctor")
+@patch("pocketdock.doctor")
 def test_doctor_healthy(mock_doctor: MagicMock) -> None:
     mock_doctor.return_value = DoctorReport(
         orphaned_containers=(), stale_instance_dirs=(), healthy=3
@@ -260,7 +260,7 @@ def test_doctor_healthy(mock_doctor: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.doctor")
+@patch("pocketdock.doctor")
 def test_doctor_json(mock_doctor: MagicMock) -> None:
     mock_doctor.return_value = DoctorReport(
         orphaned_containers=("orphan",), stale_instance_dirs=(), healthy=1
@@ -272,7 +272,7 @@ def test_doctor_json(mock_doctor: MagicMock) -> None:
     assert data["healthy"] == 1
 
 
-@patch("pocket_dock.doctor")
+@patch("pocketdock.doctor")
 def test_doctor_not_initialized(mock_doctor: MagicMock) -> None:
     mock_doctor.side_effect = ProjectNotInitialized()
     runner = CliRunner()
@@ -280,7 +280,7 @@ def test_doctor_not_initialized(mock_doctor: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.doctor")
+@patch("pocketdock.doctor")
 def test_doctor_engine_error(mock_doctor: MagicMock) -> None:
     mock_doctor.side_effect = PodmanNotRunning()
     runner = CliRunner()
@@ -297,10 +297,10 @@ def test_doctor_help() -> None:
 # --- status command ---
 
 
-@patch("pocket_dock.list_containers")
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.projects.get_project_name")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.list_containers")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.projects.get_project_name")
+@patch("pocketdock.find_project_root")
 def test_status_success(
     mock_root: MagicMock,
     mock_name: MagicMock,
@@ -309,7 +309,7 @@ def test_status_success(
 ) -> None:
     mock_root.return_value = Path("/proj")
     mock_name.return_value = "myproject"
-    mock_dirs.return_value = [Path("/proj/.pocket-dock/instances/inst1")]
+    mock_dirs.return_value = [Path("/proj/.pocketdock/instances/inst1")]
     mock_list.return_value = [
         ContainerListItem(
             id="abc",
@@ -325,10 +325,10 @@ def test_status_success(
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.list_containers")
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.projects.get_project_name")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.list_containers")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.projects.get_project_name")
+@patch("pocketdock.find_project_root")
 def test_status_json(
     mock_root: MagicMock,
     mock_name: MagicMock,
@@ -365,7 +365,7 @@ def test_status_json(
     assert data["stopped"] == 1
 
 
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.find_project_root")
 def test_status_no_project(mock_root: MagicMock) -> None:
     mock_root.return_value = None
     runner = CliRunner()
@@ -373,10 +373,10 @@ def test_status_no_project(mock_root: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.list_containers")
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.projects.get_project_name")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.list_containers")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.projects.get_project_name")
+@patch("pocketdock.find_project_root")
 def test_status_engine_error(
     mock_root: MagicMock,
     mock_name: MagicMock,
@@ -401,11 +401,11 @@ def test_status_help() -> None:
 # --- logs command ---
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_success(mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path) -> None:
     mock_root.return_value = tmp_path
-    inst = tmp_path / ".pocket-dock" / "instances" / "inst1"
+    inst = tmp_path / ".pocketdock" / "instances" / "inst1"
     logs_dir = inst / "logs"
     logs_dir.mkdir(parents=True)
     history = logs_dir / "history.jsonl"
@@ -419,11 +419,11 @@ def test_logs_success(mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_json(mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path) -> None:
     mock_root.return_value = tmp_path
-    inst = tmp_path / ".pocket-dock" / "instances" / "inst1"
+    inst = tmp_path / ".pocketdock" / "instances" / "inst1"
     logs_dir = inst / "logs"
     logs_dir.mkdir(parents=True)
     history = logs_dir / "history.jsonl"
@@ -438,14 +438,14 @@ def test_logs_json(mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path) -
     assert len(data) == 1
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_filter_by_container(
     mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path
 ) -> None:
     mock_root.return_value = tmp_path
-    inst1 = tmp_path / ".pocket-dock" / "instances" / "inst1"
-    inst2 = tmp_path / ".pocket-dock" / "instances" / "inst2"
+    inst1 = tmp_path / ".pocketdock" / "instances" / "inst1"
+    inst2 = tmp_path / ".pocketdock" / "instances" / "inst2"
     for inst in [inst1, inst2]:
         logs_dir = inst / "logs"
         logs_dir.mkdir(parents=True)
@@ -464,11 +464,11 @@ def test_logs_filter_by_container(
     assert data[0]["command"] == "echo 1"
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_filter_by_type(mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path) -> None:
     mock_root.return_value = tmp_path
-    inst = tmp_path / ".pocket-dock" / "instances" / "inst1"
+    inst = tmp_path / ".pocketdock" / "instances" / "inst1"
     logs_dir = inst / "logs"
     logs_dir.mkdir(parents=True)
     (logs_dir / "history.jsonl").write_text(
@@ -486,11 +486,11 @@ def test_logs_filter_by_type(mock_root: MagicMock, mock_dirs: MagicMock, tmp_pat
     assert data[0]["type"] == "session"
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_last_n(mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path) -> None:
     mock_root.return_value = tmp_path
-    inst = tmp_path / ".pocket-dock" / "instances" / "inst1"
+    inst = tmp_path / ".pocketdock" / "instances" / "inst1"
     logs_dir = inst / "logs"
     logs_dir.mkdir(parents=True)
     lines = "\n".join(json.dumps({"type": "run", "command": f"cmd{i}"}) for i in range(20))
@@ -504,7 +504,7 @@ def test_logs_last_n(mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path)
     assert data[0]["command"] == "cmd17"
 
 
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.find_project_root")
 def test_logs_no_project(mock_root: MagicMock) -> None:
     mock_root.return_value = None
     runner = CliRunner()
@@ -512,8 +512,8 @@ def test_logs_no_project(mock_root: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_container_not_found(mock_root: MagicMock, mock_dirs: MagicMock) -> None:
     mock_root.return_value = Path("/proj")
     mock_dirs.return_value = []
@@ -522,8 +522,8 @@ def test_logs_container_not_found(mock_root: MagicMock, mock_dirs: MagicMock) ->
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_empty(mock_root: MagicMock, mock_dirs: MagicMock) -> None:
     mock_root.return_value = Path("/proj")
     mock_dirs.return_value = []
@@ -533,13 +533,13 @@ def test_logs_empty(mock_root: MagicMock, mock_dirs: MagicMock) -> None:
     assert "No log entries found" in result.output
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_invalid_json_skipped(
     mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path
 ) -> None:
     mock_root.return_value = tmp_path
-    inst = tmp_path / ".pocket-dock" / "instances" / "inst1"
+    inst = tmp_path / ".pocketdock" / "instances" / "inst1"
     logs_dir = inst / "logs"
     logs_dir.mkdir(parents=True)
     (logs_dir / "history.jsonl").write_text("not json\n{bad\n\n")
@@ -551,13 +551,13 @@ def test_logs_invalid_json_skipped(
     assert data == []
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_table_with_error_exit(
     mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path
 ) -> None:
     mock_root.return_value = tmp_path
-    inst = tmp_path / ".pocket-dock" / "instances" / "inst1"
+    inst = tmp_path / ".pocketdock" / "instances" / "inst1"
     logs_dir = inst / "logs"
     logs_dir.mkdir(parents=True)
     (logs_dir / "history.jsonl").write_text(
@@ -569,13 +569,13 @@ def test_logs_table_with_error_exit(
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_table_no_exit_code(
     mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path
 ) -> None:
     mock_root.return_value = tmp_path
-    inst = tmp_path / ".pocket-dock" / "instances" / "inst1"
+    inst = tmp_path / ".pocketdock" / "instances" / "inst1"
     logs_dir = inst / "logs"
     logs_dir.mkdir(parents=True)
     (logs_dir / "history.jsonl").write_text(
@@ -588,11 +588,11 @@ def test_logs_table_no_exit_code(
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.projects.list_instance_dirs")
-@patch("pocket_dock.find_project_root")
+@patch("pocketdock.projects.list_instance_dirs")
+@patch("pocketdock.find_project_root")
 def test_logs_no_history_file(mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path) -> None:
     mock_root.return_value = tmp_path
-    inst = tmp_path / ".pocket-dock" / "instances" / "inst1"
+    inst = tmp_path / ".pocketdock" / "instances" / "inst1"
     inst.mkdir(parents=True)
     # No logs/history.jsonl file created
     mock_dirs.return_value = [inst]
@@ -612,7 +612,7 @@ def test_logs_help() -> None:
 # --- create command ---
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_success(mock_create: MagicMock) -> None:
     container = MagicMock()
     container.name = "test-c"
@@ -623,7 +623,7 @@ def test_create_success(mock_create: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_with_options(mock_create: MagicMock) -> None:
     container = MagicMock()
     container.name = "custom"
@@ -663,7 +663,7 @@ def test_create_with_options(mock_create: MagicMock) -> None:
     assert call_kwargs["volumes"] == {"/host": "/container"}
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_with_socket(mock_create: MagicMock) -> None:
     container = MagicMock()
     container.name = "test"
@@ -674,7 +674,7 @@ def test_create_with_socket(mock_create: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_error(mock_create: MagicMock) -> None:
     mock_create.side_effect = PodmanNotRunning()
     runner = CliRunner()
@@ -682,7 +682,7 @@ def test_create_error(mock_create: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_volume_invalid_format(mock_create: MagicMock) -> None:
     container = MagicMock()
     container.name = "test"
@@ -696,7 +696,7 @@ def test_create_volume_invalid_format(mock_create: MagicMock) -> None:
     assert "volumes" not in call_kwargs
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_restores_existing_env(mock_create: MagicMock) -> None:
     import os
 
@@ -723,7 +723,7 @@ def test_create_help() -> None:
 # --- run command ---
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_run_success(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.run.return_value = MagicMock(exit_code=0, stdout="hello\n", stderr="")
@@ -733,7 +733,7 @@ def test_run_success(mock_resume: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_run_nonzero_exit(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.run.return_value = MagicMock(exit_code=42, stdout="", stderr="err")
@@ -743,7 +743,7 @@ def test_run_nonzero_exit(mock_resume: MagicMock) -> None:
     assert result.exit_code == 42
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_run_with_options(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.run.return_value = MagicMock(exit_code=0, stdout="", stderr="")
@@ -756,9 +756,9 @@ def test_run_with_options(mock_resume: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_run_stream(mock_resume: MagicMock) -> None:
-    from pocket_dock.types import StreamChunk
+    from pocketdock.types import StreamChunk
 
     container = MagicMock()
     chunks = [StreamChunk(stream="stdout", data="line1\n"), StreamChunk(stream="stderr", data="e")]
@@ -769,9 +769,9 @@ def test_run_stream(mock_resume: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_run_stream_with_options(mock_resume: MagicMock) -> None:
-    from pocket_dock.types import StreamChunk
+    from pocketdock.types import StreamChunk
 
     container = MagicMock()
     container.run.return_value = iter([StreamChunk(stream="stdout", data="x")])
@@ -795,7 +795,7 @@ def test_run_stream_with_options(mock_resume: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_run_detach(mock_resume: MagicMock) -> None:
     container = MagicMock()
     proc = MagicMock()
@@ -807,7 +807,7 @@ def test_run_detach(mock_resume: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_run_detach_with_options(mock_resume: MagicMock) -> None:
     container = MagicMock()
     proc = MagicMock()
@@ -833,7 +833,7 @@ def test_run_detach_with_options(mock_resume: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_run_container_not_found(mock_resume: MagicMock) -> None:
     mock_resume.side_effect = ContainerNotFound("missing")
     runner = CliRunner()
@@ -841,7 +841,7 @@ def test_run_container_not_found(mock_resume: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_run_error_in_execution(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.run.side_effect = RuntimeError("boom")
@@ -851,9 +851,9 @@ def test_run_error_in_execution(mock_resume: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.resume_container")
-def test_run_pocket_dock_error_in_execution(mock_resume: MagicMock) -> None:
-    from pocket_dock.errors import ContainerGone
+@patch("pocketdock.resume_container")
+def test_run_pocketdock_error_in_execution(mock_resume: MagicMock) -> None:
+    from pocketdock.errors import ContainerGone
 
     container = MagicMock()
     container.run.side_effect = ContainerGone("abc123")
@@ -872,7 +872,7 @@ def test_run_help() -> None:
 # --- push command ---
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_push_success(mock_resume: MagicMock) -> None:
     container = MagicMock()
     mock_resume.return_value = container
@@ -882,7 +882,7 @@ def test_push_success(mock_resume: MagicMock) -> None:
     container.push.assert_called_once_with("/local/file", "/container/file")
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_push_error(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.push.side_effect = RuntimeError("fail")
@@ -892,9 +892,9 @@ def test_push_error(mock_resume: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.resume_container")
-def test_push_pocket_dock_error(mock_resume: MagicMock) -> None:
-    from pocket_dock.errors import ContainerGone
+@patch("pocketdock.resume_container")
+def test_push_pocketdock_error(mock_resume: MagicMock) -> None:
+    from pocketdock.errors import ContainerGone
 
     container = MagicMock()
     container.push.side_effect = ContainerGone("abc")
@@ -913,7 +913,7 @@ def test_push_help() -> None:
 # --- pull command ---
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_pull_success(mock_resume: MagicMock) -> None:
     container = MagicMock()
     mock_resume.return_value = container
@@ -923,7 +923,7 @@ def test_pull_success(mock_resume: MagicMock) -> None:
     container.pull.assert_called_once_with("/container/file", "/local/file")
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_pull_error(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.pull.side_effect = RuntimeError("fail")
@@ -933,9 +933,9 @@ def test_pull_error(mock_resume: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.resume_container")
-def test_pull_pocket_dock_error(mock_resume: MagicMock) -> None:
-    from pocket_dock.errors import ContainerGone
+@patch("pocketdock.resume_container")
+def test_pull_pocketdock_error(mock_resume: MagicMock) -> None:
+    from pocketdock.errors import ContainerGone
 
     container = MagicMock()
     container.pull.side_effect = ContainerGone("abc")
@@ -954,7 +954,7 @@ def test_pull_help() -> None:
 # --- reboot command ---
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_reboot_success(mock_resume: MagicMock) -> None:
     container = MagicMock()
     mock_resume.return_value = container
@@ -964,7 +964,7 @@ def test_reboot_success(mock_resume: MagicMock) -> None:
     container.reboot.assert_called_once_with(fresh=False)
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_reboot_fresh(mock_resume: MagicMock) -> None:
     container = MagicMock()
     mock_resume.return_value = container
@@ -974,9 +974,9 @@ def test_reboot_fresh(mock_resume: MagicMock) -> None:
     container.reboot.assert_called_once_with(fresh=True)
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_reboot_error(mock_resume: MagicMock) -> None:
-    from pocket_dock.errors import ContainerGone
+    from pocketdock.errors import ContainerGone
 
     container = MagicMock()
     container.reboot.side_effect = ContainerGone("abc")
@@ -986,7 +986,7 @@ def test_reboot_error(mock_resume: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_reboot_runtime_error(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.reboot.side_effect = RuntimeError("boom")
@@ -1005,7 +1005,7 @@ def test_reboot_help() -> None:
 # --- stop command ---
 
 
-@patch("pocket_dock.stop_container")
+@patch("pocketdock.stop_container")
 def test_stop_success(mock_stop: MagicMock) -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["stop", "myc"])
@@ -1013,7 +1013,7 @@ def test_stop_success(mock_stop: MagicMock) -> None:
     mock_stop.assert_called_once_with("myc", socket_path=None)
 
 
-@patch("pocket_dock.stop_container")
+@patch("pocketdock.stop_container")
 def test_stop_with_socket(mock_stop: MagicMock) -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--socket", "/tmp/s.sock", "stop", "myc"])
@@ -1021,7 +1021,7 @@ def test_stop_with_socket(mock_stop: MagicMock) -> None:
     mock_stop.assert_called_once_with("myc", socket_path="/tmp/s.sock")
 
 
-@patch("pocket_dock.stop_container")
+@patch("pocketdock.stop_container")
 def test_stop_not_found(mock_stop: MagicMock) -> None:
     mock_stop.side_effect = ContainerNotFound("missing")
     runner = CliRunner()
@@ -1038,7 +1038,7 @@ def test_stop_help() -> None:
 # --- resume command ---
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_resume_success(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.container_id = "abc123def456"
@@ -1048,7 +1048,7 @@ def test_resume_success(mock_resume: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_resume_not_found(mock_resume: MagicMock) -> None:
     mock_resume.side_effect = ContainerNotFound("missing")
     runner = CliRunner()
@@ -1065,7 +1065,7 @@ def test_resume_help() -> None:
 # --- shutdown command ---
 
 
-@patch("pocket_dock.destroy_container")
+@patch("pocketdock.destroy_container")
 def test_shutdown_with_yes(mock_destroy: MagicMock) -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["shutdown", "myc", "--yes"])
@@ -1073,8 +1073,8 @@ def test_shutdown_with_yes(mock_destroy: MagicMock) -> None:
     mock_destroy.assert_called_once_with("myc", socket_path=None)
 
 
-@patch("pocket_dock.cli._output.confirm_destructive")
-@patch("pocket_dock.destroy_container")
+@patch("pocketdock.cli._output.confirm_destructive")
+@patch("pocketdock.destroy_container")
 def test_shutdown_confirmed(mock_destroy: MagicMock, mock_confirm: MagicMock) -> None:
     mock_confirm.return_value = True
     runner = CliRunner()
@@ -1083,7 +1083,7 @@ def test_shutdown_confirmed(mock_destroy: MagicMock, mock_confirm: MagicMock) ->
     mock_destroy.assert_called_once()
 
 
-@patch("pocket_dock.cli._output.confirm_destructive")
+@patch("pocketdock.cli._output.confirm_destructive")
 def test_shutdown_aborted(mock_confirm: MagicMock) -> None:
     mock_confirm.return_value = False
     runner = CliRunner()
@@ -1092,7 +1092,7 @@ def test_shutdown_aborted(mock_confirm: MagicMock) -> None:
     assert "Aborted" in result.output
 
 
-@patch("pocket_dock.destroy_container")
+@patch("pocketdock.destroy_container")
 def test_shutdown_error(mock_destroy: MagicMock) -> None:
     mock_destroy.side_effect = ContainerNotFound("missing")
     runner = CliRunner()
@@ -1109,7 +1109,7 @@ def test_shutdown_help() -> None:
 # --- snapshot command ---
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_snapshot_success(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.snapshot.return_value = "sha256:abc123def456"
@@ -1119,7 +1119,7 @@ def test_snapshot_success(mock_resume: MagicMock) -> None:
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_snapshot_error(mock_resume: MagicMock) -> None:
     container = MagicMock()
     container.snapshot.side_effect = RuntimeError("fail")
@@ -1129,9 +1129,9 @@ def test_snapshot_error(mock_resume: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock.resume_container")
-def test_snapshot_pocket_dock_error(mock_resume: MagicMock) -> None:
-    from pocket_dock.errors import ContainerGone
+@patch("pocketdock.resume_container")
+def test_snapshot_pocketdock_error(mock_resume: MagicMock) -> None:
+    from pocketdock.errors import ContainerGone
 
     container = MagicMock()
     container.snapshot.side_effect = ContainerGone("abc")
@@ -1150,7 +1150,7 @@ def test_snapshot_help() -> None:
 # --- prune command ---
 
 
-@patch("pocket_dock.prune")
+@patch("pocketdock.prune")
 def test_prune_with_yes(mock_prune: MagicMock) -> None:
     mock_prune.return_value = 3
     runner = CliRunner()
@@ -1159,7 +1159,7 @@ def test_prune_with_yes(mock_prune: MagicMock) -> None:
     assert "3" in result.output
 
 
-@patch("pocket_dock.prune")
+@patch("pocketdock.prune")
 def test_prune_with_project(mock_prune: MagicMock) -> None:
     mock_prune.return_value = 1
     runner = CliRunner()
@@ -1168,8 +1168,8 @@ def test_prune_with_project(mock_prune: MagicMock) -> None:
     mock_prune.assert_called_once_with(socket_path=None, project="myproj")
 
 
-@patch("pocket_dock.cli._output.confirm_destructive")
-@patch("pocket_dock.prune")
+@patch("pocketdock.cli._output.confirm_destructive")
+@patch("pocketdock.prune")
 def test_prune_confirmed(mock_prune: MagicMock, mock_confirm: MagicMock) -> None:
     mock_confirm.return_value = True
     mock_prune.return_value = 2
@@ -1178,7 +1178,7 @@ def test_prune_confirmed(mock_prune: MagicMock, mock_confirm: MagicMock) -> None
     assert result.exit_code == 0
 
 
-@patch("pocket_dock.cli._output.confirm_destructive")
+@patch("pocketdock.cli._output.confirm_destructive")
 def test_prune_aborted(mock_confirm: MagicMock) -> None:
     mock_confirm.return_value = False
     runner = CliRunner()
@@ -1187,7 +1187,7 @@ def test_prune_aborted(mock_confirm: MagicMock) -> None:
     assert "Aborted" in result.output
 
 
-@patch("pocket_dock.prune")
+@patch("pocketdock.prune")
 def test_prune_error(mock_prune: MagicMock) -> None:
     mock_prune.side_effect = PodmanNotRunning()
     runner = CliRunner()
@@ -1205,7 +1205,7 @@ def test_prune_help() -> None:
 
 
 @patch("subprocess.run")
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_shell_success(mock_resume: MagicMock, mock_run: MagicMock) -> None:
     container = MagicMock()
     container.container_id = "abc123"
@@ -1219,7 +1219,7 @@ def test_shell_success(mock_resume: MagicMock, mock_run: MagicMock) -> None:
 
 
 @patch("subprocess.run")
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_shell_fallback_to_sh(mock_resume: MagicMock, mock_run: MagicMock) -> None:
     container = MagicMock()
     container.container_id = "abc123"
@@ -1236,7 +1236,7 @@ def test_shell_fallback_to_sh(mock_resume: MagicMock, mock_run: MagicMock) -> No
     assert "/bin/sh" in second_call[0][0]
 
 
-@patch("pocket_dock.resume_container")
+@patch("pocketdock.resume_container")
 def test_shell_not_found(mock_resume: MagicMock) -> None:
     mock_resume.side_effect = ContainerNotFound("missing")
     runner = CliRunner()
@@ -1254,20 +1254,20 @@ def test_shell_help() -> None:
 
 
 def test_detect_engine_cli_podman_socket() -> None:
-    from pocket_dock.cli._commands import _detect_engine_cli
+    from pocketdock.cli._commands import _detect_engine_cli
 
     assert _detect_engine_cli("/run/podman/podman.sock") == "podman"
 
 
 def test_detect_engine_cli_docker_socket() -> None:
-    from pocket_dock.cli._commands import _detect_engine_cli
+    from pocketdock.cli._commands import _detect_engine_cli
 
     assert _detect_engine_cli("/var/run/docker.sock") == "docker"
 
 
 @patch("shutil.which")
 def test_detect_engine_cli_no_socket_podman_available(mock_which: MagicMock) -> None:
-    from pocket_dock.cli._commands import _detect_engine_cli
+    from pocketdock.cli._commands import _detect_engine_cli
 
     mock_which.return_value = "/usr/bin/podman"
     assert _detect_engine_cli(None) == "podman"
@@ -1275,7 +1275,7 @@ def test_detect_engine_cli_no_socket_podman_available(mock_which: MagicMock) -> 
 
 @patch("shutil.which")
 def test_detect_engine_cli_no_socket_fallback_docker(mock_which: MagicMock) -> None:
-    from pocket_dock.cli._commands import _detect_engine_cli
+    from pocketdock.cli._commands import _detect_engine_cli
 
     mock_which.return_value = None
     assert _detect_engine_cli(None) == "docker"
@@ -1284,7 +1284,7 @@ def test_detect_engine_cli_no_socket_fallback_docker(mock_which: MagicMock) -> N
 # --- create command with --profile and --device ---
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_with_profile(mock_create: MagicMock) -> None:
     container = MagicMock()
     container.name = "test"
@@ -1297,7 +1297,7 @@ def test_create_with_profile(mock_create: MagicMock) -> None:
     assert call_kwargs["profile"] == "dev"
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_with_device(mock_create: MagicMock) -> None:
     container = MagicMock()
     container.name = "test"
@@ -1310,7 +1310,7 @@ def test_create_with_device(mock_create: MagicMock) -> None:
     assert call_kwargs["devices"] == ["/dev/ttyUSB0"]
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_with_multiple_devices(mock_create: MagicMock) -> None:
     container = MagicMock()
     container.name = "test"
@@ -1323,7 +1323,7 @@ def test_create_with_multiple_devices(mock_create: MagicMock) -> None:
     assert call_kwargs["devices"] == ["/dev/ttyUSB0", "/dev/ttyACM0"]
 
 
-@patch("pocket_dock.create_new_container")
+@patch("pocketdock.create_new_container")
 def test_create_profile_and_image(mock_create: MagicMock) -> None:
     container = MagicMock()
     container.name = "test"
@@ -1340,8 +1340,8 @@ def test_create_profile_and_image(mock_create: MagicMock) -> None:
 # --- build command ---
 
 
-@patch("pocket_dock._socket_client.build_image", new_callable=AsyncMock)
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.build_image", new_callable=AsyncMock)
+@patch("pocketdock._socket_client.detect_socket")
 def test_build_single_profile(mock_detect: MagicMock, mock_build: AsyncMock) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_build.return_value = '{"stream":"ok"}'
@@ -1351,8 +1351,8 @@ def test_build_single_profile(mock_detect: MagicMock, mock_build: AsyncMock) -> 
     assert "Built" in result.output
 
 
-@patch("pocket_dock._socket_client.build_image", new_callable=AsyncMock)
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.build_image", new_callable=AsyncMock)
+@patch("pocketdock._socket_client.detect_socket")
 def test_build_all_profiles(mock_detect: MagicMock, mock_build: AsyncMock) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_build.return_value = '{"stream":"ok"}'
@@ -1362,8 +1362,8 @@ def test_build_all_profiles(mock_detect: MagicMock, mock_build: AsyncMock) -> No
     assert result.output.count("Built") == 4
 
 
-@patch("pocket_dock._socket_client.build_image", new_callable=AsyncMock)
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.build_image", new_callable=AsyncMock)
+@patch("pocketdock._socket_client.detect_socket")
 def test_build_default_builds_all(mock_detect: MagicMock, mock_build: AsyncMock) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_build.return_value = '{"stream":"ok"}'
@@ -1373,7 +1373,7 @@ def test_build_default_builds_all(mock_detect: MagicMock, mock_build: AsyncMock)
     assert result.output.count("Built") == 4
 
 
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.detect_socket")
 def test_build_no_engine(mock_detect: MagicMock) -> None:
     mock_detect.return_value = None
     runner = CliRunner()
@@ -1383,13 +1383,13 @@ def test_build_no_engine(mock_detect: MagicMock) -> None:
 
 def test_build_unknown_profile() -> None:
     runner = CliRunner()
-    with patch("pocket_dock._socket_client.detect_socket", return_value="/tmp/s.sock"):
+    with patch("pocketdock._socket_client.detect_socket", return_value="/tmp/s.sock"):
         result = runner.invoke(cli, ["build", "nonexistent"])
     assert result.exit_code == 1
 
 
-@patch("pocket_dock._socket_client.build_image")
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.build_image")
+@patch("pocketdock._socket_client.detect_socket")
 def test_build_error(mock_detect: MagicMock, mock_build: MagicMock) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_build.side_effect = RuntimeError("build boom")
@@ -1398,9 +1398,9 @@ def test_build_error(mock_detect: MagicMock, mock_build: MagicMock) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock._socket_client.build_image")
-@patch("pocket_dock._socket_client.detect_socket")
-def test_build_pocket_dock_error(mock_detect: MagicMock, mock_build: MagicMock) -> None:
+@patch("pocketdock._socket_client.build_image")
+@patch("pocketdock._socket_client.detect_socket")
+def test_build_pocketdock_error(mock_detect: MagicMock, mock_build: MagicMock) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_build.side_effect = PodmanNotRunning()
     runner = CliRunner()
@@ -1411,20 +1411,20 @@ def test_build_pocket_dock_error(mock_detect: MagicMock, mock_build: MagicMock) 
 # --- export command ---
 
 
-@patch("pocket_dock._socket_client.save_image", new_callable=AsyncMock)
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.save_image", new_callable=AsyncMock)
+@patch("pocketdock._socket_client.detect_socket")
 def test_export_with_image(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Path) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_save.return_value = b"tar-data"
     out = str(tmp_path / "out.tar")
     runner = CliRunner()
-    result = runner.invoke(cli, ["export", "--image", "pocket-dock/minimal", "-o", out])
+    result = runner.invoke(cli, ["export", "--image", "pocketdock/minimal", "-o", out])
     assert result.exit_code == 0
     assert Path(out).read_bytes() == b"tar-data"
 
 
-@patch("pocket_dock._socket_client.save_image", new_callable=AsyncMock)
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.save_image", new_callable=AsyncMock)
+@patch("pocketdock._socket_client.detect_socket")
 def test_export_with_profile(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Path) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_save.return_value = b"tar-data"
@@ -1434,8 +1434,8 @@ def test_export_with_profile(mock_detect: MagicMock, mock_save: AsyncMock, tmp_p
     assert result.exit_code == 0
 
 
-@patch("pocket_dock._socket_client.save_image", new_callable=AsyncMock)
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.save_image", new_callable=AsyncMock)
+@patch("pocketdock._socket_client.detect_socket")
 def test_export_all(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Path) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_save.return_value = b"tar-data"
@@ -1445,8 +1445,8 @@ def test_export_all(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Path
     assert result.exit_code == 0
 
 
-@patch("pocket_dock._socket_client.save_image", new_callable=AsyncMock)
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.save_image", new_callable=AsyncMock)
+@patch("pocketdock._socket_client.detect_socket")
 def test_export_gzip(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Path) -> None:
     import gzip
 
@@ -1461,7 +1461,7 @@ def test_export_gzip(mock_detect: MagicMock, mock_save: AsyncMock, tmp_path: Pat
     assert decompressed == b"tar-data"
 
 
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.detect_socket")
 def test_export_no_engine(mock_detect: MagicMock, tmp_path: Path) -> None:
     mock_detect.return_value = None
     out = str(tmp_path / "out.tar")
@@ -1473,13 +1473,13 @@ def test_export_no_engine(mock_detect: MagicMock, tmp_path: Path) -> None:
 def test_export_no_image_or_profile(tmp_path: Path) -> None:
     out = str(tmp_path / "out.tar")
     runner = CliRunner()
-    with patch("pocket_dock._socket_client.detect_socket", return_value="/tmp/s.sock"):
+    with patch("pocketdock._socket_client.detect_socket", return_value="/tmp/s.sock"):
         result = runner.invoke(cli, ["export", "-o", out])
     assert result.exit_code != 0
 
 
-@patch("pocket_dock._socket_client.save_image")
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.save_image")
+@patch("pocketdock._socket_client.detect_socket")
 def test_export_error(mock_detect: MagicMock, mock_save: MagicMock, tmp_path: Path) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_save.side_effect = RuntimeError("save boom")
@@ -1489,12 +1489,12 @@ def test_export_error(mock_detect: MagicMock, mock_save: MagicMock, tmp_path: Pa
     assert result.exit_code == 1
 
 
-@patch("pocket_dock._socket_client.save_image")
-@patch("pocket_dock._socket_client.detect_socket")
-def test_export_pocket_dock_error(
+@patch("pocketdock._socket_client.save_image")
+@patch("pocketdock._socket_client.detect_socket")
+def test_export_pocketdock_error(
     mock_detect: MagicMock, mock_save: MagicMock, tmp_path: Path
 ) -> None:
-    from pocket_dock.errors import ImageNotFound
+    from pocketdock.errors import ImageNotFound
 
     mock_detect.return_value = "/tmp/s.sock"
     mock_save.side_effect = ImageNotFound("nope")
@@ -1507,8 +1507,8 @@ def test_export_pocket_dock_error(
 # --- import command ---
 
 
-@patch("pocket_dock._socket_client.load_image", new_callable=AsyncMock)
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.load_image", new_callable=AsyncMock)
+@patch("pocketdock._socket_client.detect_socket")
 def test_import_success(mock_detect: MagicMock, mock_load: AsyncMock, tmp_path: Path) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_load.return_value = "ok"
@@ -1520,8 +1520,8 @@ def test_import_success(mock_detect: MagicMock, mock_load: AsyncMock, tmp_path: 
     assert "Imported" in result.output
 
 
-@patch("pocket_dock._socket_client.load_image", new_callable=AsyncMock)
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.load_image", new_callable=AsyncMock)
+@patch("pocketdock._socket_client.detect_socket")
 def test_import_gzip(mock_detect: MagicMock, mock_load: AsyncMock, tmp_path: Path) -> None:
     import gzip
 
@@ -1537,7 +1537,7 @@ def test_import_gzip(mock_detect: MagicMock, mock_load: AsyncMock, tmp_path: Pat
     assert call_args[1] == b"tar-data"
 
 
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.detect_socket")
 def test_import_no_engine(mock_detect: MagicMock, tmp_path: Path) -> None:
     mock_detect.return_value = None
     tar_file = tmp_path / "images.tar"
@@ -1547,8 +1547,8 @@ def test_import_no_engine(mock_detect: MagicMock, tmp_path: Path) -> None:
     assert result.exit_code == 1
 
 
-@patch("pocket_dock._socket_client.load_image")
-@patch("pocket_dock._socket_client.detect_socket")
+@patch("pocketdock._socket_client.load_image")
+@patch("pocketdock._socket_client.detect_socket")
 def test_import_error(mock_detect: MagicMock, mock_load: MagicMock, tmp_path: Path) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_load.side_effect = RuntimeError("load boom")
@@ -1559,9 +1559,9 @@ def test_import_error(mock_detect: MagicMock, mock_load: MagicMock, tmp_path: Pa
     assert result.exit_code == 1
 
 
-@patch("pocket_dock._socket_client.load_image")
-@patch("pocket_dock._socket_client.detect_socket")
-def test_import_pocket_dock_error(
+@patch("pocketdock._socket_client.load_image")
+@patch("pocketdock._socket_client.detect_socket")
+def test_import_pocketdock_error(
     mock_detect: MagicMock, mock_load: MagicMock, tmp_path: Path
 ) -> None:
     mock_detect.return_value = "/tmp/s.sock"

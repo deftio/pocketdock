@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime
 import re
 
-from pocket_dock.types import ContainerInfo
+from pocketdock.types import ContainerInfo
 
 _KIB = 1024
 

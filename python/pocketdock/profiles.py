@@ -29,7 +29,7 @@ class ProfileInfo:
 PROFILES: dict[str, ProfileInfo] = {
     "minimal": ProfileInfo(
         name="minimal",
-        image_tag="pocket-dock/minimal",
+        image_tag="pocketdock/minimal",
         dockerfile_dir="images/minimal",
         network_default=False,
         description="Lightest sandbox — Python 3, bash, busybox (~25 MB)",
@@ -37,7 +37,7 @@ PROFILES: dict[str, ProfileInfo] = {
     ),
     "dev": ProfileInfo(
         name="dev",
-        image_tag="pocket-dock/dev",
+        image_tag="pocketdock/dev",
         dockerfile_dir="images/dev",
         network_default=True,
         description="Interactive dev sandbox — git, curl, vim, build tools, ipython (~250 MB)",
@@ -45,7 +45,7 @@ PROFILES: dict[str, ProfileInfo] = {
     ),
     "agent": ProfileInfo(
         name="agent",
-        image_tag="pocket-dock/agent",
+        image_tag="pocketdock/agent",
         dockerfile_dir="images/agent",
         network_default=False,
         description="Agent sandbox — requests, pandas, numpy, beautifulsoup4 (~350 MB)",
@@ -53,7 +53,7 @@ PROFILES: dict[str, ProfileInfo] = {
     ),
     "embedded": ProfileInfo(
         name="embedded",
-        image_tag="pocket-dock/embedded",
+        image_tag="pocketdock/embedded",
         dockerfile_dir="images/embedded",
         network_default=True,
         description="C/C++ toolchain — GCC, CMake, ARM cross-compiler, Arduino CLI (~450 MB)",
@@ -93,7 +93,7 @@ def get_dockerfile_path(name: str) -> pathlib.Path:
 
     The path is resolved relative to the repository root, which is assumed
     to be three levels above this source file
-    (``python/pocket_dock/profiles.py`` → repo root).
+    (``python/pocketdock/profiles.py`` → repo root).
 
     Args:
         name: Profile name.

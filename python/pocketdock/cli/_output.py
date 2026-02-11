@@ -11,8 +11,8 @@ import sys
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pocket_dock.errors import PocketDockError
-    from pocket_dock.types import ContainerInfo, ContainerListItem, DoctorReport, ExecResult
+    from pocketdock.errors import PocketDockError
+    from pocketdock.types import ContainerInfo, ContainerListItem, DoctorReport, ExecResult
 
 from rich.console import Console
 from rich.panel import Panel
@@ -135,7 +135,7 @@ def format_error(err: PocketDockError) -> None:
 
 def _error_info(err: PocketDockError) -> tuple[str, str]:
     """Map an SDK error to a title and suggestion string."""
-    from pocket_dock.errors import (  # noqa: PLC0415
+    from pocketdock.errors import (  # noqa: PLC0415
         ContainerNotFound,
         ImageNotFound,
         PodmanNotRunning,
@@ -145,11 +145,11 @@ def _error_info(err: PocketDockError) -> tuple[str, str]:
     if isinstance(err, PodmanNotRunning):
         return "Engine Not Found", "Start Podman or Docker and try again."
     if isinstance(err, ContainerNotFound):
-        return "Container Not Found", "Run 'pocket-dock list' to see available containers."
+        return "Container Not Found", "Run 'pocketdock list' to see available containers."
     if isinstance(err, ImageNotFound):
         return "Image Not Found", "Pull the image first: docker pull <image>"
     if isinstance(err, ProjectNotInitialized):
-        return "Project Not Initialized", "Run 'pocket-dock init' to create a project."
+        return "Project Not Initialized", "Run 'pocketdock init' to create a project."
     return "Error", ""
 
 

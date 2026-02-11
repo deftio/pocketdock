@@ -7,7 +7,7 @@ By default, containers are ephemeral — they are removed when `shutdown()` is c
 Create a container that survives `shutdown()`:
 
 ```python
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 c = create_new_container(persist=True, name="my-sandbox")
 c.run("echo setup done")
@@ -19,7 +19,7 @@ c.shutdown()  # Stops the container, but does NOT remove it
 Resume a stopped persistent container by name:
 
 ```python
-from pocket_dock import resume_container
+from pocketdock import resume_container
 
 c = resume_container("my-sandbox")
 result = c.run("echo I'm back")
@@ -30,10 +30,10 @@ The container's filesystem state is preserved from the previous session.
 
 ## List Containers
 
-List all pocket-dock managed containers (running and stopped):
+List all pocketdock managed containers (running and stopped):
 
 ```python
-from pocket_dock import list_containers
+from pocketdock import list_containers
 
 containers = list_containers()
 for item in containers:
@@ -63,7 +63,7 @@ containers = list_containers(project="my-project")
 Stop a running container without removing it:
 
 ```python
-from pocket_dock import stop_container
+from pocketdock import stop_container
 
 stop_container("my-sandbox")
 ```
@@ -73,7 +73,7 @@ stop_container("my-sandbox")
 Permanently remove a container regardless of its persist setting:
 
 ```python
-from pocket_dock import destroy_container
+from pocketdock import destroy_container
 
 destroy_container("my-sandbox")
 ```
@@ -82,10 +82,10 @@ If the container has an associated instance directory (from project management),
 
 ## Prune
 
-Remove all stopped pocket-dock managed containers:
+Remove all stopped pocketdock managed containers:
 
 ```python
-from pocket_dock import prune
+from pocketdock import prune
 
 count = prune()
 print(f"Removed {count} containers")

@@ -6,7 +6,7 @@ Requires a running container engine (Podman or Docker).
 from __future__ import annotations
 
 import pytest
-from pocket_dock.async_ import AsyncContainer, create_new_container
+from pocketdock.async_ import AsyncContainer, create_new_container
 
 from .conftest import requires_engine
 
@@ -46,10 +46,10 @@ async def test_session_cwd_persists(container: AsyncContainer) -> None:
 @requires_engine
 async def test_session_env_var_persists(container: AsyncContainer) -> None:
     sess = await container.session()
-    await sess.send_and_wait("export MY_VAR=pocket_dock_test")
+    await sess.send_and_wait("export MY_VAR=pocketdock_test")
     result = await sess.send_and_wait("echo $MY_VAR")
     assert result.ok
-    assert result.stdout.strip() == "pocket_dock_test"
+    assert result.stdout.strip() == "pocketdock_test"
     await sess.close()
 
 

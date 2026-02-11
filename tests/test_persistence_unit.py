@@ -8,8 +8,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pocket_dock.errors import ContainerNotFound, PodmanNotRunning
-from pocket_dock.persistence import (
+from pocketdock.errors import ContainerNotFound, PodmanNotRunning
+from pocketdock.persistence import (
     _parse_container_list_item,
     _resolve_socket,
     destroy_container,
@@ -18,7 +18,7 @@ from pocket_dock.persistence import (
     resume_container,
     stop_container,
 )
-from pocket_dock.types import ContainerListItem
+from pocketdock.types import ContainerListItem
 
 # --- _resolve_socket ---
 
@@ -28,13 +28,13 @@ def test_resolve_socket_returns_provided() -> None:
 
 
 def test_resolve_socket_detects_when_none() -> None:
-    with patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/auto.sock"):
+    with patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/auto.sock"):
         assert _resolve_socket(None) == "/tmp/auto.sock"
 
 
 def test_resolve_socket_raises_when_no_engine() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value=None),
+        patch("pocketdock.persistence.sc.detect_socket", return_value=None),
         pytest.raises(PodmanNotRunning),
     ):
         _resolve_socket(None)
@@ -48,18 +48,18 @@ def test_parse_full_data() -> None:
         "Id": "abc123def45678",
         "Names": ["pd-test"],
         "State": "running",
-        "Image": "pocket-dock/minimal",
+        "Image": "pocketdock/minimal",
         "Labels": {
-            "pocket-dock.instance": "pd-test",
-            "pocket-dock.persist": "true",
-            "pocket-dock.created-at": "2026-02-09T00:00:00+00:00",
+            "pocketdock.instance": "pd-test",
+            "pocketdock.persist": "true",
+            "pocketdock.created-at": "2026-02-09T00:00:00+00:00",
         },
     }
     item = _parse_container_list_item(data)
     assert item.id == "abc123def456"
     assert item.name == "pd-test"
     assert item.status == "running"
-    assert item.image == "pocket-dock/minimal"
+    assert item.image == "pocketdock/minimal"
     assert item.persist is True
     assert item.created_at == "2026-02-09T00:00:00+00:00"
 
@@ -100,7 +100,7 @@ def test_parse_persist_false_label() -> None:
         "Names": ["n"],
         "State": "running",
         "Image": "img",
-        "Labels": {"pocket-dock.persist": "false"},
+        "Labels": {"pocketdock.persist": "false"},
     }
     item = _parse_container_list_item(data)
     assert item.persist is False
@@ -119,7 +119,7 @@ def test_container_list_item_is_frozen() -> None:
 
 async def test_resume_no_socket_raises() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value=None),
+        patch("pocketdock.persistence.sc.detect_socket", return_value=None),
         pytest.raises(PodmanNotRunning),
     ):
         await resume_container("test")
@@ -127,9 +127,9 @@ async def test_resume_no_socket_raises() -> None:
 
 async def test_resume_not_found() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[],
         ),
@@ -142,21 +142,21 @@ async def test_resume_stopped_container_starts_it() -> None:
     list_result = [{"Id": "abc123", "State": "exited"}]
     inspect_result = {
         "Config": {
-            "Image": "pocket-dock/minimal",
-            "Labels": {"pocket-dock.persist": "true"},
+            "Image": "pocketdock/minimal",
+            "Labels": {"pocketdock.persist": "true"},
         },
         "HostConfig": {"Memory": 0, "NanoCpus": 0},
     }
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=list_result,
         ),
-        patch("pocket_dock.persistence.sc.start_container", new_callable=AsyncMock) as start,
+        patch("pocketdock.persistence.sc.start_container", new_callable=AsyncMock) as start,
         patch(
-            "pocket_dock.persistence.sc.inspect_container",
+            "pocketdock.persistence.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_result,
         ),
@@ -176,15 +176,15 @@ async def test_resume_running_container_skips_start() -> None:
         "HostConfig": {"Memory": 268435456, "NanoCpus": 500000000},
     }
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=list_result,
         ),
-        patch("pocket_dock.persistence.sc.start_container", new_callable=AsyncMock) as start,
+        patch("pocketdock.persistence.sc.start_container", new_callable=AsyncMock) as start,
         patch(
-            "pocket_dock.persistence.sc.inspect_container",
+            "pocketdock.persistence.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_result,
         ),
@@ -203,20 +203,20 @@ async def test_resume_with_explicit_socket() -> None:
     }
     with (
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=list_result,
         ) as list_mock,
-        patch("pocket_dock.persistence.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock.persistence.sc.start_container", new_callable=AsyncMock),
         patch(
-            "pocket_dock.persistence.sc.inspect_container",
+            "pocketdock.persistence.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_result,
         ),
     ):
         await resume_container("pd-test", socket_path="/custom.sock")
 
-    list_mock.assert_called_once_with("/custom.sock", label_filter="pocket-dock.instance=pd-test")
+    list_mock.assert_called_once_with("/custom.sock", label_filter="pocketdock.instance=pd-test")
 
 
 # --- list_containers ---
@@ -224,7 +224,7 @@ async def test_resume_with_explicit_socket() -> None:
 
 async def test_list_no_socket_raises() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value=None),
+        patch("pocketdock.persistence.sc.detect_socket", return_value=None),
         pytest.raises(PodmanNotRunning),
     ):
         await list_containers()
@@ -237,20 +237,20 @@ async def test_list_returns_parsed_items() -> None:
             "State": "running",
             "Image": "img",
             "Names": ["n"],
-            "Labels": {"pocket-dock.instance": "pd-a"},
+            "Labels": {"pocketdock.instance": "pd-a"},
         },
         {
             "Id": "def456abc123",
             "State": "exited",
             "Image": "img2",
             "Names": ["m"],
-            "Labels": {"pocket-dock.instance": "pd-b", "pocket-dock.persist": "true"},
+            "Labels": {"pocketdock.instance": "pd-b", "pocketdock.persist": "true"},
         },
     ]
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=raw,
         ),
@@ -265,9 +265,9 @@ async def test_list_returns_parsed_items() -> None:
 
 async def test_list_empty() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[],
         ),
@@ -282,7 +282,7 @@ async def test_list_empty() -> None:
 
 async def test_destroy_no_socket_raises() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value=None),
+        patch("pocketdock.persistence.sc.detect_socket", return_value=None),
         pytest.raises(PodmanNotRunning),
     ):
         await destroy_container("test")
@@ -290,9 +290,9 @@ async def test_destroy_no_socket_raises() -> None:
 
 async def test_destroy_not_found_raises() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[],
         ),
@@ -304,18 +304,18 @@ async def test_destroy_not_found_raises() -> None:
 async def test_destroy_removes_with_force() -> None:
     inspect_data = {"Config": {"Labels": {}}}
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[{"Id": "abc123"}],
         ),
         patch(
-            "pocket_dock.persistence.sc.inspect_container",
+            "pocketdock.persistence.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_data,
         ),
-        patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
+        patch("pocketdock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
     ):
         await destroy_container("test")
 
@@ -327,7 +327,7 @@ async def test_destroy_removes_with_force() -> None:
 
 async def test_prune_no_socket_raises() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value=None),
+        patch("pocketdock.persistence.sc.detect_socket", return_value=None),
         pytest.raises(PodmanNotRunning),
     ):
         await prune()
@@ -340,13 +340,13 @@ async def test_prune_removes_stopped_only() -> None:
         {"Id": "exited2", "State": "exited"},
     ]
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=raw,
         ),
-        patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
+        patch("pocketdock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
     ):
         count = await prune()
 
@@ -361,13 +361,13 @@ async def test_prune_removes_stopped_only() -> None:
 async def test_prune_no_stopped_returns_zero() -> None:
     raw = [{"Id": "running1", "State": "running"}]
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=raw,
         ),
-        patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
+        patch("pocketdock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
     ):
         count = await prune()
 
@@ -377,9 +377,9 @@ async def test_prune_no_stopped_returns_zero() -> None:
 
 async def test_prune_empty_list_returns_zero() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[],
         ),
@@ -389,7 +389,7 @@ async def test_prune_empty_list_returns_zero() -> None:
     assert count == 0
 
 
-# --- Sync wrappers (pocket_dock.__init__) ---
+# --- Sync wrappers (pocketdock.__init__) ---
 
 
 def _close_coroutine_arg(mock_obj: MagicMock) -> None:
@@ -399,13 +399,13 @@ def _close_coroutine_arg(mock_obj: MagicMock) -> None:
 
 
 def test_sync_resume_container() -> None:
-    import pocket_dock
+    import pocketdock
 
     mock_lt = MagicMock()
     mock_lt.run.return_value = MagicMock()
-    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+    with patch.object(pocketdock, "_LoopThread") as lt_cls:
         lt_cls.get.return_value = mock_lt
-        c = pocket_dock.resume_container("pd-test", socket_path="/tmp/s.sock")
+        c = pocketdock.resume_container("pd-test", socket_path="/tmp/s.sock")
 
     lt_cls.get.assert_called_once()
     mock_lt.run.assert_called_once()
@@ -414,7 +414,7 @@ def test_sync_resume_container() -> None:
 
 
 def test_sync_list_containers() -> None:
-    import pocket_dock
+    import pocketdock
 
     mock_lt = MagicMock()
     mock_lt.run.return_value = [
@@ -422,9 +422,9 @@ def test_sync_list_containers() -> None:
             id="abc", name="pd-a", status="running", image="img", created_at="", persist=False
         )
     ]
-    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+    with patch.object(pocketdock, "_LoopThread") as lt_cls:
         lt_cls.get.return_value = mock_lt
-        result = pocket_dock.list_containers(socket_path="/tmp/s.sock")
+        result = pocketdock.list_containers(socket_path="/tmp/s.sock")
 
     lt_cls.get.assert_called_once()
     mock_lt.run.assert_called_once()
@@ -434,13 +434,13 @@ def test_sync_list_containers() -> None:
 
 
 def test_sync_destroy_container() -> None:
-    import pocket_dock
+    import pocketdock
 
     mock_lt = MagicMock()
     mock_lt.run.return_value = None
-    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+    with patch.object(pocketdock, "_LoopThread") as lt_cls:
         lt_cls.get.return_value = mock_lt
-        pocket_dock.destroy_container("pd-test", socket_path="/tmp/s.sock")
+        pocketdock.destroy_container("pd-test", socket_path="/tmp/s.sock")
 
     lt_cls.get.assert_called_once()
     mock_lt.run.assert_called_once()
@@ -448,13 +448,13 @@ def test_sync_destroy_container() -> None:
 
 
 def test_sync_prune() -> None:
-    import pocket_dock
+    import pocketdock
 
     mock_lt = MagicMock()
     mock_lt.run.return_value = 3
-    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+    with patch.object(pocketdock, "_LoopThread") as lt_cls:
         lt_cls.get.return_value = mock_lt
-        count = pocket_dock.prune(socket_path="/tmp/s.sock")
+        count = pocketdock.prune(socket_path="/tmp/s.sock")
 
     lt_cls.get.assert_called_once()
     mock_lt.run.assert_called_once()
@@ -463,13 +463,13 @@ def test_sync_prune() -> None:
 
 
 def test_sync_stop_container() -> None:
-    import pocket_dock
+    import pocketdock
 
     mock_lt = MagicMock()
     mock_lt.run.return_value = None
-    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+    with patch.object(pocketdock, "_LoopThread") as lt_cls:
         lt_cls.get.return_value = mock_lt
-        pocket_dock.stop_container("myc", socket_path="/tmp/s.sock")
+        pocketdock.stop_container("myc", socket_path="/tmp/s.sock")
 
     lt_cls.get.assert_called_once()
     mock_lt.run.assert_called_once()
@@ -486,8 +486,8 @@ def test_parse_container_list_item_includes_project() -> None:
         "State": "running",
         "Image": "img",
         "Labels": {
-            "pocket-dock.instance": "pd-test",
-            "pocket-dock.project": "my-project",
+            "pocketdock.instance": "pd-test",
+            "pocketdock.project": "my-project",
         },
     }
     item = _parse_container_list_item(data)
@@ -508,23 +508,23 @@ def test_parse_container_list_item_no_project() -> None:
 
 async def test_list_containers_with_project_filter() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[],
         ) as list_mock,
     ):
         await list_containers(project="my-project")
 
-    list_mock.assert_called_once_with("/tmp/s.sock", label_filter="pocket-dock.project=my-project")
+    list_mock.assert_called_once_with("/tmp/s.sock", label_filter="pocketdock.project=my-project")
 
 
 async def test_prune_with_project_filter() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[],
         ) as list_mock,
@@ -532,7 +532,7 @@ async def test_prune_with_project_filter() -> None:
         count = await prune(project="my-project")
 
     assert count == 0
-    list_mock.assert_called_once_with("/tmp/s.sock", label_filter="pocket-dock.project=my-project")
+    list_mock.assert_called_once_with("/tmp/s.sock", label_filter="pocketdock.project=my-project")
 
 
 async def test_destroy_cleans_up_data_path(tmp_path: object) -> None:
@@ -543,21 +543,21 @@ async def test_destroy_cleans_up_data_path(tmp_path: object) -> None:
     (data_dir / "test.txt").write_text("test")
 
     inspect_data = {
-        "Config": {"Labels": {"pocket-dock.data-path": str(data_dir)}},
+        "Config": {"Labels": {"pocketdock.data-path": str(data_dir)}},
     }
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[{"Id": "abc123"}],
         ),
         patch(
-            "pocket_dock.persistence.sc.inspect_container",
+            "pocketdock.persistence.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_data,
         ),
-        patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock.persistence.sc.remove_container", new_callable=AsyncMock),
     ):
         await destroy_container("test")
 
@@ -567,18 +567,18 @@ async def test_destroy_cleans_up_data_path(tmp_path: object) -> None:
 async def test_destroy_no_data_path_label() -> None:
     inspect_data = {"Config": {"Labels": {}}}
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[{"Id": "abc123"}],
         ),
         patch(
-            "pocket_dock.persistence.sc.inspect_container",
+            "pocketdock.persistence.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_data,
         ),
-        patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
+        patch("pocketdock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
     ):
         await destroy_container("test")
 
@@ -587,21 +587,21 @@ async def test_destroy_no_data_path_label() -> None:
 
 async def test_destroy_data_path_already_gone() -> None:
     inspect_data = {
-        "Config": {"Labels": {"pocket-dock.data-path": "/nonexistent/path"}},
+        "Config": {"Labels": {"pocketdock.data-path": "/nonexistent/path"}},
     }
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[{"Id": "abc123"}],
         ),
         patch(
-            "pocket_dock.persistence.sc.inspect_container",
+            "pocketdock.persistence.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_data,
         ),
-        patch("pocket_dock.persistence.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock.persistence.sc.remove_container", new_callable=AsyncMock),
     ):
         # Should not raise even if data path doesn't exist
         await destroy_container("test")
@@ -613,23 +613,23 @@ async def test_resume_restores_project_and_data_path() -> None:
         "Config": {
             "Image": "img",
             "Labels": {
-                "pocket-dock.persist": "true",
-                "pocket-dock.project": "my-proj",
-                "pocket-dock.data-path": "/some/path",
+                "pocketdock.persist": "true",
+                "pocketdock.project": "my-proj",
+                "pocketdock.data-path": "/some/path",
             },
         },
         "HostConfig": {"Memory": 0, "NanoCpus": 0},
     }
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=list_result,
         ),
-        patch("pocket_dock.persistence.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock.persistence.sc.start_container", new_callable=AsyncMock),
         patch(
-            "pocket_dock.persistence.sc.inspect_container",
+            "pocketdock.persistence.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_result,
         ),
@@ -647,12 +647,12 @@ async def test_stop_container_success() -> None:
     container_data = [{"Id": "abc123", "State": "running"}]
     with (
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=container_data,
         ),
         patch(
-            "pocket_dock.persistence.sc.stop_container",
+            "pocketdock.persistence.sc.stop_container",
             new_callable=AsyncMock,
         ) as mock_stop,
     ):
@@ -664,7 +664,7 @@ async def test_stop_container_success() -> None:
 async def test_stop_container_not_found() -> None:
     with (
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=[],
         ),
@@ -677,16 +677,16 @@ async def test_stop_container_auto_detect_socket() -> None:
     container_data = [{"Id": "xyz789", "State": "running"}]
     with (
         patch(
-            "pocket_dock.persistence.sc.detect_socket",
+            "pocketdock.persistence.sc.detect_socket",
             return_value="/tmp/auto.sock",
         ),
         patch(
-            "pocket_dock.persistence.sc.list_containers",
+            "pocketdock.persistence.sc.list_containers",
             new_callable=AsyncMock,
             return_value=container_data,
         ),
         patch(
-            "pocket_dock.persistence.sc.stop_container",
+            "pocketdock.persistence.sc.stop_container",
             new_callable=AsyncMock,
         ) as mock_stop,
     ):
@@ -697,7 +697,7 @@ async def test_stop_container_auto_detect_socket() -> None:
 
 async def test_stop_container_no_engine() -> None:
     with (
-        patch("pocket_dock.persistence.sc.detect_socket", return_value=None),
+        patch("pocketdock.persistence.sc.detect_socket", return_value=None),
         pytest.raises(PodmanNotRunning),
     ):
         await stop_container("my-container")

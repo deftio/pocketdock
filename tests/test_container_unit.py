@@ -11,20 +11,20 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pocket_dock._async_container import (
+from pocketdock._async_container import (
     AsyncContainer,
     _build_command,
     _build_host_config,
     _generate_name,
 )
-from pocket_dock._async_container import (
+from pocketdock._async_container import (
     create_new_container as async_factory,
 )
-from pocket_dock._process import AsyncExecStream, AsyncProcess
-from pocket_dock._stream import STREAM_STDERR, STREAM_STDOUT
-from pocket_dock._sync_container import Container, SyncExecStream, SyncProcess, _LoopThread
-from pocket_dock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
-from pocket_dock.types import ExecResult
+from pocketdock._process import AsyncExecStream, AsyncProcess
+from pocketdock._stream import STREAM_STDERR, STREAM_STDOUT
+from pocketdock._sync_container import Container, SyncExecStream, SyncProcess, _LoopThread
+from pocketdock.errors import ContainerNotFound, ContainerNotRunning, PodmanNotRunning
+from pocketdock.types import ExecResult
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -82,7 +82,7 @@ async def test_async_container_run_delegates() -> None:
     expected = ExecResult(exit_code=0, stdout="hi\n")
 
     with patch(
-        "pocket_dock._async_container.sc.exec_command",
+        "pocketdock._async_container.sc.exec_command",
         new_callable=AsyncMock,
     ) as mock:
         mock.return_value = expected
@@ -103,7 +103,7 @@ async def test_async_container_run_custom_timeout() -> None:
     expected = ExecResult(exit_code=0)
 
     with patch(
-        "pocket_dock._async_container.sc.exec_command",
+        "pocketdock._async_container.sc.exec_command",
         new_callable=AsyncMock,
     ) as mock:
         mock.return_value = expected
@@ -118,7 +118,7 @@ async def test_async_container_run_python_lang() -> None:
     expected = ExecResult(exit_code=0, stdout="3\n")
 
     with patch(
-        "pocket_dock._async_container.sc.exec_command",
+        "pocketdock._async_container.sc.exec_command",
         new_callable=AsyncMock,
     ) as mock:
         mock.return_value = expected
@@ -135,9 +135,9 @@ async def test_async_shutdown_calls_stop_then_remove() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
         patch(
-            "pocket_dock._async_container.sc.remove_container",
+            "pocketdock._async_container.sc.remove_container",
             new_callable=AsyncMock,
         ) as remove,
     ):
@@ -151,9 +151,9 @@ async def test_async_shutdown_force_skips_stop() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
         patch(
-            "pocket_dock._async_container.sc.remove_container",
+            "pocketdock._async_container.sc.remove_container",
             new_callable=AsyncMock,
         ) as remove,
     ):
@@ -167,9 +167,9 @@ async def test_async_shutdown_idempotent() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
         patch(
-            "pocket_dock._async_container.sc.remove_container",
+            "pocketdock._async_container.sc.remove_container",
             new_callable=AsyncMock,
         ),
     ):
@@ -186,8 +186,8 @@ async def test_async_context_manager_calls_shutdown() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
-        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.remove_container", new_callable=AsyncMock),
     ):
         async with ac as entered:
             assert entered is ac
@@ -198,7 +198,7 @@ async def test_async_context_manager_calls_shutdown() -> None:
 
 async def test_async_create_no_socket_raises() -> None:
     with (
-        patch("pocket_dock._async_container.sc.detect_socket", return_value=None),
+        patch("pocketdock._async_container.sc.detect_socket", return_value=None),
         pytest.raises(PodmanNotRunning),
     ):
         await async_factory()
@@ -207,16 +207,16 @@ async def test_async_create_no_socket_raises() -> None:
 async def test_async_create_sets_labels() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
         patch(
-            "pocket_dock._async_container.sc.start_container",
+            "pocketdock._async_container.sc.start_container",
             new_callable=AsyncMock,
         ),
     ):
@@ -225,8 +225,8 @@ async def test_async_create_sets_labels() -> None:
     assert c.container_id == "deadbeef"
     assert c.name == "pd-lab"
     labels = create.call_args[1]["labels"]
-    assert labels["pocket-dock.managed"] == "true"
-    assert labels["pocket-dock.instance"] == "pd-lab"
+    assert labels["pocketdock.managed"] == "true"
+    assert labels["pocketdock.instance"] == "pd-lab"
 
 
 # --- Container (sync) properties ---
@@ -244,15 +244,15 @@ def test_sync_container_properties() -> None:
 # --- Imports from top-level ---
 
 
-def test_import_container_from_pocket_dock() -> None:
-    from pocket_dock import Container, create_new_container
+def test_import_container_from_pocketdock() -> None:
+    from pocketdock import Container, create_new_container
 
     assert Container is not None
     assert create_new_container is not None
 
 
 def test_import_async_from_async_module() -> None:
-    from pocket_dock.async_ import AsyncContainer, create_new_container
+    from pocketdock.async_ import AsyncContainer, create_new_container
 
     assert AsyncContainer is not None
     assert create_new_container is not None
@@ -281,7 +281,7 @@ async def test_read_file_skips_non_file_members() -> None:
         tar.addfile(info, io.BytesIO(content))
 
     with patch(
-        "pocket_dock._async_container.sc.pull_archive",
+        "pocketdock._async_container.sc.pull_archive",
         new_callable=AsyncMock,
         return_value=buf.getvalue(),
     ):
@@ -302,7 +302,7 @@ async def test_read_file_extractfile_returns_none() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc.pull_archive",
+            "pocketdock._async_container.sc.pull_archive",
             new_callable=AsyncMock,
             return_value=buf.getvalue(),
         ),
@@ -329,7 +329,7 @@ async def test_pull_single_file_extractfile_none() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc.pull_archive",
+            "pocketdock._async_container.sc.pull_archive",
             new_callable=AsyncMock,
             return_value=buf.getvalue(),
         ),
@@ -437,17 +437,17 @@ async def test_async_info_running() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc.inspect_container",
+            "pocketdock._async_container.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_data,
         ),
         patch(
-            "pocket_dock._async_container.sc.get_container_stats",
+            "pocketdock._async_container.sc.get_container_stats",
             new_callable=AsyncMock,
             return_value=stats_data,
         ),
         patch(
-            "pocket_dock._async_container.sc.get_container_top",
+            "pocketdock._async_container.sc.get_container_top",
             new_callable=AsyncMock,
             return_value=top_data,
         ),
@@ -470,7 +470,7 @@ async def test_async_info_stopped() -> None:
     }
 
     with patch(
-        "pocket_dock._async_container.sc.inspect_container",
+        "pocketdock._async_container.sc.inspect_container",
         new_callable=AsyncMock,
         return_value=inspect_data,
     ):
@@ -493,17 +493,17 @@ async def test_async_info_race_container_stops_during_stats() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc.inspect_container",
+            "pocketdock._async_container.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_data,
         ),
         patch(
-            "pocket_dock._async_container.sc.get_container_stats",
+            "pocketdock._async_container.sc.get_container_stats",
             new_callable=AsyncMock,
             side_effect=ContainerNotRunning("cid"),
         ),
         patch(
-            "pocket_dock._async_container.sc.get_container_top",
+            "pocketdock._async_container.sc.get_container_top",
             new_callable=AsyncMock,
         ),
     ):
@@ -525,17 +525,17 @@ async def test_async_info_race_container_removed_during_stats() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc.inspect_container",
+            "pocketdock._async_container.sc.inspect_container",
             new_callable=AsyncMock,
             return_value=inspect_data,
         ),
         patch(
-            "pocket_dock._async_container.sc.get_container_stats",
+            "pocketdock._async_container.sc.get_container_stats",
             new_callable=AsyncMock,
             side_effect=ContainerNotFound("cid"),
         ),
         patch(
-            "pocket_dock._async_container.sc.get_container_top",
+            "pocketdock._async_container.sc.get_container_top",
             new_callable=AsyncMock,
         ),
     ):
@@ -551,7 +551,7 @@ async def test_async_reboot_simple() -> None:
     ac = _make_container()
 
     with patch(
-        "pocket_dock._async_container.sc.restart_container",
+        "pocketdock._async_container.sc.restart_container",
         new_callable=AsyncMock,
     ) as mock_restart:
         await ac.reboot()
@@ -570,14 +570,14 @@ async def test_async_reboot_fresh() -> None:
     )
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
-        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.remove_container", new_callable=AsyncMock),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="new_cid",
         ) as mock_create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await ac.reboot(fresh=True)
 
@@ -593,17 +593,17 @@ async def test_async_reboot_fresh_stop_already_stopped() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc.stop_container",
+            "pocketdock._async_container.sc.stop_container",
             new_callable=AsyncMock,
             side_effect=ContainerNotRunning("cid"),
         ),
-        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.remove_container", new_callable=AsyncMock),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="new_cid",
         ),
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await ac.reboot(fresh=True)
 
@@ -614,18 +614,18 @@ async def test_async_reboot_fresh_remove_already_gone() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-test", image="img")
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock),
         patch(
-            "pocket_dock._async_container.sc.remove_container",
+            "pocketdock._async_container.sc.remove_container",
             new_callable=AsyncMock,
             side_effect=ContainerNotFound("cid"),
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="new_cid",
         ),
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await ac.reboot(fresh=True)
 
@@ -638,15 +638,15 @@ async def test_async_reboot_fresh_remove_already_gone() -> None:
 async def test_async_create_with_mem_limit() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as mock_create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         c = await async_factory(name="pd-mem", mem_limit="256m")
 
@@ -658,15 +658,15 @@ async def test_async_create_with_mem_limit() -> None:
 async def test_async_create_with_cpu_percent() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as mock_create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         c = await async_factory(name="pd-cpu", cpu_percent=50)
 
@@ -678,15 +678,15 @@ async def test_async_create_with_cpu_percent() -> None:
 async def test_async_create_no_limits_no_host_config() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as mock_create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await async_factory(name="pd-nolimits")
 
@@ -728,7 +728,7 @@ def test_sync_info_delegates() -> None:
     }
 
     with patch(
-        "pocket_dock._async_container.sc.inspect_container",
+        "pocketdock._async_container.sc.inspect_container",
         new_callable=AsyncMock,
         return_value=inspect_data,
     ):
@@ -743,7 +743,7 @@ def test_sync_reboot_delegates() -> None:
     c = Container(ac, lt)
 
     with patch(
-        "pocket_dock._async_container.sc.restart_container",
+        "pocketdock._async_container.sc.restart_container",
         new_callable=AsyncMock,
     ) as mock_restart:
         c.reboot()
@@ -778,17 +778,17 @@ async def test_async_run_stream_returns_exec_stream() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -812,17 +812,17 @@ async def test_async_run_detach_returns_process() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -857,17 +857,17 @@ async def test_async_on_stdout_callback() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -883,24 +883,24 @@ async def test_async_on_stderr_callback() -> None:
     captured: list[str] = []
     ac.on_stderr(lambda _c, data: captured.append(data))
 
-    from pocket_dock._stream import STREAM_STDERR
+    from pocketdock._stream import STREAM_STDERR
 
     writer = _mock_writer()
     frames = [(STREAM_STDERR, b"err")]
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -920,17 +920,17 @@ async def test_async_on_exit_callback() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list([]), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=42,
         ),
@@ -950,12 +950,12 @@ async def test_async_shutdown_cleans_up_streams() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list([]), writer),
         ),
@@ -963,8 +963,8 @@ async def test_async_shutdown_cleans_up_streams() -> None:
         await ac.run("echo x", stream=True)
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
-        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.remove_container", new_callable=AsyncMock),
     ):
         await ac.shutdown()
 
@@ -979,17 +979,17 @@ async def test_async_shutdown_cleans_up_processes() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -998,8 +998,8 @@ async def test_async_shutdown_cleans_up_processes() -> None:
         await proc.wait()
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
-        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.remove_container", new_callable=AsyncMock),
     ):
         await ac.shutdown()
 
@@ -1014,7 +1014,7 @@ async def test_sync_exec_stream_iteration() -> None:
     frames = [(STREAM_STDOUT, b"hi")]
 
     with patch(
-        "pocket_dock._socket_client._exec_inspect_exit_code",
+        "pocketdock._socket_client._exec_inspect_exit_code",
         new_callable=AsyncMock,
         return_value=0,
     ):
@@ -1040,17 +1040,17 @@ def test_sync_process_basic() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -1074,17 +1074,17 @@ def test_sync_process_read_drains() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -1107,17 +1107,17 @@ def test_sync_process_buffer_props() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -1137,17 +1137,17 @@ def test_sync_process_is_running() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list([]), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -1166,17 +1166,17 @@ def test_sync_process_kill() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list([]), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -1199,17 +1199,17 @@ def test_sync_container_run_stream() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -1231,17 +1231,17 @@ def test_sync_container_run_detach() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -1268,17 +1268,17 @@ def test_sync_container_on_stdout() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -1290,7 +1290,7 @@ def test_sync_container_on_stdout() -> None:
 
 
 def test_sync_container_on_stderr() -> None:
-    from pocket_dock._stream import STREAM_STDERR
+    from pocketdock._stream import STREAM_STDERR
 
     ac = _make_container()
     lt = _LoopThread.get()
@@ -1303,17 +1303,17 @@ def test_sync_container_on_stderr() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list(frames), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=0,
         ),
@@ -1335,17 +1335,17 @@ def test_sync_container_on_exit() -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(_gen_from_list([]), writer),
         ),
         patch(
-            "pocket_dock._socket_client._exec_inspect_exit_code",
+            "pocketdock._socket_client._exec_inspect_exit_code",
             new_callable=AsyncMock,
             return_value=7,
         ),
@@ -1360,25 +1360,25 @@ def test_sync_container_on_exit() -> None:
 
 
 def test_exports_exec_stream_alias() -> None:
-    from pocket_dock import ExecStream
+    from pocketdock import ExecStream
 
     assert ExecStream is SyncExecStream
 
 
 def test_exports_process_alias() -> None:
-    from pocket_dock import Process
+    from pocketdock import Process
 
     assert Process is SyncProcess
 
 
 def test_exports_async_exec_stream() -> None:
-    from pocket_dock.async_ import AsyncExecStream as ExportedStream
+    from pocketdock.async_ import AsyncExecStream as ExportedStream
 
     assert ExportedStream is AsyncExecStream
 
 
 def test_exports_async_process() -> None:
-    from pocket_dock.async_ import AsyncProcess as ExportedProc
+    from pocketdock.async_ import AsyncProcess as ExportedProc
 
     assert ExportedProc is AsyncProcess
 
@@ -1410,9 +1410,9 @@ async def test_async_shutdown_persist_stops_but_does_not_remove() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx", persist=True)
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
         patch(
-            "pocket_dock._async_container.sc.remove_container",
+            "pocketdock._async_container.sc.remove_container",
             new_callable=AsyncMock,
         ) as remove,
     ):
@@ -1426,9 +1426,9 @@ async def test_async_shutdown_persist_force_still_stops_only() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx", persist=True)
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
         patch(
-            "pocket_dock._async_container.sc.remove_container",
+            "pocketdock._async_container.sc.remove_container",
             new_callable=AsyncMock,
         ) as remove,
     ):
@@ -1442,9 +1442,9 @@ async def test_async_shutdown_persist_idempotent() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx", persist=True)
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock) as stop,
         patch(
-            "pocket_dock._async_container.sc.remove_container",
+            "pocketdock._async_container.sc.remove_container",
             new_callable=AsyncMock,
         ),
     ):
@@ -1461,7 +1461,7 @@ async def test_async_snapshot_with_tag() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
 
     with patch(
-        "pocket_dock._async_container.sc.commit_container",
+        "pocketdock._async_container.sc.commit_container",
         new_callable=AsyncMock,
         return_value="sha256:img",
     ) as mock:
@@ -1475,7 +1475,7 @@ async def test_async_snapshot_no_tag_defaults_latest() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
 
     with patch(
-        "pocket_dock._async_container.sc.commit_container",
+        "pocketdock._async_container.sc.commit_container",
         new_callable=AsyncMock,
         return_value="sha256:img",
     ) as mock:
@@ -1488,7 +1488,7 @@ async def test_async_snapshot_image_with_registry() -> None:
     ac = AsyncContainer("cid", "/tmp/s.sock", name="pd-xx")
 
     with patch(
-        "pocket_dock._async_container.sc.commit_container",
+        "pocketdock._async_container.sc.commit_container",
         new_callable=AsyncMock,
         return_value="sha256:img",
     ) as mock:
@@ -1503,7 +1503,7 @@ def test_sync_snapshot_delegates() -> None:
     c = Container(ac, lt)
 
     with patch(
-        "pocket_dock._async_container.sc.commit_container",
+        "pocketdock._async_container.sc.commit_container",
         new_callable=AsyncMock,
         return_value="sha256:img",
     ):
@@ -1518,56 +1518,56 @@ def test_sync_snapshot_delegates() -> None:
 async def test_async_create_with_persist() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         c = await async_factory(name="pd-persist", persist=True)
 
     assert c.persist is True
     labels = create.call_args[1]["labels"]
-    assert labels["pocket-dock.persist"] == "true"
-    assert "pocket-dock.created-at" in labels
+    assert labels["pocketdock.persist"] == "true"
+    assert "pocketdock.created-at" in labels
 
 
 async def test_async_create_without_persist_label() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         c = await async_factory(name="pd-eph")
 
     assert c.persist is False
     labels = create.call_args[1]["labels"]
-    assert labels["pocket-dock.persist"] == "false"
+    assert labels["pocketdock.persist"] == "false"
 
 
 async def test_async_create_with_volumes() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await async_factory(name="pd-vol", volumes={"/host/path": "/container/path"})
 
@@ -1578,15 +1578,15 @@ async def test_async_create_with_volumes() -> None:
 async def test_async_create_volumes_without_resource_limits() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await async_factory(name="pd-vol2", volumes={"/a": "/b"})
 
@@ -1598,15 +1598,15 @@ async def test_async_create_volumes_without_resource_limits() -> None:
 async def test_async_create_volumes_with_resource_limits() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await async_factory(
             name="pd-vol3",
@@ -1624,25 +1624,25 @@ async def test_async_create_volumes_with_resource_limits() -> None:
 
 async def test_reboot_fresh_includes_persist_labels() -> None:
     ac = AsyncContainer(
-        "cid", "/tmp/s.sock", name="pd-xx", image="pocket-dock/minimal", persist=True
+        "cid", "/tmp/s.sock", name="pd-xx", image="pocketdock/minimal", persist=True
     )
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
-        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.remove_container", new_callable=AsyncMock),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="newcid",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await ac.reboot(fresh=True)
 
     assert ac.container_id == "newcid"
     labels = create.call_args[1]["labels"]
-    assert labels["pocket-dock.persist"] == "true"
-    assert "pocket-dock.created-at" in labels
+    assert labels["pocketdock.persist"] == "true"
+    assert "pocketdock.created-at" in labels
 
 
 # --- Project properties ---
@@ -1673,21 +1673,21 @@ def test_sync_container_project_delegates() -> None:
 async def test_async_create_with_project_label() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
-        patch("pocket_dock.projects.find_project_root", return_value=None),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock.projects.find_project_root", return_value=None),
     ):
         c = await async_factory(name="pd-proj", persist=True, project="my-project")
 
     labels = create.call_args[1]["labels"]
-    assert labels["pocket-dock.project"] == "my-project"
+    assert labels["pocketdock.project"] == "my-project"
     assert c._project == "my-project"
 
 
@@ -1696,27 +1696,27 @@ async def test_async_reboot_fresh_preserves_project_labels() -> None:
         "cid",
         "/tmp/s.sock",
         name="pd-xx",
-        image="pocket-dock/minimal",
+        image="pocketdock/minimal",
         persist=True,
         project="my-proj",
         data_path="/data/path",
     )
 
     with (
-        patch("pocket_dock._async_container.sc.stop_container", new_callable=AsyncMock),
-        patch("pocket_dock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.remove_container", new_callable=AsyncMock),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="newcid",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await ac.reboot(fresh=True)
 
     labels = create.call_args[1]["labels"]
-    assert labels["pocket-dock.project"] == "my-proj"
-    assert labels["pocket-dock.data-path"] == "/data/path"
+    assert labels["pocketdock.project"] == "my-proj"
+    assert labels["pocketdock.data-path"] == "/data/path"
 
 
 # --- Logger integration in container ---
@@ -1729,7 +1729,7 @@ async def test_run_blocking_calls_logger(tmp_path: Path) -> None:
 
     mock_result = ExecResult(exit_code=0, stdout="hello\n", stderr="", duration_ms=42.0)
     with patch(
-        "pocket_dock._async_container.sc.exec_command",
+        "pocketdock._async_container.sc.exec_command",
         new_callable=AsyncMock,
         return_value=mock_result,
     ):
@@ -1758,12 +1758,12 @@ async def test_run_detach_creates_log_handle(tmp_path: Path) -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(fake_gen(), mock_writer),
         ),
@@ -1798,12 +1798,12 @@ async def test_session_creates_log_handle(tmp_path: Path) -> None:
 
     with (
         patch(
-            "pocket_dock._async_container.sc._exec_create",
+            "pocketdock._async_container.sc._exec_create",
             new_callable=AsyncMock,
             return_value="eid",
         ),
         patch(
-            "pocket_dock._async_container.sc._exec_start_stream",
+            "pocketdock._async_container.sc._exec_start_stream",
             new_callable=AsyncMock,
             return_value=(fake_gen(), mock_writer),
         ),
@@ -1826,30 +1826,30 @@ async def test_session_creates_log_handle(tmp_path: Path) -> None:
 
 
 async def test_create_new_container_with_project_root(tmp_path: Path) -> None:
-    from pocket_dock.projects import init_project
+    from pocketdock.projects import init_project
 
     init_project(tmp_path, project_name="my-test-proj")
 
     with (
-        patch("pocket_dock._async_container.sc.detect_socket", return_value="/fake.sock"),
+        patch("pocketdock._async_container.sc.detect_socket", return_value="/fake.sock"),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="cid123",
         ) as create_mock,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
-        patch("pocket_dock.projects.find_project_root", return_value=tmp_path),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock.projects.find_project_root", return_value=tmp_path),
     ):
         ac = await async_factory(persist=True)
         assert ac.project == "my-test-proj"
         assert ac.data_path != ""
 
     labels = create_mock.call_args[1]["labels"]
-    assert labels["pocket-dock.project"] == "my-test-proj"
-    assert "pocket-dock.data-path" in labels
+    assert labels["pocketdock.project"] == "my-test-proj"
+    assert "pocketdock.data-path" in labels
 
     # Instance dir should have been created
-    instances = list((tmp_path / ".pocket-dock" / "instances").iterdir())
+    instances = list((tmp_path / ".pocketdock" / "instances").iterdir())
     assert len(instances) == 1
     toml_file = instances[0] / "instance.toml"
     assert toml_file.is_file()
@@ -1858,25 +1858,25 @@ async def test_create_new_container_with_project_root(tmp_path: Path) -> None:
 
 
 async def test_create_new_container_with_explicit_project(tmp_path: Path) -> None:
-    from pocket_dock.projects import init_project
+    from pocketdock.projects import init_project
 
     init_project(tmp_path, project_name="yaml-name")
 
     with (
-        patch("pocket_dock._async_container.sc.detect_socket", return_value="/fake.sock"),
+        patch("pocketdock._async_container.sc.detect_socket", return_value="/fake.sock"),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="cid456",
         ) as create_mock,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
-        patch("pocket_dock.projects.find_project_root", return_value=tmp_path),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock.projects.find_project_root", return_value=tmp_path),
     ):
         ac = await async_factory(persist=True, project="explicit-proj")
         assert ac.project == "explicit-proj"
 
     labels = create_mock.call_args[1]["labels"]
-    assert labels["pocket-dock.project"] == "explicit-proj"
+    assert labels["pocketdock.project"] == "explicit-proj"
 
 
 # --- create_new_container with profile ---
@@ -1885,36 +1885,36 @@ async def test_create_new_container_with_explicit_project(tmp_path: Path) -> Non
 async def test_async_create_with_profile_resolves_image() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         c = await async_factory(name="pd-prof", profile="dev")
 
     assert c.container_id == "deadbeef"
     # Image should be resolved from profile
     args = create.call_args
-    assert args[0][1] == "pocket-dock/dev"
+    assert args[0][1] == "pocketdock/dev"
 
 
 async def test_async_create_profile_ignored_when_image_explicit() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         c = await async_factory(name="pd-imgover", image="custom:latest", profile="agent")
 
@@ -1927,26 +1927,26 @@ async def test_async_create_profile_ignored_when_image_explicit() -> None:
 async def test_async_create_profile_none_uses_default() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await async_factory(name="pd-nopr")
 
     args = create.call_args
-    assert args[0][1] == "pocket-dock/minimal"
+    assert args[0][1] == "pocketdock/minimal"
 
 
 async def test_async_create_profile_unknown_raises() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         pytest.raises(ValueError, match="Unknown profile"),
@@ -1956,22 +1956,22 @@ async def test_async_create_profile_unknown_raises() -> None:
 
 async def test_async_create_with_all_profiles() -> None:
     for profile_name, expected_tag in [
-        ("minimal", "pocket-dock/minimal"),
-        ("dev", "pocket-dock/dev"),
-        ("agent", "pocket-dock/agent"),
-        ("embedded", "pocket-dock/embedded"),
+        ("minimal", "pocketdock/minimal"),
+        ("dev", "pocketdock/dev"),
+        ("agent", "pocketdock/agent"),
+        ("embedded", "pocketdock/embedded"),
     ]:
         with (
             patch(
-                "pocket_dock._async_container.sc.detect_socket",
+                "pocketdock._async_container.sc.detect_socket",
                 return_value="/tmp/s.sock",
             ),
             patch(
-                "pocket_dock._async_container.sc.create_container",
+                "pocketdock._async_container.sc.create_container",
                 new_callable=AsyncMock,
                 return_value="deadbeef",
             ) as create,
-            patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+            patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
         ):
             await async_factory(name="pd-test", profile=profile_name)
 
@@ -1985,15 +1985,15 @@ async def test_async_create_with_all_profiles() -> None:
 async def test_async_create_with_devices() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await async_factory(name="pd-dev", devices=["/dev/ttyUSB0"])
 
@@ -2009,15 +2009,15 @@ async def test_async_create_with_devices() -> None:
 async def test_async_create_with_multiple_devices() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await async_factory(name="pd-devs", devices=["/dev/ttyUSB0", "/dev/ttyACM0"])
 
@@ -2028,15 +2028,15 @@ async def test_async_create_with_multiple_devices() -> None:
 async def test_async_create_with_devices_and_limits() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await async_factory(
             name="pd-dl",
@@ -2052,15 +2052,15 @@ async def test_async_create_with_devices_and_limits() -> None:
 async def test_async_create_devices_none_no_host_config_entry() -> None:
     with (
         patch(
-            "pocket_dock._async_container.sc.detect_socket",
+            "pocketdock._async_container.sc.detect_socket",
             return_value="/tmp/s.sock",
         ),
         patch(
-            "pocket_dock._async_container.sc.create_container",
+            "pocketdock._async_container.sc.create_container",
             new_callable=AsyncMock,
             return_value="deadbeef",
         ) as create,
-        patch("pocket_dock._async_container.sc.start_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
     ):
         await async_factory(name="pd-nodev")
 

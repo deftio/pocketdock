@@ -6,14 +6,14 @@ import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from pocket_dock._logger import (
+from pocketdock._logger import (
     DetachLogHandle,
     InstanceLogger,
     SessionLogHandle,
     _safe_timestamp,
 )
-from pocket_dock.projects import ensure_instance_dir, init_project
-from pocket_dock.types import ExecResult
+from pocketdock.projects import ensure_instance_dir, init_project
+from pocketdock.types import ExecResult
 
 if TYPE_CHECKING:
     from pathlib import Path

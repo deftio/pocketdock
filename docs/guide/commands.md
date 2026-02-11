@@ -1,6 +1,6 @@
 # Running Commands
 
-pocket-dock supports three execution modes: **blocking**, **streaming**, and **detached**.
+pocketdock supports three execution modes: **blocking**, **streaming**, and **detached**.
 
 ## Blocking Mode (Default)
 

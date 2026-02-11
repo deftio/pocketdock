@@ -82,7 +82,7 @@ sess.close()
 After closing, any further operations raise `SessionClosed`:
 
 ```python
-from pocket_dock import SessionClosed
+from pocketdock import SessionClosed
 
 sess.close()
 try:
@@ -99,7 +99,7 @@ except SessionClosed:
 
 ## Sentinel Protocol
 
-pocket-dock uses a sentinel protocol to reliably detect command boundaries and exit codes. After each `send_and_wait()` command, the session injects a sentinel marker (`__PD_{uuid}_${exit_code}__`) to determine where one command's output ends and the next begins. This is transparent to the user.
+pocketdock uses a sentinel protocol to reliably detect command boundaries and exit codes. After each `send_and_wait()` command, the session injects a sentinel marker (`__PD_{uuid}_${exit_code}__`) to determine where one command's output ends and the next begins. This is transparent to the user.
 
 ## Automatic Cleanup
 

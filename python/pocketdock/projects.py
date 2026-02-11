@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # Copyright (c) deftio llc
 
-"""Project management — .pocket-dock/ directory, instance dirs, metadata."""
+"""Project management — .pocketdock/ directory, instance dirs, metadata."""
 
 from __future__ import annotations
 
@@ -13,13 +13,13 @@ from typing import Any
 
 import yaml
 
-from pocket_dock.types import DoctorReport
+from pocketdock.types import DoctorReport
 
-_CONFIG_FILENAME = "pocket-dock.yaml"
+_CONFIG_FILENAME = "pocketdock.yaml"
 _INSTANCES_DIR = "instances"
 
 _DEFAULT_YAML_TEMPLATE = """\
-# Project configuration for pocket-dock
+# Project configuration for pocketdock
 project_name: {project_name}
 default_profile: minimal
 default_persist: false
@@ -33,13 +33,13 @@ logging:
 
 
 def find_project_root(start: Path | None = None) -> Path | None:
-    """Walk up from *start* (default: cwd) looking for ``.pocket-dock/pocket-dock.yaml``.
+    """Walk up from *start* (default: cwd) looking for ``.pocketdock/pocketdock.yaml``.
 
-    Returns the directory containing ``.pocket-dock/``, or ``None`` if not found.
+    Returns the directory containing ``.pocketdock/``, or ``None`` if not found.
     """
     current = (start or Path.cwd()).resolve()
     while True:
-        candidate = current / ".pocket-dock" / _CONFIG_FILENAME
+        candidate = current / ".pocketdock" / _CONFIG_FILENAME
         if candidate.is_file():
             return current
         parent = current.parent
@@ -49,12 +49,12 @@ def find_project_root(start: Path | None = None) -> Path | None:
 
 
 def init_project(path: Path | None = None, *, project_name: str | None = None) -> Path:
-    """Create ``.pocket-dock/pocket-dock.yaml`` in *path* (default: cwd).
+    """Create ``.pocketdock/pocketdock.yaml`` in *path* (default: cwd).
 
-    Returns the project root path (the directory containing ``.pocket-dock/``).
+    Returns the project root path (the directory containing ``.pocketdock/``).
     """
     root = (path or Path.cwd()).resolve()
-    pd_dir = root / ".pocket-dock"
+    pd_dir = root / ".pocketdock"
     pd_dir.mkdir(parents=True, exist_ok=True)
 
     name = project_name or root.name
@@ -69,8 +69,8 @@ def init_project(path: Path | None = None, *, project_name: str | None = None) -
 
 
 def get_project_name(project_root: Path) -> str:
-    """Parse ``pocket-dock.yaml`` for ``project_name``, fallback to dir name."""
-    config_path = project_root / ".pocket-dock" / _CONFIG_FILENAME
+    """Parse ``pocketdock.yaml`` for ``project_name``, fallback to dir name."""
+    config_path = project_root / ".pocketdock" / _CONFIG_FILENAME
     if config_path.is_file():
         try:
             data = yaml.safe_load(config_path.read_text())
@@ -84,11 +84,11 @@ def get_project_name(project_root: Path) -> str:
 
 
 def ensure_instance_dir(project_root: Path, instance_name: str) -> Path:
-    """Create ``.pocket-dock/instances/{name}/`` with ``logs/`` and ``data/`` subdirs.
+    """Create ``.pocketdock/instances/{name}/`` with ``logs/`` and ``data/`` subdirs.
 
     Returns the instance directory path.
     """
-    instance_dir = project_root / ".pocket-dock" / _INSTANCES_DIR / instance_name
+    instance_dir = project_root / ".pocketdock" / _INSTANCES_DIR / instance_name
     instance_dir.mkdir(parents=True, exist_ok=True)
     (instance_dir / "logs").mkdir(exist_ok=True)
     (instance_dir / "data").mkdir(exist_ok=True)
@@ -111,7 +111,7 @@ def write_instance_metadata(  # noqa: PLR0913
 
     Uses a simple TOML emitter (flat sections, trivial to generate).
     """
-    lines = ["# Maintained by pocket-dock. Do not edit.", ""]
+    lines = ["# Maintained by pocketdock. Do not edit.", ""]
 
     # --- container section ---
     container_pairs: list[tuple[str, object]] = []
@@ -166,7 +166,7 @@ def read_instance_metadata(instance_dir: Path) -> dict[str, Any]:
 
 def remove_instance_dir(project_root: Path, instance_name: str) -> bool:
     """Remove the instance directory. Returns ``True`` if removed."""
-    instance_dir = project_root / ".pocket-dock" / _INSTANCES_DIR / instance_name
+    instance_dir = project_root / ".pocketdock" / _INSTANCES_DIR / instance_name
     if instance_dir.is_dir():
         shutil.rmtree(instance_dir)
         return True
@@ -174,8 +174,8 @@ def remove_instance_dir(project_root: Path, instance_name: str) -> bool:
 
 
 def list_instance_dirs(project_root: Path) -> list[Path]:
-    """List all directories under ``.pocket-dock/instances/``."""
-    instances_dir = project_root / ".pocket-dock" / _INSTANCES_DIR
+    """List all directories under ``.pocketdock/instances/``."""
+    instances_dir = project_root / ".pocketdock" / _INSTANCES_DIR
     if not instances_dir.is_dir():
         return []
     return sorted(p for p in instances_dir.iterdir() if p.is_dir())
@@ -196,18 +196,18 @@ async def doctor(
         A :class:`DoctorReport` with orphaned containers, stale dirs, and healthy count.
 
     Raises:
-        ProjectNotInitialized: If no ``.pocket-dock/`` project directory is found.
+        ProjectNotInitialized: If no ``.pocketdock/`` project directory is found.
 
     """
-    from pocket_dock.errors import ProjectNotInitialized  # noqa: PLC0415
-    from pocket_dock.persistence import list_containers  # noqa: PLC0415
+    from pocketdock.errors import ProjectNotInitialized  # noqa: PLC0415
+    from pocketdock.persistence import list_containers  # noqa: PLC0415
 
     if project_root is None:
         project_root = find_project_root()
     if project_root is None:
         raise ProjectNotInitialized
 
-    config_file = project_root / ".pocket-dock" / _CONFIG_FILENAME
+    config_file = project_root / ".pocketdock" / _CONFIG_FILENAME
     if not config_file.is_file():
         raise ProjectNotInitialized
 

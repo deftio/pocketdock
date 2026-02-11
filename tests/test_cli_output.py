@@ -6,7 +6,7 @@ import json
 from io import StringIO
 from unittest.mock import patch
 
-from pocket_dock.cli._output import (
+from pocketdock.cli._output import (
     click_echo_json,
     confirm_destructive,
     format_container_info,
@@ -16,14 +16,14 @@ from pocket_dock.cli._output import (
     format_exec_result,
     print_success,
 )
-from pocket_dock.errors import (
+from pocketdock.errors import (
     ContainerNotFound,
     ImageNotFound,
     PodmanNotRunning,
     ProjectNotInitialized,
     SocketCommunicationError,
 )
-from pocket_dock.types import ContainerInfo, ContainerListItem, DoctorReport, ExecResult
+from pocketdock.types import ContainerInfo, ContainerListItem, DoctorReport, ExecResult
 
 # --- format_container_list ---
 
@@ -242,7 +242,7 @@ def test_print_success() -> None:
 
 def test_confirm_destructive_yes() -> None:
     with patch.object(
-        __import__("pocket_dock.cli._output", fromlist=["_console"]),
+        __import__("pocketdock.cli._output", fromlist=["_console"]),
         "_console",
     ) as mock_console:
         mock_console.input.return_value = "y"
@@ -252,7 +252,7 @@ def test_confirm_destructive_yes() -> None:
 
 def test_confirm_destructive_no() -> None:
     with patch.object(
-        __import__("pocket_dock.cli._output", fromlist=["_console"]),
+        __import__("pocketdock.cli._output", fromlist=["_console"]),
         "_console",
     ) as mock_console:
         mock_console.input.return_value = "n"

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 
 class PocketDockError(Exception):
-    """Base exception for all pocket-dock errors."""
+    """Base exception for all pocketdock errors."""
 
 
 class SocketError(PocketDockError):
@@ -90,7 +90,7 @@ class SessionClosed(PocketDockError):
 
 
 class ProjectNotInitialized(PocketDockError):
-    """No .pocket-dock/ project directory found."""
+    """No .pocketdock/ project directory found."""
 
     def __init__(self) -> None:
-        super().__init__("No .pocket-dock/ project directory found. Run `pocket-dock init` first.")
+        super().__init__("No .pocketdock/ project directory found. Run `pocketdock init` first.")

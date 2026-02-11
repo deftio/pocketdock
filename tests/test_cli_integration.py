@@ -6,8 +6,8 @@ import contextlib
 from typing import TYPE_CHECKING
 
 from click.testing import CliRunner
-from pocket_dock import _socket_client as sc
-from pocket_dock.cli.main import cli
+from pocketdock import _socket_client as sc
+from pocketdock.cli.main import cli
 
 from .conftest import requires_engine
 
@@ -25,7 +25,7 @@ async def _force_cleanup(name: str) -> None:
         return
     with contextlib.suppress(Exception):
         containers = await sc.list_containers(
-            socket_path, label_filter=f"pocket-dock.instance={name}"
+            socket_path, label_filter=f"pocketdock.instance={name}"
         )
         for ct in containers:
             with contextlib.suppress(Exception):
@@ -90,7 +90,7 @@ def test_cli_export_import_roundtrip(tmp_path: pytest.TempPathFactory) -> None:
     out = str(tmp_path / "minimal.tar")  # type: ignore[operator]
     runner = CliRunner()
     # Export
-    result = runner.invoke(cli, ["export", "--image", "pocket-dock/minimal", "-o", out])
+    result = runner.invoke(cli, ["export", "--image", "pocketdock/minimal", "-o", out])
     assert result.exit_code == 0
     assert "Exported" in result.output
     # Import

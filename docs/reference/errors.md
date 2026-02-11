@@ -1,6 +1,6 @@
 # Error Reference
 
-All exceptions inherit from `PocketDockError` and can be imported from `pocket_dock`.
+All exceptions inherit from `PocketDockError` and can be imported from `pocketdock`.
 
 ## Hierarchy
 
@@ -23,15 +23,15 @@ PocketDockError
 
 ### `PocketDockError`
 
-Base exception for all pocket-dock errors. Catch this to handle any pocket-dock error:
+Base exception for all pocketdock errors. Catch this to handle any pocketdock error:
 
 ```python
-from pocket_dock import PocketDockError
+from pocketdock import PocketDockError
 
 try:
     c = create_new_container()
 except PocketDockError as e:
-    print(f"pocket-dock error: {e}")
+    print(f"pocketdock error: {e}")
 ```
 
 ## Socket Errors
@@ -54,7 +54,7 @@ Cannot connect to the container engine socket.
 **When raised:** The socket file doesn't exist, permission denied, or the engine isn't running.
 
 ```python
-from pocket_dock import SocketConnectionError
+from pocketdock import SocketConnectionError
 
 try:
     c = create_new_container()
@@ -102,7 +102,7 @@ Container does not exist.
 **When raised:** The engine returned a 404 for the container ID. The container was never created, or it was already removed.
 
 ```python
-from pocket_dock import ContainerNotFound
+from pocketdock import ContainerNotFound
 
 try:
     c = resume_container("nonexistent")
@@ -128,7 +128,7 @@ Container was removed externally.
 |-----------|------|-------------|
 | `container_id` | `str` | Container ID or name |
 
-**When raised:** The container existed when pocket-dock last checked, but it's gone now. Likely removed by another process or the engine.
+**When raised:** The container existed when pocketdock last checked, but it's gone now. Likely removed by another process or the engine.
 
 ## Image Errors
 
@@ -143,7 +143,7 @@ Requested image does not exist locally.
 **When raised:** `create_new_container()` was called with an image that hasn't been built or pulled.
 
 ```python
-from pocket_dock import ImageNotFound
+from pocketdock import ImageNotFound
 
 try:
     c = create_new_container(image="nonexistent:latest")
@@ -160,7 +160,7 @@ Operation attempted on a closed session.
 **When raised:** `send()`, `send_and_wait()`, or `read()` was called after `close()`.
 
 ```python
-from pocket_dock import SessionClosed
+from pocketdock import SessionClosed
 
 sess = c.session()
 sess.close()
@@ -176,10 +176,10 @@ except SessionClosed:
 
 Operation requires a project directory that doesn't exist.
 
-**When raised:** `doctor()` or project-related operations were called outside a `.pocket-dock/` project directory.
+**When raised:** `doctor()` or project-related operations were called outside a `.pocketdock/` project directory.
 
 ```python
-from pocket_dock import ProjectNotInitialized
+from pocketdock import ProjectNotInitialized
 
 try:
     report = doctor()

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
-from pocket_dock._config import PocketDockConfig, _build_config, _merge_yaml, load_config
+from pocketdock._config import PocketDockConfig, _build_config, _merge_yaml, load_config
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -43,9 +43,9 @@ def test_load_config_no_files_returns_defaults() -> None:
 
 
 def test_load_config_project_override(tmp_path: Path) -> None:
-    pd_dir = tmp_path / ".pocket-dock"
+    pd_dir = tmp_path / ".pocketdock"
     pd_dir.mkdir()
-    (pd_dir / "pocket-dock.yaml").write_text(
+    (pd_dir / "pocketdock.yaml").write_text(
         "project_name: my-app\ndefault_profile: dev\ndefault_persist: true\n"
     )
 
@@ -58,11 +58,11 @@ def test_load_config_project_override(tmp_path: Path) -> None:
 
 
 def test_load_config_install_level_override(tmp_path: Path) -> None:
-    install_dir = tmp_path / ".pocket-dock"
+    install_dir = tmp_path / ".pocketdock"
     install_dir.mkdir()
-    (install_dir / "pocket-dock.yaml").write_text("socket: /custom/sock\nlog_level: debug\n")
+    (install_dir / "pocketdock.yaml").write_text("socket: /custom/sock\nlog_level: debug\n")
 
-    with patch("pocket_dock._config.Path.home", return_value=tmp_path):
+    with patch("pocketdock._config.Path.home", return_value=tmp_path):
         cfg = load_config(project_root=None)
 
     assert cfg.socket == "/custom/sock"
@@ -71,18 +71,18 @@ def test_load_config_install_level_override(tmp_path: Path) -> None:
 
 def test_load_config_project_overrides_install(tmp_path: Path) -> None:
     # Install-level
-    install_dir = tmp_path / "home" / ".pocket-dock"
+    install_dir = tmp_path / "home" / ".pocketdock"
     install_dir.mkdir(parents=True)
-    (install_dir / "pocket-dock.yaml").write_text("default_profile: dev\nlog_level: debug\n")
+    (install_dir / "pocketdock.yaml").write_text("default_profile: dev\nlog_level: debug\n")
 
     # Project-level overrides profile but not log_level
     project_root = tmp_path / "project"
     project_root.mkdir()
-    pd_dir = project_root / ".pocket-dock"
+    pd_dir = project_root / ".pocketdock"
     pd_dir.mkdir()
-    (pd_dir / "pocket-dock.yaml").write_text("default_profile: agent\n")
+    (pd_dir / "pocketdock.yaml").write_text("default_profile: agent\n")
 
-    with patch("pocket_dock._config.Path.home", return_value=tmp_path / "home"):
+    with patch("pocketdock._config.Path.home", return_value=tmp_path / "home"):
         cfg = load_config(project_root=project_root)
 
     assert cfg.default_profile == "agent"  # project wins
@@ -90,9 +90,9 @@ def test_load_config_project_overrides_install(tmp_path: Path) -> None:
 
 
 def test_load_config_logging_section(tmp_path: Path) -> None:
-    pd_dir = tmp_path / ".pocket-dock"
+    pd_dir = tmp_path / ".pocketdock"
     pd_dir.mkdir()
-    (pd_dir / "pocket-dock.yaml").write_text(
+    (pd_dir / "pocketdock.yaml").write_text(
         "logging:\n  auto_log: false\n  max_log_size: 50MB\n  retention_days: 7\n"
     )
 

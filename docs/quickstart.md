@@ -10,32 +10,32 @@ Get a container running in under a minute.
 ## Install
 
 ```bash
-pip install pocket-dock          # SDK only
-pip install pocket-dock[cli]     # SDK + CLI
+pip install pocketdock          # SDK only
+pip install pocketdock[cli]     # SDK + CLI
 ```
 
 ## Build the Minimal Image
 
-pocket-dock ships Dockerfiles for four image profiles. The `minimal` profile (~25MB, <500ms startup) is the default:
+pocketdock ships Dockerfiles for four image profiles. The `minimal` profile (~25MB, <500ms startup) is the default:
 
 ```bash
-pocket-dock build minimal
+pocketdock build minimal
 ```
 
 Or build directly with your container engine:
 
 ```bash
 # Podman
-podman build -t pocket-dock/minimal images/minimal/
+podman build -t pocketdock/minimal images/minimal/
 
 # Docker
-docker build -t pocket-dock/minimal images/minimal/
+docker build -t pocketdock/minimal images/minimal/
 ```
 
 ## Run Your First Container
 
 ```python
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 c = create_new_container()
 result = c.run("echo hello")
@@ -49,7 +49,7 @@ c.shutdown()
 Use a context manager to automatically clean up the container:
 
 ```python
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 with create_new_container() as c:
     result = c.run("echo hello")
@@ -85,16 +85,16 @@ with create_new_container() as c:
 
 ```bash
 # Create a persistent container
-pocket-dock create --name my-sandbox
+pocketdock create --name my-sandbox
 
 # Run a command
-pocket-dock run my-sandbox echo hello
+pocketdock run my-sandbox echo hello
 
 # Interactive shell
-pocket-dock shell my-sandbox
+pocketdock shell my-sandbox
 
 # Clean up
-pocket-dock shutdown my-sandbox --yes
+pocketdock shutdown my-sandbox --yes
 ```
 
 ## Next Steps

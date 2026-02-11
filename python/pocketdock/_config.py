@@ -11,12 +11,12 @@ from typing import Any
 
 import yaml
 
-_CONFIG_FILENAME = "pocket-dock.yaml"
+_CONFIG_FILENAME = "pocketdock.yaml"
 
 
 @dataclasses.dataclass(frozen=True)
 class PocketDockConfig:
-    """Resolved pocket-dock configuration."""
+    """Resolved pocketdock configuration."""
 
     project_name: str = ""
     default_profile: str = "minimal"
@@ -33,19 +33,19 @@ def load_config(project_root: Path | None = None) -> PocketDockConfig:
     """Load configuration with precedence: project > install > defaults.
 
     1. Start with defaults
-    2. Overlay install-level ``~/.pocket-dock/pocket-dock.yaml`` (if exists)
-    3. Overlay project-level ``.pocket-dock/pocket-dock.yaml`` (if exists)
+    2. Overlay install-level ``~/.pocketdock/pocketdock.yaml`` (if exists)
+    3. Overlay project-level ``.pocketdock/pocketdock.yaml`` (if exists)
     """
     overrides: dict[str, Any] = {}
 
     # Install-level config
-    install_config = Path.home() / ".pocket-dock" / _CONFIG_FILENAME
+    install_config = Path.home() / ".pocketdock" / _CONFIG_FILENAME
     if install_config.is_file():
         _merge_yaml(overrides, install_config)
 
     # Project-level config
     if project_root is not None:
-        project_config = project_root / ".pocket-dock" / _CONFIG_FILENAME
+        project_config = project_root / ".pocketdock" / _CONFIG_FILENAME
         if project_config.is_file():
             _merge_yaml(overrides, project_config)
 

@@ -1,11 +1,11 @@
 # CLI Reference
 
-pocket-dock includes a full CLI for managing containers from the terminal.
+pocketdock includes a full CLI for managing containers from the terminal.
 
 ## Install
 
 ```bash
-pip install pocket-dock[cli]
+pip install pocketdock[cli]
 ```
 
 ## Global Options
@@ -21,10 +21,10 @@ pip install pocket-dock[cli]
 
 ### `init`
 
-Initialize a `.pocket-dock/` project directory.
+Initialize a `.pocketdock/` project directory.
 
 ```bash
-pocket-dock init [PATH]
+pocketdock init [PATH]
 ```
 
 | Option | Description |
@@ -36,7 +36,7 @@ pocket-dock init [PATH]
 Show project summary and container states.
 
 ```bash
-pocket-dock status [--json]
+pocketdock status [--json]
 ```
 
 ### `doctor`
@@ -44,7 +44,7 @@ pocket-dock status [--json]
 Diagnose orphaned containers and stale instance directories.
 
 ```bash
-pocket-dock doctor [--json]
+pocketdock doctor [--json]
 ```
 
 ### `logs`
@@ -52,7 +52,7 @@ pocket-dock doctor [--json]
 View command history for the project.
 
 ```bash
-pocket-dock logs [--json] [--history] [--follow] [--limit N]
+pocketdock logs [--json] [--history] [--follow] [--limit N]
 ```
 
 | Option | Description |
@@ -68,12 +68,12 @@ pocket-dock logs [--json] [--history] [--follow] [--limit N]
 Create a new container.
 
 ```bash
-pocket-dock create [OPTIONS]
+pocketdock create [OPTIONS]
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--image IMAGE` | Container image (default: `pocket-dock/minimal`) |
+| `--image IMAGE` | Container image (default: `pocketdock/minimal`) |
 | `--name NAME` | Container name (auto-generated if omitted) |
 | `--profile PROFILE` | Image profile (`minimal`, `dev`, `agent`, `embedded`) |
 | `--mem-limit LIMIT` | Memory limit (e.g., `256m`, `1g`) |
@@ -82,7 +82,7 @@ pocket-dock create [OPTIONS]
 | `--device DEVICE` | Device passthrough (can be repeated) |
 
 ```bash
-pocket-dock create --name my-sandbox --profile dev --mem-limit 512m --persist
+pocketdock create --name my-sandbox --profile dev --mem-limit 512m --persist
 ```
 
 ### `run`
@@ -90,7 +90,7 @@ pocket-dock create --name my-sandbox --profile dev --mem-limit 512m --persist
 Execute a command inside a container.
 
 ```bash
-pocket-dock run CONTAINER [OPTIONS] COMMAND...
+pocketdock run CONTAINER [OPTIONS] COMMAND...
 ```
 
 | Option | Description |
@@ -101,10 +101,10 @@ pocket-dock run CONTAINER [OPTIONS] COMMAND...
 | `--lang LANG` | Language wrapper (e.g., `python`) |
 
 ```bash
-pocket-dock run my-sandbox echo hello
-pocket-dock run my-sandbox --stream make all
-pocket-dock run my-sandbox --detach python server.py
-pocket-dock run my-sandbox --lang python "print(2 + 2)"
+pocketdock run my-sandbox echo hello
+pocketdock run my-sandbox --stream make all
+pocketdock run my-sandbox --detach python server.py
+pocketdock run my-sandbox --lang python "print(2 + 2)"
 ```
 
 ### `shell`
@@ -112,7 +112,7 @@ pocket-dock run my-sandbox --lang python "print(2 + 2)"
 Open an interactive shell session.
 
 ```bash
-pocket-dock shell CONTAINER
+pocketdock shell CONTAINER
 ```
 
 This passes through to the engine's `exec -it` command (e.g., `docker exec -it CONTAINER /bin/sh`).
@@ -122,7 +122,7 @@ This passes through to the engine's `exec -it` command (e.g., `docker exec -it C
 Restart a container.
 
 ```bash
-pocket-dock reboot CONTAINER [--fresh]
+pocketdock reboot CONTAINER [--fresh]
 ```
 
 | Option | Description |
@@ -134,7 +134,7 @@ pocket-dock reboot CONTAINER [--fresh]
 Stop a running container without removing it.
 
 ```bash
-pocket-dock stop CONTAINER
+pocketdock stop CONTAINER
 ```
 
 ### `resume`
@@ -142,7 +142,7 @@ pocket-dock stop CONTAINER
 Resume a stopped persistent container.
 
 ```bash
-pocket-dock resume CONTAINER
+pocketdock resume CONTAINER
 ```
 
 ### `shutdown`
@@ -150,7 +150,7 @@ pocket-dock resume CONTAINER
 Stop and remove a container.
 
 ```bash
-pocket-dock shutdown CONTAINER [--yes]
+pocketdock shutdown CONTAINER [--yes]
 ```
 
 | Option | Description |
@@ -162,19 +162,19 @@ pocket-dock shutdown CONTAINER [--yes]
 Commit a container's filesystem as a new image.
 
 ```bash
-pocket-dock snapshot CONTAINER IMAGE_NAME
+pocketdock snapshot CONTAINER IMAGE_NAME
 ```
 
 ```bash
-pocket-dock snapshot my-sandbox my-sandbox:v1
+pocketdock snapshot my-sandbox my-sandbox:v1
 ```
 
 ### `prune`
 
-Remove all stopped pocket-dock containers.
+Remove all stopped pocketdock containers.
 
 ```bash
-pocket-dock prune [--yes] [--project PROJECT]
+pocketdock prune [--yes] [--project PROJECT]
 ```
 
 | Option | Description |
@@ -186,16 +186,16 @@ pocket-dock prune [--yes] [--project PROJECT]
 
 ### `list`
 
-List all pocket-dock managed containers.
+List all pocketdock managed containers.
 
 ```bash
-pocket-dock list [--json] [--project PROJECT]
+pocketdock list [--json] [--project PROJECT]
 ```
 
 ```bash
-pocket-dock list
-pocket-dock list --json
-pocket-dock list --project my-app
+pocketdock list
+pocketdock list --json
+pocketdock list --project my-app
 ```
 
 ### `info`
@@ -203,7 +203,7 @@ pocket-dock list --project my-app
 Show detailed information about a container.
 
 ```bash
-pocket-dock info CONTAINER [--json]
+pocketdock info CONTAINER [--json]
 ```
 
 ## File Operations
@@ -213,11 +213,11 @@ pocket-dock info CONTAINER [--json]
 Copy a file or directory from the host into a container.
 
 ```bash
-pocket-dock push CONTAINER SRC DEST
+pocketdock push CONTAINER SRC DEST
 ```
 
 ```bash
-pocket-dock push my-sandbox ./src/ /home/sandbox/src/
+pocketdock push my-sandbox ./src/ /home/sandbox/src/
 ```
 
 ### `pull`
@@ -225,11 +225,11 @@ pocket-dock push my-sandbox ./src/ /home/sandbox/src/
 Copy a file or directory from a container to the host.
 
 ```bash
-pocket-dock pull CONTAINER SRC DEST
+pocketdock pull CONTAINER SRC DEST
 ```
 
 ```bash
-pocket-dock pull my-sandbox /home/sandbox/output.csv ./output.csv
+pocketdock pull my-sandbox /home/sandbox/output.csv ./output.csv
 ```
 
 ## Image Profile Commands
@@ -239,7 +239,7 @@ pocket-dock pull my-sandbox /home/sandbox/output.csv ./output.csv
 List available image profiles.
 
 ```bash
-pocket-dock profiles [--json]
+pocketdock profiles [--json]
 ```
 
 ### `build`
@@ -247,12 +247,12 @@ pocket-dock profiles [--json]
 Build profile images from Dockerfiles.
 
 ```bash
-pocket-dock build [PROFILE]
+pocketdock build [PROFILE]
 ```
 
 ```bash
-pocket-dock build           # Build all profiles
-pocket-dock build minimal   # Build a specific profile
+pocketdock build           # Build all profiles
+pocketdock build minimal   # Build a specific profile
 ```
 
 ### `export`
@@ -260,7 +260,7 @@ pocket-dock build minimal   # Build a specific profile
 Save images to a tar/tar.gz file for transfer.
 
 ```bash
-pocket-dock export [OPTIONS] -o OUTPUT
+pocketdock export [OPTIONS] -o OUTPUT
 ```
 
 | Option | Description |
@@ -269,7 +269,7 @@ pocket-dock export [OPTIONS] -o OUTPUT
 | `-o / --output FILE` | Output file path |
 
 ```bash
-pocket-dock export --all -o images.tar.gz
+pocketdock export --all -o images.tar.gz
 ```
 
 ### `import`
@@ -277,11 +277,11 @@ pocket-dock export --all -o images.tar.gz
 Load images from a tar/tar.gz file.
 
 ```bash
-pocket-dock import FILE
+pocketdock import FILE
 ```
 
 ```bash
-pocket-dock import images.tar.gz
+pocketdock import images.tar.gz
 ```
 
 ## JSON Output
@@ -289,10 +289,10 @@ pocket-dock import images.tar.gz
 Read commands support `--json` for machine-readable output:
 
 ```bash
-pocket-dock list --json
-pocket-dock info my-sandbox --json
-pocket-dock doctor --json
-pocket-dock status --json
-pocket-dock logs --json
-pocket-dock profiles --json
+pocketdock list --json
+pocketdock info my-sandbox --json
+pocketdock doctor --json
+pocketdock status --json
+pocketdock logs --json
+pocketdock profiles --json
 ```

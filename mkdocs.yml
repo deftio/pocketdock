@@ -1,8 +1,8 @@
-site_name: pocket-dock
+site_name: pocketdock
 site_description: Portable, offline-first container sandboxes for LLM agents and dev workflows
-site_url: https://deftio.github.io/pocket-dock/
-repo_url: https://github.com/deftio/pocket-dock
-repo_name: deftio/pocket-dock
+site_url: https://deftio.github.io/pocketdock/
+repo_url: https://github.com/deftio/pocketdock
+repo_name: deftio/pocketdock
 
 theme:
   name: material

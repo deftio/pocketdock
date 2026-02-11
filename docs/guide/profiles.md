@@ -1,6 +1,6 @@
 # Image Profiles
 
-pocket-dock ships four pre-baked Dockerfiles for common use cases.
+pocketdock ships four pre-baked Dockerfiles for common use cases.
 
 ## Available Profiles
 
@@ -16,21 +16,21 @@ pocket-dock ships four pre-baked Dockerfiles for common use cases.
 ### With the `profile` Parameter
 
 ```python
-from pocket_dock import create_new_container
+from pocketdock import create_new_container
 
 with create_new_container(profile="dev") as c:
     result = c.run("python --version")
     print(result.stdout)
 ```
 
-The `profile` parameter resolves to the profile's image tag (e.g., `pocket-dock/dev`) and applies the profile's default network setting.
+The `profile` parameter resolves to the profile's image tag (e.g., `pocketdock/dev`) and applies the profile's default network setting.
 
 ### With the `image` Parameter
 
 You can also specify the image tag directly:
 
 ```python
-with create_new_container(image="pocket-dock/agent") as c:
+with create_new_container(image="pocketdock/agent") as c:
     result = c.run("python -c 'import pandas; print(pandas.__version__)'", lang=None)
 ```
 
@@ -40,20 +40,20 @@ with create_new_container(image="pocket-dock/agent") as c:
 
 ```bash
 # Build all profiles
-pocket-dock build
+pocketdock build
 
 # Build a specific profile
-pocket-dock build minimal
-pocket-dock build dev
+pocketdock build minimal
+pocketdock build dev
 ```
 
 ### Via Container Engine
 
 ```bash
-docker build -t pocket-dock/minimal images/minimal/
-docker build -t pocket-dock/dev images/dev/
-docker build -t pocket-dock/agent images/agent/
-docker build -t pocket-dock/embedded images/embedded/
+docker build -t pocketdock/minimal images/minimal/
+docker build -t pocketdock/dev images/dev/
+docker build -t pocketdock/agent images/agent/
+docker build -t pocketdock/embedded images/embedded/
 ```
 
 ## Listing Profiles
@@ -61,7 +61,7 @@ docker build -t pocket-dock/embedded images/embedded/
 ### SDK
 
 ```python
-from pocket_dock import list_profiles, resolve_profile
+from pocketdock import list_profiles, resolve_profile
 
 # List all profiles
 profiles = list_profiles()
@@ -71,7 +71,7 @@ for p in profiles:
 # Resolve a single profile
 info = resolve_profile("dev")
 info.name            # "dev"
-info.image_tag       # "pocket-dock/dev"
+info.image_tag       # "pocketdock/dev"
 info.network_default # True
 info.description     # "Development tools, git, curl, ..."
 info.size_estimate   # "~250 MB"
@@ -81,8 +81,8 @@ info.dockerfile_dir  # path to Dockerfile directory
 ### CLI
 
 ```bash
-pocket-dock profiles
-pocket-dock profiles --json
+pocketdock profiles
+pocketdock profiles --json
 ```
 
 ## Export and Import
@@ -91,10 +91,10 @@ Transfer images between machines for air-gapped environments:
 
 ```bash
 # Export all profile images to a tar.gz file
-pocket-dock export --all -o images.tar.gz
+pocketdock export --all -o images.tar.gz
 
 # Import on another machine
-pocket-dock import images.tar.gz
+pocketdock import images.tar.gz
 ```
 
 ## Device Passthrough

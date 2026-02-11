@@ -25,23 +25,23 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-from pocket_dock._stream import (
+from pocketdock._stream import (
     HEADER_SIZE as _DEMUX_HEADER_SIZE,
 )
-from pocket_dock._stream import (
+from pocketdock._stream import (
     DemuxResult,
     demux_stream,
     demux_stream_iter,
     parse_stream_header,
 )
-from pocket_dock.errors import (
+from pocketdock.errors import (
     ContainerNotFound,
     ContainerNotRunning,
     ImageNotFound,
     SocketCommunicationError,
     SocketConnectionError,
 )
-from pocket_dock.types import ExecResult
+from pocketdock.types import ExecResult
 
 # ---------------------------------------------------------------------------
 # Socket detection
@@ -745,7 +745,7 @@ async def list_containers(
 
     Args:
         socket_path: Path to the container engine Unix socket.
-        label_filter: Label filter string (e.g. ``"pocket-dock.managed=true"``).
+        label_filter: Label filter string (e.g. ``"pocketdock.managed=true"``).
 
     Returns:
         List of container JSON objects from the engine.
@@ -812,7 +812,7 @@ async def build_image(
     Args:
         socket_path: Path to the container engine Unix socket.
         context_tar: Tar archive containing the Dockerfile and build context.
-        tag: Image tag (e.g. ``"pocket-dock/dev"``).
+        tag: Image tag (e.g. ``"pocketdock/dev"``).
 
     Returns:
         Build output as a string (streaming JSON lines from the engine).
@@ -838,7 +838,7 @@ async def save_image(socket_path: str, image_name: str) -> bytes:
 
     Args:
         socket_path: Path to the container engine Unix socket.
-        image_name: Image name with optional tag (e.g. ``"pocket-dock/dev:latest"``).
+        image_name: Image name with optional tag (e.g. ``"pocketdock/dev:latest"``).
 
     Returns:
         Raw tar archive bytes.

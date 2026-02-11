@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from pocket_dock.profiles import (
+from pocketdock.profiles import (
     PROFILES,
     ProfileInfo,
     get_dockerfile_path,
@@ -17,27 +17,27 @@ from pocket_dock.profiles import (
 def test_resolve_minimal() -> None:
     info = resolve_profile("minimal")
     assert info.name == "minimal"
-    assert info.image_tag == "pocket-dock/minimal"
+    assert info.image_tag == "pocketdock/minimal"
 
 
 def test_resolve_dev() -> None:
     info = resolve_profile("dev")
     assert info.name == "dev"
-    assert info.image_tag == "pocket-dock/dev"
+    assert info.image_tag == "pocketdock/dev"
     assert info.network_default is True
 
 
 def test_resolve_agent() -> None:
     info = resolve_profile("agent")
     assert info.name == "agent"
-    assert info.image_tag == "pocket-dock/agent"
+    assert info.image_tag == "pocketdock/agent"
     assert info.network_default is False
 
 
 def test_resolve_embedded() -> None:
     info = resolve_profile("embedded")
     assert info.name == "embedded"
-    assert info.image_tag == "pocket-dock/embedded"
+    assert info.image_tag == "pocketdock/embedded"
     assert info.network_default is True
 
 

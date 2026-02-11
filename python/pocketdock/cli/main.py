@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # Copyright (c) deftio llc
 
-"""CLI entry point for pocket-dock."""
+"""CLI entry point for pocketdock."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import dataclasses
 
 import click
 
-from pocket_dock import __version__
+from pocketdock import __version__
 
 
 @dataclasses.dataclass
@@ -29,7 +29,7 @@ class CliContext:
     help="Path to container engine socket.",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output.")
-@click.version_option(version=__version__, prog_name="pocket-dock")
+@click.version_option(version=__version__, prog_name="pocketdock")
 @click.pass_context
 def cli(ctx: click.Context, socket: str | None, *, verbose: bool) -> None:
     """Portable container sandboxes for LLM agents and dev workflows."""
@@ -39,7 +39,7 @@ def cli(ctx: click.Context, socket: str | None, *, verbose: bool) -> None:
 
 # --- Register commands ---
 
-from pocket_dock.cli._commands import (  # noqa: E402
+from pocketdock.cli._commands import (  # noqa: E402
     build_cmd,
     create_cmd,
     doctor_cmd,
