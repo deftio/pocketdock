@@ -63,12 +63,12 @@ from pocketdock.errors import (
 def test_detect_socket_with_env_var(tmp_path: pathlib.Path) -> None:
     sock = tmp_path / "test.sock"
     sock.touch()
-    with patch.dict(os.environ, {"POCKET_DOCK_SOCKET": str(sock)}):
+    with patch.dict(os.environ, {"POCKETDOCK_SOCKET": str(sock)}):
         assert detect_socket() == str(sock)
 
 
 def test_detect_socket_env_var_nonexistent() -> None:
-    with patch.dict(os.environ, {"POCKET_DOCK_SOCKET": "/tmp/nonexistent.sock"}):
+    with patch.dict(os.environ, {"POCKETDOCK_SOCKET": "/tmp/nonexistent.sock"}):
         # Falls through to candidate list; may or may not find Docker
         result = detect_socket()
         # Just verify it doesn't return the nonexistent path
@@ -77,7 +77,7 @@ def test_detect_socket_env_var_nonexistent() -> None:
 
 def test_detect_socket_no_env_no_candidates() -> None:
     with (
-        patch.dict(os.environ, {"POCKET_DOCK_SOCKET": "", "XDG_RUNTIME_DIR": "/tmp/fake_xdg"}),
+        patch.dict(os.environ, {"POCKETDOCK_SOCKET": "", "XDG_RUNTIME_DIR": "/tmp/fake_xdg"}),
         patch("pocketdock._socket_client.pathlib.Path.exists", return_value=False),
     ):
         assert detect_socket() is None
@@ -299,7 +299,7 @@ def test_detect_socket_finds_candidate(tmp_path: pathlib.Path) -> None:
     sock = tmp_path / "podman" / "podman.sock"
     sock.parent.mkdir()
     sock.touch()
-    with patch.dict(os.environ, {"POCKET_DOCK_SOCKET": "", "XDG_RUNTIME_DIR": str(tmp_path)}):
+    with patch.dict(os.environ, {"POCKETDOCK_SOCKET": "", "XDG_RUNTIME_DIR": str(tmp_path)}):
         result = detect_socket()
     assert result == str(sock)
 

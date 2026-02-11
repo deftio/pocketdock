@@ -38,7 +38,7 @@ If no socket path is specified, pocketdock searches in this order:
 
 | Priority | Path | Engine |
 |----------|------|--------|
-| 1 | `$POCKET_DOCK_SOCKET` env var | Any |
+| 1 | `$POCKETDOCK_SOCKET` env var | Any |
 | 2 | `$XDG_RUNTIME_DIR/podman/podman.sock` | Podman (rootless) |
 | 3 | `/run/podman/podman.sock` | Podman (system) |
 | 4 | `/var/run/docker.sock` | Docker |
@@ -56,7 +56,7 @@ c = create_new_container(socket_path="/path/to/engine.sock")
 Or via environment variable:
 
 ```bash
-export POCKET_DOCK_SOCKET=/path/to/engine.sock
+export POCKETDOCK_SOCKET=/path/to/engine.sock
 ```
 
 Or via project config (`pocketdock.yaml`):

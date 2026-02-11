@@ -58,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `--json` flag on read commands (`list`, `info`, `doctor`, `status`, `logs`) for machine-readable output
 - `--stream` and `--detach` flags on `run` for streaming and background execution
 - `--yes/-y` flag on destructive commands (`shutdown`, `prune`) to skip confirmation prompts
-- `--socket` global option and `POCKET_DOCK_SOCKET` env var for engine socket override
+- `--socket` global option and `POCKETDOCK_SOCKET` env var for engine socket override
 - Rich-formatted output: tables for container lists, panels for info/doctor, colored success/error messages
 - `shell` command — interactive shell via engine CLI passthrough (`podman`/`docker exec -it`)
 - Entry point: `pocketdock` (via `pyproject.toml` console script)

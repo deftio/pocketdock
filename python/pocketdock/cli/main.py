@@ -24,7 +24,7 @@ class CliContext:
 @click.group()
 @click.option(
     "--socket",
-    envvar="POCKET_DOCK_SOCKET",
+    envvar="POCKETDOCK_SOCKET",
     default=None,
     help="Path to container engine socket.",
 )

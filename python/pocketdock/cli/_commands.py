@@ -371,9 +371,9 @@ def create_cmd(  # noqa: PLR0913
         device=device,
     )
 
-    old_env = os.environ.get("POCKET_DOCK_SOCKET")
+    old_env = os.environ.get("POCKETDOCK_SOCKET")
     if cli_ctx.socket:
-        os.environ["POCKET_DOCK_SOCKET"] = cli_ctx.socket
+        os.environ["POCKETDOCK_SOCKET"] = cli_ctx.socket
     try:
         c = pocketdock.create_new_container(**kwargs)  # type: ignore[arg-type]
     except pocketdock.PocketDockError as exc:
@@ -382,9 +382,9 @@ def create_cmd(  # noqa: PLR0913
     finally:
         if cli_ctx.socket:
             if old_env is None:
-                os.environ.pop("POCKET_DOCK_SOCKET", None)
+                os.environ.pop("POCKETDOCK_SOCKET", None)
             else:
-                os.environ["POCKET_DOCK_SOCKET"] = old_env
+                os.environ["POCKETDOCK_SOCKET"] = old_env
 
     print_success(f"Container {c.name} created ({c.container_id[:12]})")
 

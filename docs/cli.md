@@ -12,7 +12,7 @@ pip install pocketdock[cli]
 
 | Option | Env Var | Description |
 |--------|---------|-------------|
-| `--socket PATH` | `POCKET_DOCK_SOCKET` | Container engine socket path |
+| `--socket PATH` | `POCKETDOCK_SOCKET` | Container engine socket path |
 | `--verbose / -v` | — | Enable verbose output |
 | `--version` | — | Show version and exit |
 | `--help` | — | Show help and exit |

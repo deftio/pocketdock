@@ -1,5 +1,5 @@
 
-# Pocket-Dock Milestone Acceptance Lists
+# Pocketdock Milestone Acceptance Lists
 
 Each milestone is **accepted only if all items pass**.
 

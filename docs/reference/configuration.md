@@ -36,14 +36,14 @@ log_level: info
 
 | Variable | Description |
 |----------|-------------|
-| `POCKET_DOCK_SOCKET` | Container engine socket path (overrides config and auto-detection) |
+| `POCKETDOCK_SOCKET` | Container engine socket path (overrides config and auto-detection) |
 
 ## Config Precedence
 
 Configuration is resolved in this order (highest priority first):
 
 1. **Explicit parameters** — `socket_path` passed to functions
-2. **Environment variables** — `POCKET_DOCK_SOCKET`
+2. **Environment variables** — `POCKETDOCK_SOCKET`
 3. **Project config** — `.pocketdock/pocketdock.yaml`
 4. **Auto-detection** — built-in socket discovery
 
@@ -51,7 +51,7 @@ Configuration is resolved in this order (highest priority first):
 
 If no socket is specified, pocketdock searches in this order:
 
-1. `POCKET_DOCK_SOCKET` environment variable
+1. `POCKETDOCK_SOCKET` environment variable
 2. Podman rootless: `$XDG_RUNTIME_DIR/podman/podman.sock`
 3. Podman system: `/run/podman/podman.sock`
 4. Docker: `/var/run/docker.sock`

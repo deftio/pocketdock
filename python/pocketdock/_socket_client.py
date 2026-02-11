@@ -52,7 +52,7 @@ def detect_socket() -> str | None:
     """Auto-detect an available container engine socket.
 
     Detection order:
-    1. ``POCKET_DOCK_SOCKET`` env var
+    1. ``POCKETDOCK_SOCKET`` env var
     2. Podman rootless: ``$XDG_RUNTIME_DIR/podman/podman.sock``
     3. Podman system: ``/run/podman/podman.sock``
     4. Docker: ``/var/run/docker.sock``
@@ -61,7 +61,7 @@ def detect_socket() -> str | None:
         The path to the first socket found, or ``None``.
 
     """
-    explicit = os.environ.get("POCKET_DOCK_SOCKET")
+    explicit = os.environ.get("POCKETDOCK_SOCKET")
     if explicit and pathlib.Path(explicit).exists():
         return explicit
 

@@ -704,14 +704,14 @@ def test_create_restores_existing_env(mock_create: MagicMock) -> None:
     container.name = "test"
     container.container_id = "abc123def456"
     mock_create.return_value = container
-    os.environ["POCKET_DOCK_SOCKET"] = "/original/socket"
+    os.environ["POCKETDOCK_SOCKET"] = "/original/socket"
     try:
         runner = CliRunner()
         result = runner.invoke(cli, ["--socket", "/tmp/test.sock", "create"])
         assert result.exit_code == 0
-        assert os.environ.get("POCKET_DOCK_SOCKET") == "/original/socket"
+        assert os.environ.get("POCKETDOCK_SOCKET") == "/original/socket"
     finally:
-        os.environ.pop("POCKET_DOCK_SOCKET", None)
+        os.environ.pop("POCKETDOCK_SOCKET", None)
 
 
 def test_create_help() -> None:

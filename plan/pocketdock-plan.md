@@ -140,7 +140,7 @@ From pocketdock's perspective, they're interchangeable. Both expose the same RES
 
 Detection order:
 
-1. Explicit `POCKET_DOCK_SOCKET` env var (if set, use it directly)
+1. Explicit `POCKETDOCK_SOCKET` env var (if set, use it directly)
 2. Podman rootless: `$XDG_RUNTIME_DIR/podman/podman.sock`
 3. Podman system: `/run/podman/podman.sock`
 4. Docker: `/var/run/docker.sock`

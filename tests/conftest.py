@@ -10,7 +10,7 @@ import pytest
 
 def _find_socket() -> str | None:
     """Detect an available container engine socket."""
-    explicit = os.environ.get("POCKET_DOCK_SOCKET")
+    explicit = os.environ.get("POCKETDOCK_SOCKET")
     if explicit and pathlib.Path(explicit).exists():
         return explicit
 
