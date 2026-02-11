@@ -98,7 +98,8 @@ async def test_session_nonzero_exit(container: AsyncContainer) -> None:
 @requires_engine
 async def test_session_stderr_capture(container: AsyncContainer) -> None:
     sess = await container.session()
-    result = await sess.send_and_wait("echo err >&2")
+    # Small sleep ensures stderr frame arrives before the sentinel on stdout.
+    result = await sess.send_and_wait("echo err >&2; sleep 0.05")
     assert result.ok
     assert "err" in result.stderr
     await sess.close()
