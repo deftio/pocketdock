@@ -16,6 +16,7 @@ from pocket_dock.persistence import (
     list_containers,
     prune,
     resume_container,
+    stop_container,
 )
 from pocket_dock.types import ContainerListItem
 
@@ -623,3 +624,66 @@ async def test_resume_restores_project_and_data_path() -> None:
 
     assert c._project == "my-proj"
     assert c._data_path == "/some/path"
+
+
+# --- stop_container ---
+
+
+async def test_stop_container_success() -> None:
+    container_data = [{"Id": "abc123", "State": "running"}]
+    with (
+        patch(
+            "pocket_dock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=container_data,
+        ),
+        patch(
+            "pocket_dock.persistence.sc.stop_container",
+            new_callable=AsyncMock,
+        ) as mock_stop,
+    ):
+        await stop_container("my-container", socket_path="/tmp/test.sock")
+
+    mock_stop.assert_awaited_once_with("/tmp/test.sock", "abc123")
+
+
+async def test_stop_container_not_found() -> None:
+    with (
+        patch(
+            "pocket_dock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        pytest.raises(ContainerNotFound),
+    ):
+        await stop_container("missing", socket_path="/tmp/test.sock")
+
+
+async def test_stop_container_auto_detect_socket() -> None:
+    container_data = [{"Id": "xyz789", "State": "running"}]
+    with (
+        patch(
+            "pocket_dock.persistence.sc.detect_socket",
+            return_value="/tmp/auto.sock",
+        ),
+        patch(
+            "pocket_dock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=container_data,
+        ),
+        patch(
+            "pocket_dock.persistence.sc.stop_container",
+            new_callable=AsyncMock,
+        ) as mock_stop,
+    ):
+        await stop_container("my-container")
+
+    mock_stop.assert_awaited_once_with("/tmp/auto.sock", "xyz789")
+
+
+async def test_stop_container_no_engine() -> None:
+    with (
+        patch("pocket_dock.persistence.sc.detect_socket", return_value=None),
+        pytest.raises(PodmanNotRunning),
+    ):
+        await stop_container("my-container")

@@ -159,21 +159,39 @@ asyncio.run(main())
 
 ## CLI
 
-pocket-dock includes a CLI (planned for v0.9.0) for managing containers from the terminal:
+pocket-dock includes a full CLI for managing containers from the terminal:
 
 ```bash
-pocket-dock create --profile minimal --name my-sandbox
-pocket-dock run my-sandbox "echo hello"
-pocket-dock run my-sandbox --stream "make all"
+pip install pocket-dock[cli]
+
+# Project management
+pocket-dock init                            # initialize a .pocket-dock/ project
+pocket-dock status                          # project summary and container states
+pocket-dock doctor                          # diagnose orphaned containers / stale dirs
+
+# Container lifecycle
+pocket-dock create --image alpine --name my-sandbox
+pocket-dock run my-sandbox echo hello
+pocket-dock run my-sandbox --stream make all
+pocket-dock run my-sandbox --detach python server.py
+pocket-dock shell my-sandbox                # interactive shell
+
+# File operations
 pocket-dock push my-sandbox ./src/ /home/sandbox/src/
 pocket-dock pull my-sandbox /home/sandbox/output.csv ./output.csv
-pocket-dock info my-sandbox
-pocket-dock list
-pocket-dock shell my-sandbox          # interactive shell
-pocket-dock shutdown my-sandbox
-```
 
-Additional commands include `build` (build image profiles), `init` (initialize a project), `reboot`, `snapshot`, `logs`, `prune`, `export`/`import` (offline image transfer), and `doctor` (diagnose problems).
+# Container management
+pocket-dock list                            # list all containers
+pocket-dock list --json                     # machine-readable output
+pocket-dock info my-sandbox                 # detailed container info
+pocket-dock logs                            # command history
+pocket-dock reboot my-sandbox               # restart in place
+pocket-dock stop my-sandbox                 # stop without removing
+pocket-dock resume my-sandbox               # resume stopped container
+pocket-dock snapshot my-sandbox my-image:v1 # commit as image
+pocket-dock shutdown my-sandbox --yes       # stop + remove
+pocket-dock prune --yes                     # remove all stopped containers
+```
 
 ## Image profiles
 
@@ -232,7 +250,7 @@ User Code / LLM Agent / CLI
 | M5 | Sessions (persistent shells) | 0.6.0 | Done |
 | M6 | Persistence (resume, snapshot) | 0.7.0 | Done |
 | M7 | Projects (.pocket-dock/ management) | 0.8.0 | Done |
-| M8 | CLI (15+ commands) | 0.9.0 | Planned |
+| M8 | CLI (17 commands) | 0.9.0 | Done |
 | M9 | Image profiles | 1.0.0 | Planned |
 | M10 | ContainerPool (pre-warming) | 1.1.0 | Planned |
 

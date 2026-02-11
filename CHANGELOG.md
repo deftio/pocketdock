@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-02-10
+
+### Added
+
+- Full CLI with 17 commands: `init`, `list`, `info`, `doctor`, `status`, `logs`, `create`, `run`, `push`, `pull`, `reboot`, `stop`, `resume`, `shutdown`, `snapshot`, `prune`, `shell`
+- `stop_container()` — stop a running container by name without removing it (sync and async)
+- `--json` flag on read commands (`list`, `info`, `doctor`, `status`, `logs`) for machine-readable output
+- `--stream` and `--detach` flags on `run` for streaming and background execution
+- `--yes/-y` flag on destructive commands (`shutdown`, `prune`) to skip confirmation prompts
+- `--socket` global option and `POCKET_DOCK_SOCKET` env var for engine socket override
+- Rich-formatted output: tables for container lists, panels for info/doctor, colored success/error messages
+- `shell` command — interactive shell via engine CLI passthrough (`podman`/`docker exec -it`)
+- Entry point: `pocket-dock` (via `pyproject.toml` console script)
+- `click` and `rich` CLI dependencies (optional `[cli]` extra)
+
 ## [0.8.0] - 2026-02-10
 
 ### Added

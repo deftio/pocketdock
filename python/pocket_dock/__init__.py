@@ -44,6 +44,9 @@ from pocket_dock.persistence import (
 from pocket_dock.persistence import (
     resume_container as _async_resume_container,
 )
+from pocket_dock.persistence import (
+    stop_container as _async_stop_container,
+)
 from pocket_dock.projects import (
     doctor as _async_doctor,
 )
@@ -99,6 +102,16 @@ def destroy_container(
     """Remove a container completely (sync)."""
     lt = _LoopThread.get()
     lt.run(_async_destroy_container(name, socket_path=socket_path))
+
+
+def stop_container(
+    name: str,
+    *,
+    socket_path: str | None = None,
+) -> None:
+    """Stop a running container by name without removing (sync)."""
+    lt = _LoopThread.get()
+    lt.run(_async_stop_container(name, socket_path=socket_path))
 
 
 def prune(
@@ -162,4 +175,5 @@ __all__ = [
     "list_containers",
     "prune",
     "resume_container",
+    "stop_container",
 ]

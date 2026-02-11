@@ -184,6 +184,35 @@ async def prune(
     return count
 
 
+async def stop_container(
+    name: str,
+    *,
+    socket_path: str | None = None,
+) -> None:
+    """Stop a running container by name (without removing).
+
+    Args:
+        name: The container name (``pocket-dock.instance`` label value).
+        socket_path: Path to the engine socket. Auto-detected if ``None``.
+
+    Raises:
+        ContainerNotFound: If no container with this name exists.
+        PodmanNotRunning: If no container engine socket is found.
+
+    """
+    socket_path = _resolve_socket(socket_path)
+
+    containers = await sc.list_containers(
+        socket_path,
+        label_filter=f"pocket-dock.instance={name}",
+    )
+    if not containers:
+        raise ContainerNotFound(name)
+
+    container_id: str = containers[0]["Id"]
+    await sc.stop_container(socket_path, container_id)
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------

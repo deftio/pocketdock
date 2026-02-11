@@ -23,6 +23,7 @@ from pocket_dock.persistence import (
     list_containers,
     prune,
     resume_container,
+    stop_container,
 )
 from pocket_dock.projects import doctor, find_project_root, init_project
 
@@ -39,4 +40,5 @@ __all__ = [
     "list_containers",
     "prune",
     "resume_container",
+    "stop_container",
 ]
