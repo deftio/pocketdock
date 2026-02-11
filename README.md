@@ -1,8 +1,9 @@
 # pocketdock
 
 [![CI](https://github.com/deftio/pocketdock/actions/workflows/ci.yml/badge.svg)](https://github.com/deftio/pocketdock/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/pocketdock)](https://pypi.org/project/pocketdock/)
 [![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/deftio/pocketdock/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-deftio.github.io%2Fpocket--dock-blue)](https://deftio.github.io/pocketdock/)
+[![Docs](https://img.shields.io/badge/docs-deftio.github.io%2Fpocketdock-blue)](https://deftio.github.io/pocketdock/)
 [![License: BSD-2-Clause](https://img.shields.io/badge/License-BSD_2--Clause-blue.svg)](https://opensource.org/licenses/BSD-2-Clause)
 
 **Portable, offline-first container sandboxes for LLM agents and dev workflows.**
