@@ -588,6 +588,21 @@ def test_logs_table_no_exit_code(
     assert result.exit_code == 0
 
 
+@patch("pocket_dock.projects.list_instance_dirs")
+@patch("pocket_dock.find_project_root")
+def test_logs_no_history_file(mock_root: MagicMock, mock_dirs: MagicMock, tmp_path: Path) -> None:
+    mock_root.return_value = tmp_path
+    inst = tmp_path / ".pocket-dock" / "instances" / "inst1"
+    inst.mkdir(parents=True)
+    # No logs/history.jsonl file created
+    mock_dirs.return_value = [inst]
+    runner = CliRunner()
+    result = runner.invoke(cli, ["logs", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data == []
+
+
 def test_logs_help() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["logs", "--help"])
@@ -965,6 +980,16 @@ def test_reboot_error(mock_resume: MagicMock) -> None:
 
     container = MagicMock()
     container.reboot.side_effect = ContainerGone("abc")
+    mock_resume.return_value = container
+    runner = CliRunner()
+    result = runner.invoke(cli, ["reboot", "myc"])
+    assert result.exit_code == 1
+
+
+@patch("pocket_dock.resume_container")
+def test_reboot_runtime_error(mock_resume: MagicMock) -> None:
+    container = MagicMock()
+    container.reboot.side_effect = RuntimeError("boom")
     mock_resume.return_value = container
     runner = CliRunner()
     result = runner.invoke(cli, ["reboot", "myc"])

@@ -462,6 +462,20 @@ def test_sync_prune() -> None:
     assert count == 3
 
 
+def test_sync_stop_container() -> None:
+    import pocket_dock
+
+    mock_lt = MagicMock()
+    mock_lt.run.return_value = None
+    with patch.object(pocket_dock, "_LoopThread") as lt_cls:
+        lt_cls.get.return_value = mock_lt
+        pocket_dock.stop_container("myc", socket_path="/tmp/s.sock")
+
+    lt_cls.get.assert_called_once()
+    mock_lt.run.assert_called_once()
+    _close_coroutine_arg(mock_lt)
+
+
 # --- Project-scoped features (M7) ---
 
 
