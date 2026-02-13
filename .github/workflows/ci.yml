@@ -43,11 +43,20 @@ jobs:
 
   docs:
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
       - run: uv sync --dev
       - run: uv run mkdocs build --strict
+      - if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+      - if: github.event_name == 'push'
+        uses: actions/deploy-pages@v4
 
   audit:
     runs-on: ubuntu-latest
