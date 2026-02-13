@@ -48,6 +48,14 @@ from pocketdock.types import ExecResult
 # ---------------------------------------------------------------------------
 
 
+def _path_exists(path: pathlib.Path) -> bool:
+    """Check if *path* exists, returning ``False`` on ``PermissionError``."""
+    try:
+        return path.exists()
+    except PermissionError:
+        return False
+
+
 def detect_socket() -> str | None:
     """Auto-detect an available container engine socket.
 
@@ -62,7 +70,7 @@ def detect_socket() -> str | None:
 
     """
     explicit = os.environ.get("POCKETDOCK_SOCKET")
-    if explicit and pathlib.Path(explicit).exists():
+    if explicit and _path_exists(pathlib.Path(explicit)):
         return explicit
 
     xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
@@ -72,7 +80,7 @@ def detect_socket() -> str | None:
         pathlib.Path("/var/run/docker.sock"),
     ]
     for candidate in candidates:
-        if candidate.exists():
+        if _path_exists(candidate):
             return str(candidate)
     return None
 
@@ -292,12 +300,13 @@ async def ping(socket_path: str) -> str:
     return body.decode("ascii").strip()
 
 
-async def create_container(
+async def create_container(  # noqa: PLR0913
     socket_path: str,
     image: str,
     command: list[str] | None = None,
     labels: dict[str, str] | None = None,
     host_config: dict[str, Any] | None = None,
+    exposed_ports: dict[str, Any] | None = None,
 ) -> str:
     """Create a container and return its ID.
 
@@ -307,6 +316,7 @@ async def create_container(
         command: Command to run (default: image CMD).
         labels: OCI labels to attach.
         host_config: Docker-compatible ``HostConfig`` dict (resource limits, etc.).
+        exposed_ports: Docker-compatible ``ExposedPorts`` dict (e.g. ``{"80/tcp": {}}``).
 
     Returns:
         The container ID (full hex string).
@@ -319,6 +329,8 @@ async def create_container(
         payload["Labels"] = labels
     if host_config is not None:
         payload["HostConfig"] = host_config
+    if exposed_ports is not None:
+        payload["ExposedPorts"] = exposed_ports
 
     status, body = await _request(socket_path, "POST", "/containers/create", payload)
 

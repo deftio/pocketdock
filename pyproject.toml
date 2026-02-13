@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pocketdock"
-version = "1.1.1"
+version = "1.2.0"
 description = "Portable, offline-first container sandboxes for LLM agents and dev workflows"
 readme = "README.md"
 license = "BSD-2-Clause"
@@ -83,6 +83,10 @@ ignore = [
     "EM101",   # allow string literals in exceptions in tests
     "PLR2004", # allow magic values in tests
     "SLF001",  # allow private member access in tests
+]
+"examples/**/*.py" = [
+    "T201",    # allow print in examples
+    "INP001",  # examples are standalone scripts, not a package
 ]
 
 [tool.ruff.format]

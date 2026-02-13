@@ -11,6 +11,7 @@ from typing import Any
 
 from pocketdock import _socket_client as sc
 from pocketdock._async_container import AsyncContainer
+from pocketdock._helpers import parse_port_bindings
 from pocketdock.errors import ContainerNotFound, PodmanNotRunning
 from pocketdock.types import ContainerListItem
 
@@ -63,6 +64,7 @@ async def resume_container(
     persist = labels.get("pocketdock.persist", "false").lower() == "true"
     project = labels.get("pocketdock.project", "")
     data_path = labels.get("pocketdock.data-path", "")
+    ports = parse_port_bindings(inspect_data)
 
     return AsyncContainer(
         container_id,
@@ -75,6 +77,7 @@ async def resume_container(
         persist=persist,
         project=project,
         data_path=data_path,
+        ports=ports or None,
     )
 
 

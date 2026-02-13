@@ -2066,3 +2066,95 @@ async def test_async_create_devices_none_no_host_config_entry() -> None:
 
     hc = create.call_args[1]["host_config"]
     assert hc is None
+
+
+# --- create_new_container with ports ---
+
+
+async def test_async_create_with_ports() -> None:
+    with (
+        patch(
+            "pocketdock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocketdock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        c = await async_factory(name="pd-ports", ports={8080: 80})
+
+    assert c._ports == {8080: 80}
+    hc = create.call_args[1]["host_config"]
+    assert hc is not None
+    assert hc["PortBindings"] == {"80/tcp": [{"HostPort": "8080"}]}
+    ep = create.call_args[1]["exposed_ports"]
+    assert ep == {"80/tcp": {}}
+
+
+async def test_async_create_with_ports_and_limits() -> None:
+    with (
+        patch(
+            "pocketdock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocketdock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(name="pd-pl", mem_limit="256m", ports={3000: 3000})
+
+    hc = create.call_args[1]["host_config"]
+    assert hc["Memory"] == 256 * 1024**2
+    assert hc["PortBindings"] == {"3000/tcp": [{"HostPort": "3000"}]}
+
+
+async def test_async_create_no_ports_no_exposed_ports() -> None:
+    with (
+        patch(
+            "pocketdock._async_container.sc.detect_socket",
+            return_value="/tmp/s.sock",
+        ),
+        patch(
+            "pocketdock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="deadbeef",
+        ) as create,
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await async_factory(name="pd-noports")
+
+    ep = create.call_args[1]["exposed_ports"]
+    assert ep is None
+
+
+async def test_reboot_fresh_includes_ports() -> None:
+    ac = AsyncContainer(
+        "cid",
+        "/tmp/s.sock",
+        name="pd-xx",
+        image="pocketdock/minimal",
+        ports={8080: 80},
+    )
+
+    with (
+        patch("pocketdock._async_container.sc.stop_container", new_callable=AsyncMock),
+        patch("pocketdock._async_container.sc.remove_container", new_callable=AsyncMock),
+        patch(
+            "pocketdock._async_container.sc.create_container",
+            new_callable=AsyncMock,
+            return_value="newcid",
+        ) as create,
+        patch("pocketdock._async_container.sc.start_container", new_callable=AsyncMock),
+    ):
+        await ac.reboot(fresh=True)
+
+    hc = create.call_args[1]["host_config"]
+    assert hc["PortBindings"] == {"80/tcp": [{"HostPort": "8080"}]}
+    ep = create.call_args[1]["exposed_ports"]
+    assert ep == {"80/tcp": {}}

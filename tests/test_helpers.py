@@ -11,10 +11,13 @@ from pocketdock._helpers import (
     _extract_processes,
     _safe_dict,
     build_container_info,
+    build_exposed_ports,
+    build_port_bindings,
     compute_cpu_percent,
     format_bytes,
     parse_iso_timestamp,
     parse_mem_limit,
+    parse_port_bindings,
 )
 
 # --- format_bytes ---
@@ -378,3 +381,115 @@ def test_build_container_info_missing_state() -> None:
     }
     info = build_container_info(inspect, None, None, "pd-x")
     assert info.status == "unknown"
+
+
+# --- build_exposed_ports ---
+
+
+def test_build_exposed_ports_single() -> None:
+    result = build_exposed_ports({8080: 80})
+    assert result == {"80/tcp": {}}
+
+
+def test_build_exposed_ports_multiple() -> None:
+    result = build_exposed_ports({8080: 80, 3000: 3000})
+    assert result == {"80/tcp": {}, "3000/tcp": {}}
+
+
+def test_build_exposed_ports_empty() -> None:
+    assert build_exposed_ports({}) == {}
+
+
+# --- build_port_bindings ---
+
+
+def test_build_port_bindings_single() -> None:
+    result = build_port_bindings({8080: 80})
+    assert result == {"80/tcp": [{"HostPort": "8080"}]}
+
+
+def test_build_port_bindings_multiple() -> None:
+    result = build_port_bindings({8080: 80, 3000: 3000})
+    assert result == {
+        "80/tcp": [{"HostPort": "8080"}],
+        "3000/tcp": [{"HostPort": "3000"}],
+    }
+
+
+def test_build_port_bindings_empty() -> None:
+    assert build_port_bindings({}) == {}
+
+
+# --- parse_port_bindings ---
+
+
+def test_parse_port_bindings_normal() -> None:
+    inspect: dict[str, object] = {
+        "HostConfig": {
+            "PortBindings": {
+                "80/tcp": [{"HostPort": "8080"}],
+            }
+        }
+    }
+    assert parse_port_bindings(inspect) == {8080: 80}
+
+
+def test_parse_port_bindings_multiple() -> None:
+    inspect: dict[str, object] = {
+        "HostConfig": {
+            "PortBindings": {
+                "80/tcp": [{"HostPort": "8080"}],
+                "3000/tcp": [{"HostPort": "3000"}],
+            }
+        }
+    }
+    result = parse_port_bindings(inspect)
+    assert result == {8080: 80, 3000: 3000}
+
+
+def test_parse_port_bindings_empty() -> None:
+    assert parse_port_bindings({}) == {}
+
+
+def test_parse_port_bindings_no_host_config() -> None:
+    assert parse_port_bindings({"HostConfig": {}}) == {}
+
+
+def test_parse_port_bindings_none_bindings() -> None:
+    inspect: dict[str, object] = {"HostConfig": {"PortBindings": None}}
+    assert parse_port_bindings(inspect) == {}
+
+
+def test_parse_port_bindings_non_list_binding() -> None:
+    inspect: dict[str, object] = {"HostConfig": {"PortBindings": {"80/tcp": "bad"}}}
+    assert parse_port_bindings(inspect) == {}
+
+
+def test_parse_port_bindings_non_dict_entry() -> None:
+    inspect: dict[str, object] = {"HostConfig": {"PortBindings": {"80/tcp": ["not_a_dict"]}}}
+    assert parse_port_bindings(inspect) == {}
+
+
+def test_parse_port_bindings_missing_host_port() -> None:
+    inspect: dict[str, object] = {"HostConfig": {"PortBindings": {"80/tcp": [{}]}}}
+    assert parse_port_bindings(inspect) == {}
+
+
+# --- build_container_info with ports ---
+
+
+def test_build_container_info_with_ports() -> None:
+    inspect: dict[str, object] = {
+        "Id": "abc123",
+        "Created": "2026-01-01T00:00:00Z",
+        "State": {"Status": "running"},
+        "Config": {"Image": "test"},
+        "NetworkSettings": {"IPAddress": ""},
+        "HostConfig": {
+            "PortBindings": {
+                "80/tcp": [{"HostPort": "8080"}],
+            }
+        },
+    }
+    info = build_container_info(inspect, None, None, "pd-ports")
+    assert info.ports == {8080: 80}

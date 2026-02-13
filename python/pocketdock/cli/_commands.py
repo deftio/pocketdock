@@ -280,7 +280,7 @@ def logs_cmd(
 # ---------------------------------------------------------------------------
 
 
-def _build_create_kwargs(  # noqa: PLR0913
+def _build_create_kwargs(  # noqa: PLR0913, C901, PLR0912
     *,
     image: str | None,
     name: str | None,
@@ -292,6 +292,7 @@ def _build_create_kwargs(  # noqa: PLR0913
     project: str | None,
     profile: str | None = None,
     device: tuple[str, ...] = (),
+    port: tuple[str, ...] = (),
 ) -> dict[str, object]:
     """Build kwargs dict for create_new_container from CLI options."""
     kwargs: dict[str, object] = {"timeout": timeout, "persist": persist}
@@ -317,6 +318,14 @@ def _build_create_kwargs(  # noqa: PLR0913
         )
         if volumes:
             kwargs["volumes"] = volumes
+    if port:
+        ports: dict[int, int] = {}
+        for p in port:
+            parts = p.split(":", 1)
+            if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():  # noqa: PLR2004
+                ports[int(parts[0])] = int(parts[1])
+        if ports:
+            kwargs["ports"] = ports
     return kwargs
 
 
@@ -337,6 +346,7 @@ def _build_create_kwargs(  # noqa: PLR0913
 @click.option(
     "--device", "-d", multiple=True, help="Host device to passthrough (e.g. /dev/ttyUSB0)."
 )
+@click.option("--port", "-p", multiple=True, help="Port mapping HOST:CONTAINER.")
 @click.pass_context
 def create_cmd(  # noqa: PLR0913
     ctx: click.Context,
@@ -351,6 +361,7 @@ def create_cmd(  # noqa: PLR0913
     project: str | None,
     profile: str | None,
     device: tuple[str, ...],
+    port: tuple[str, ...],
 ) -> None:
     """Create and start a new container."""
     import os  # noqa: PLC0415
@@ -369,6 +380,7 @@ def create_cmd(  # noqa: PLR0913
         project=project,
         profile=profile,
         device=device,
+        port=port,
     )
 
     old_env = os.environ.get("POCKETDOCK_SOCKET")

@@ -26,7 +26,7 @@ def test_cli_version() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert "1.1.1" in result.output
+    assert "1.2.0" in result.output
 
 
 def test_cli_socket_option() -> None:
@@ -1335,6 +1335,61 @@ def test_create_profile_and_image(mock_create: MagicMock) -> None:
     call_kwargs = mock_create.call_args[1]
     assert call_kwargs["image"] == "custom:latest"
     assert call_kwargs["profile"] == "agent"
+
+
+# --- create command with --port ---
+
+
+@patch("pocketdock.create_new_container")
+def test_create_with_port(mock_create: MagicMock) -> None:
+    container = MagicMock()
+    container.name = "test"
+    container.container_id = "abc123def456"
+    mock_create.return_value = container
+    runner = CliRunner()
+    result = runner.invoke(cli, ["create", "-p", "8080:80"])
+    assert result.exit_code == 0
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["ports"] == {8080: 80}
+
+
+@patch("pocketdock.create_new_container")
+def test_create_with_multiple_ports(mock_create: MagicMock) -> None:
+    container = MagicMock()
+    container.name = "test"
+    container.container_id = "abc123def456"
+    mock_create.return_value = container
+    runner = CliRunner()
+    result = runner.invoke(cli, ["create", "-p", "8080:80", "-p", "3000:3000"])
+    assert result.exit_code == 0
+    call_kwargs = mock_create.call_args[1]
+    assert call_kwargs["ports"] == {8080: 80, 3000: 3000}
+
+
+@patch("pocketdock.create_new_container")
+def test_create_port_invalid_format(mock_create: MagicMock) -> None:
+    container = MagicMock()
+    container.name = "test"
+    container.container_id = "abc123"
+    mock_create.return_value = container
+    runner = CliRunner()
+    result = runner.invoke(cli, ["create", "-p", "not-a-port"])
+    assert result.exit_code == 0
+    call_kwargs = mock_create.call_args[1]
+    assert "ports" not in call_kwargs
+
+
+@patch("pocketdock.create_new_container")
+def test_create_port_non_numeric(mock_create: MagicMock) -> None:
+    container = MagicMock()
+    container.name = "test"
+    container.container_id = "abc123"
+    mock_create.return_value = container
+    runner = CliRunner()
+    result = runner.invoke(cli, ["create", "-p", "abc:def"])
+    assert result.exit_code == 0
+    call_kwargs = mock_create.call_args[1]
+    assert "ports" not in call_kwargs
 
 
 # --- build command ---

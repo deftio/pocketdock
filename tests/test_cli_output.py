@@ -127,6 +127,20 @@ def test_format_container_info_minimal() -> None:
     format_container_info(info, json_output=False)
 
 
+def test_format_container_info_with_ports() -> None:
+    import datetime
+
+    info = ContainerInfo(
+        id="abc123def456789",
+        name="web-server",
+        status="running",
+        image="alpine:latest",
+        created_at=datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc),
+        ports={8080: 80, 3000: 3000},
+    )
+    format_container_info(info, json_output=False)
+
+
 # --- format_exec_result ---
 
 

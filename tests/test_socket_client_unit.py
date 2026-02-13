@@ -23,6 +23,7 @@ from pocketdock._socket_client import (
     _exec_inspect_exit_code,
     _exec_start,
     _exec_start_stream,
+    _path_exists,
     _read_body,
     _read_chunked,
     _read_exact_body,
@@ -73,6 +74,12 @@ def test_detect_socket_env_var_nonexistent() -> None:
         result = detect_socket()
         # Just verify it doesn't return the nonexistent path
         assert result != "/tmp/nonexistent.sock"
+
+
+def test_path_exists_permission_error() -> None:
+    path = MagicMock()
+    path.exists.side_effect = PermissionError("denied")
+    assert _path_exists(path) is False
 
 
 def test_detect_socket_no_env_no_candidates() -> None:
@@ -819,6 +826,22 @@ async def test_create_container_no_host_config() -> None:
         await create_container("/tmp/s.sock", "test-image")
     payload = mock_req.call_args[0][3]
     assert "HostConfig" not in payload
+
+
+async def test_create_container_with_exposed_ports() -> None:
+    with patch(
+        "pocketdock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(201, b'{"Id": "abc123"}'),
+    ) as mock_req:
+        cid = await create_container(
+            "/tmp/s.sock",
+            "test-image",
+            exposed_ports={"8080/tcp": {}},
+        )
+    assert cid == "abc123"
+    payload = mock_req.call_args[0][3]
+    assert payload["ExposedPorts"] == {"8080/tcp": {}}
 
 
 # --- _demux_chunked_stream ---

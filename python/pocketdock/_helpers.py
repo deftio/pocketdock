@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime
 import re
+from typing import Any
 
 from pocketdock.types import ContainerInfo
 
@@ -99,6 +100,54 @@ def _safe_dict(data: object, key: str) -> dict[str, object]:
     return val if isinstance(val, dict) else {}
 
 
+def build_exposed_ports(ports: dict[int, int]) -> dict[str, Any]:
+    """Convert ``{host_port: container_port}`` to Docker ``ExposedPorts`` format.
+
+    Example: ``{8080: 80}`` → ``{"80/tcp": {}}``.
+    """
+    return {f"{container_port}/tcp": {} for container_port in ports.values()}
+
+
+def build_port_bindings(ports: dict[int, int]) -> dict[str, list[dict[str, str]]]:
+    """Convert ``{host_port: container_port}`` to Docker ``PortBindings`` format.
+
+    Example: ``{8080: 80}`` → ``{"80/tcp": [{"HostPort": "8080"}]}``.
+    """
+    bindings: dict[str, list[dict[str, str]]] = {}
+    for host_port, container_port in ports.items():
+        key = f"{container_port}/tcp"
+        bindings[key] = [{"HostPort": str(host_port)}]
+    return bindings
+
+
+def parse_port_bindings(inspect: dict[str, object]) -> dict[int, int]:
+    """Extract port mappings from inspect data's ``HostConfig.PortBindings``.
+
+    Returns ``{host_port: container_port}``.
+    """
+    host_config = _safe_dict(inspect, "HostConfig")
+    raw = host_config.get("PortBindings")
+    if not isinstance(raw, dict):
+        return {}
+    result: dict[int, int] = {}
+    for key, bindings in raw.items():
+        # key is like "80/tcp"
+        container_port_str = key.split("/")[0]
+        if not isinstance(bindings, list):
+            continue
+        for binding in bindings:
+            if not isinstance(binding, dict):
+                continue
+            host_port_str = binding.get("HostPort", "")
+            if (
+                isinstance(host_port_str, str)
+                and host_port_str.isdigit()
+                and container_port_str.isdigit()
+            ):
+                result[int(host_port_str)] = int(container_port_str)
+    return result
+
+
 def _extract_memory(stats: dict[str, object] | None) -> tuple[str, str, float]:
     """Return ``(usage_str, limit_str, percent)`` from stats."""
     if stats is None:
@@ -161,6 +210,7 @@ def build_container_info(
 
     mem_usage, mem_limit, mem_pct = _extract_memory(stats)
     ip_address = str(net.get("IPAddress", ""))
+    ports = parse_port_bindings(inspect)
 
     return ContainerInfo(
         id=str(inspect.get("Id", "")),
@@ -177,5 +227,6 @@ def build_container_info(
         pids=_extract_pids(stats),
         network=bool(ip_address),
         ip_address=ip_address,
+        ports=ports,
         processes=_extract_processes(top),
     )

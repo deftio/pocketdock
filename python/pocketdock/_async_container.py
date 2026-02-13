@@ -21,7 +21,12 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from pocketdock import _socket_client as sc
 from pocketdock._callbacks import CallbackRegistry
-from pocketdock._helpers import build_container_info, parse_mem_limit
+from pocketdock._helpers import (
+    build_container_info,
+    build_exposed_ports,
+    build_port_bindings,
+    parse_mem_limit,
+)
 from pocketdock._logger import InstanceLogger
 from pocketdock._process import AsyncExecStream, AsyncProcess
 from pocketdock._session import AsyncSession
@@ -83,8 +88,9 @@ def _augment_host_config(
     *,
     devices: list[str] | None = None,
     volumes: dict[str, str] | None = None,
+    ports: dict[int, int] | None = None,
 ) -> dict[str, Any] | None:
-    """Add devices and volumes to an existing host config (or create one)."""
+    """Add devices, volumes, and port bindings to an existing host config (or create one)."""
     if devices is not None:
         if host_config is None:
             host_config = {}
@@ -95,6 +101,10 @@ def _augment_host_config(
         if host_config is None:
             host_config = {}
         host_config["Binds"] = [f"{h}:{c}" for h, c in volumes.items()]
+    if ports is not None:
+        if host_config is None:
+            host_config = {}
+        host_config["PortBindings"] = build_port_bindings(ports)
     return host_config
 
 
@@ -118,6 +128,7 @@ class AsyncContainer:
         persist: bool = False,
         project: str = "",
         data_path: str = "",
+        ports: dict[int, int] | None = None,
     ) -> None:
         self._container_id = container_id
         self._socket_path = socket_path
@@ -129,6 +140,7 @@ class AsyncContainer:
         self._persist = persist
         self._project = project
         self._data_path = data_path
+        self._ports = ports
         self._logger: InstanceLogger | None = None
         if data_path:
             self._logger = InstanceLogger(pathlib.Path(data_path))
@@ -324,12 +336,15 @@ class AsyncContainer:
             self._name, persist=self._persist, project=self._project, data_path=self._data_path
         )
         host_config = _build_host_config(self._mem_limit_bytes, self._nano_cpus)
+        host_config = _augment_host_config(host_config, ports=self._ports)
+        exposed_ports = build_exposed_ports(self._ports) if self._ports else None
         self._container_id = await sc.create_container(
             self._socket_path,
             self._image or _DEFAULT_IMAGE,
             command=["sleep", "infinity"],
             labels=labels,
             host_config=host_config,
+            exposed_ports=exposed_ports,
         )
         await sc.start_container(self._socket_path, self._container_id)
 
@@ -570,6 +585,7 @@ async def create_new_container(  # noqa: PLR0913
     project: str | None = None,
     profile: str | None = None,
     devices: list[str] | None = None,
+    ports: dict[int, int] | None = None,
 ) -> AsyncContainer:
     """Create and start a new container, returning an async handle.
 
@@ -586,6 +602,7 @@ async def create_new_container(  # noqa: PLR0913
             an image tag via :func:`pocketdock.profiles.resolve_profile`. Ignored
             when *image* is explicitly set to a non-default value.
         devices: Host device paths to passthrough (e.g. ``["/dev/ttyUSB0"]``).
+        ports: Host-to-container port mappings (e.g. ``{8080: 80}``).
 
     Returns:
         A running :class:`AsyncContainer`.
@@ -635,11 +652,13 @@ async def create_new_container(  # noqa: PLR0913
                 persist=True,
                 mem_limit=mem_limit or "",
                 cpu_percent=cpu_percent or 0,
+                ports=ports,
             )
 
     labels = _build_labels(name, persist=persist, project=resolved_project, data_path=data_path)
     host_config = _build_host_config(mem_limit_bytes, nano_cpus)
-    host_config = _augment_host_config(host_config, devices=devices, volumes=volumes)
+    host_config = _augment_host_config(host_config, devices=devices, volumes=volumes, ports=ports)
+    exposed_ports = build_exposed_ports(ports) if ports else None
 
     container_id = await sc.create_container(
         socket_path,
@@ -647,6 +666,7 @@ async def create_new_container(  # noqa: PLR0913
         command=["sleep", "infinity"],
         labels=labels,
         host_config=host_config,
+        exposed_ports=exposed_ports,
     )
     await sc.start_container(socket_path, container_id)
 
@@ -662,6 +682,7 @@ async def create_new_container(  # noqa: PLR0913
             persist=True,
             mem_limit=mem_limit or "",
             cpu_percent=cpu_percent or 0,
+            ports=ports,
         )
 
     return AsyncContainer(
@@ -675,4 +696,5 @@ async def create_new_container(  # noqa: PLR0913
         persist=persist,
         project=resolved_project,
         data_path=data_path,
+        ports=ports,
     )

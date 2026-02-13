@@ -412,6 +412,7 @@ def create_new_container(  # noqa: PLR0913
     project: str | None = None,
     profile: str | None = None,
     devices: list[str] | None = None,
+    ports: dict[int, int] | None = None,
 ) -> Container:
     """Create and start a new container, returning a sync handle.
 
@@ -430,6 +431,7 @@ def create_new_container(  # noqa: PLR0913
             project=project,
             profile=profile,
             devices=devices,
+            ports=ports,
         )
     )
     return Container(ac, lt)  # type: ignore[arg-type]

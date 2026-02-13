@@ -24,6 +24,7 @@ c = create_new_container(
     project=None,                  # Project name
     profile=None,                  # Image profile name
     devices=None,                  # ["/dev/ttyUSB0"]
+    ports=None,                    # {8080: 80}
 )
 ```
 
