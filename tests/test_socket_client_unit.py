@@ -821,6 +821,22 @@ async def test_create_container_no_host_config() -> None:
     assert "HostConfig" not in payload
 
 
+async def test_create_container_with_exposed_ports() -> None:
+    with patch(
+        "pocketdock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=(201, b'{"Id": "abc123"}'),
+    ) as mock_req:
+        cid = await create_container(
+            "/tmp/s.sock",
+            "test-image",
+            exposed_ports={"8080/tcp": {}},
+        )
+    assert cid == "abc123"
+    payload = mock_req.call_args[0][3]
+    assert payload["ExposedPorts"] == {"8080/tcp": {}}
+
+
 # --- _demux_chunked_stream ---
 
 
