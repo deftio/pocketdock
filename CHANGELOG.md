@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-02-13
+
+### Added
+
+- Port mapping support: `ports` parameter on `create_new_container()` — maps host ports to container ports (e.g. `ports={8080: 80}`)
+- `build_exposed_ports()`, `build_port_bindings()`, `parse_port_bindings()` helper functions
+- `ports` field on `ContainerInfo` dataclass
+- CLI `--port / -p HOST:CONTAINER` option on `create` command
+- Ports display in CLI `info` output
+- Port mappings persisted in instance metadata and restored on `resume_container()`
+- Quickstart example: `examples/quickstart_sandbox.py` — run a program in a sandbox
+- Quickstart example: `examples/quickstart_webserver.py` — hello world web server with port mapping
+
 ## [1.1.1] - 2026-02-11
 
 ### Fixed
