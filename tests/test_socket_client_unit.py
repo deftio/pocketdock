@@ -23,6 +23,7 @@ from pocketdock._socket_client import (
     _exec_inspect_exit_code,
     _exec_start,
     _exec_start_stream,
+    _path_exists,
     _read_body,
     _read_chunked,
     _read_exact_body,
@@ -73,6 +74,12 @@ def test_detect_socket_env_var_nonexistent() -> None:
         result = detect_socket()
         # Just verify it doesn't return the nonexistent path
         assert result != "/tmp/nonexistent.sock"
+
+
+def test_path_exists_permission_error() -> None:
+    path = MagicMock()
+    path.exists.side_effect = PermissionError("denied")
+    assert _path_exists(path) is False
 
 
 def test_detect_socket_no_env_no_candidates() -> None:
