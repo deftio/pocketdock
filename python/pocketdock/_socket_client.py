@@ -48,6 +48,14 @@ from pocketdock.types import ExecResult
 # ---------------------------------------------------------------------------
 
 
+def _path_exists(path: pathlib.Path) -> bool:
+    """Check if *path* exists, returning ``False`` on ``PermissionError``."""
+    try:
+        return path.exists()
+    except PermissionError:
+        return False
+
+
 def detect_socket() -> str | None:
     """Auto-detect an available container engine socket.
 
@@ -62,7 +70,7 @@ def detect_socket() -> str | None:
 
     """
     explicit = os.environ.get("POCKETDOCK_SOCKET")
-    if explicit and pathlib.Path(explicit).exists():
+    if explicit and _path_exists(pathlib.Path(explicit)):
         return explicit
 
     xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
@@ -72,7 +80,7 @@ def detect_socket() -> str | None:
         pathlib.Path("/var/run/docker.sock"),
     ]
     for candidate in candidates:
-        if candidate.exists():
+        if _path_exists(candidate):
             return str(candidate)
     return None
 
