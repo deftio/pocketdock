@@ -296,6 +296,32 @@ def test_toml_value_other() -> None:
 # --- tomli fallback coverage ---
 
 
+def test_write_instance_metadata_with_ports(tmp_path: Path) -> None:
+    init_project(tmp_path)
+    instance_dir = ensure_instance_dir(tmp_path, "pd-porttest")
+
+    write_instance_metadata(
+        instance_dir,
+        container_id="abc",
+        name="pd-porttest",
+        ports={8080: 80, 3000: 3000},
+    )
+    metadata = read_instance_metadata(instance_dir)
+    assert "ports" in metadata
+    # TOML keys are strings, values are ints
+    assert metadata["ports"]["8080"] == 80
+    assert metadata["ports"]["3000"] == 3000
+
+
+def test_write_instance_metadata_no_ports(tmp_path: Path) -> None:
+    init_project(tmp_path)
+    instance_dir = ensure_instance_dir(tmp_path, "pd-noport")
+
+    write_instance_metadata(instance_dir, container_id="abc", name="pd-noport")
+    metadata = read_instance_metadata(instance_dir)
+    assert "ports" not in metadata
+
+
 def test_read_instance_metadata_tomli_fallback(tmp_path: Path) -> None:
     """Ensure the tomli fallback import path is covered."""
     import builtins

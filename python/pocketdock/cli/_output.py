@@ -77,6 +77,9 @@ def format_container_info(info: ContainerInfo, *, json_output: bool = False) -> 
         lines.append(f"[bold]PIDs:[/bold]     {info.pids}")
     if info.ip_address:
         lines.append(f"[bold]IP:[/bold]       {info.ip_address}")
+    if info.ports:
+        port_strs = [f"{h}->{c}/tcp" for h, c in sorted(info.ports.items())]
+        lines.append(f"[bold]Ports:[/bold]    {', '.join(port_strs)}")
 
     panel = Panel("\n".join(lines), title=f"[cyan]{info.name}[/cyan]", expand=False)
     _console.print(panel)

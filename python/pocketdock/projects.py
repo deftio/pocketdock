@@ -106,6 +106,7 @@ def write_instance_metadata(  # noqa: PLR0913
     persist: bool = False,
     mem_limit: str = "",
     cpu_percent: int = 0,
+    ports: dict[int, int] | None = None,
 ) -> None:
     """Write ``instance.toml`` with container metadata and provenance.
 
@@ -138,6 +139,13 @@ def write_instance_metadata(  # noqa: PLR0913
 
     if resource_pairs:
         _emit_section(lines, "resources", resource_pairs)
+
+    # --- ports section ---
+    if ports:
+        port_pairs: list[tuple[str, object]] = [
+            (str(host_port), container_port) for host_port, container_port in ports.items()
+        ]
+        _emit_section(lines, "ports", port_pairs)
 
     # --- provenance section ---
     provenance_pairs: list[tuple[str, object]] = [

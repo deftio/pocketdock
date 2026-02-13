@@ -123,6 +123,29 @@ def test_container_info_full_construction() -> None:
     assert len(info.processes) == 1
 
 
+def test_container_info_ports_default() -> None:
+    info = ContainerInfo(
+        id="abc",
+        name="pd-test",
+        status="running",
+        image="test",
+        created_at=datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc),
+    )
+    assert info.ports == {}
+
+
+def test_container_info_ports_set() -> None:
+    info = ContainerInfo(
+        id="abc",
+        name="pd-test",
+        status="running",
+        image="test",
+        created_at=datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc),
+        ports={8080: 80, 3000: 3000},
+    )
+    assert info.ports == {8080: 80, 3000: 3000}
+
+
 def test_container_info_is_frozen() -> None:
     info = ContainerInfo(
         id="x",

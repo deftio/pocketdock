@@ -292,12 +292,13 @@ async def ping(socket_path: str) -> str:
     return body.decode("ascii").strip()
 
 
-async def create_container(
+async def create_container(  # noqa: PLR0913
     socket_path: str,
     image: str,
     command: list[str] | None = None,
     labels: dict[str, str] | None = None,
     host_config: dict[str, Any] | None = None,
+    exposed_ports: dict[str, Any] | None = None,
 ) -> str:
     """Create a container and return its ID.
 
@@ -307,6 +308,7 @@ async def create_container(
         command: Command to run (default: image CMD).
         labels: OCI labels to attach.
         host_config: Docker-compatible ``HostConfig`` dict (resource limits, etc.).
+        exposed_ports: Docker-compatible ``ExposedPorts`` dict (e.g. ``{"80/tcp": {}}``).
 
     Returns:
         The container ID (full hex string).
@@ -319,6 +321,8 @@ async def create_container(
         payload["Labels"] = labels
     if host_config is not None:
         payload["HostConfig"] = host_config
+    if exposed_ports is not None:
+        payload["ExposedPorts"] = exposed_ports
 
     status, body = await _request(socket_path, "POST", "/containers/create", payload)
 

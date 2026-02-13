@@ -84,6 +84,10 @@ ignore = [
     "PLR2004", # allow magic values in tests
     "SLF001",  # allow private member access in tests
 ]
+"examples/**/*.py" = [
+    "T201",    # allow print in examples
+    "INP001",  # examples are standalone scripts, not a package
+]
 
 [tool.ruff.format]
 quote-style = "double"

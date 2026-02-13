@@ -28,6 +28,7 @@ class ContainerInfo:
     pids: int = 0
     network: bool = False
     ip_address: str = ""
+    ports: dict[int, int] = dataclasses.field(default_factory=dict)
     processes: tuple[dict[str, str], ...] = ()
 
 
