@@ -34,6 +34,7 @@ with create_new_container() as c:
 | `project` | `str \| None` | `None` | Project name (auto-detected from `.pocketdock/`) |
 | `profile` | `str \| None` | `None` | Image profile name (`"minimal"`, `"dev"`, `"agent"`, `"embedded"`) |
 | `devices` | `list[str] \| None` | `None` | Host devices to passthrough (e.g., `["/dev/ttyUSB0"]`) |
+| `ports` | `dict[int, int] \| None` | `None` | Host-to-container port mappings (e.g., `{8080: 80}`) |
 
 ```python
 c = create_new_container(
@@ -142,6 +143,20 @@ c.shutdown()  # Stops, but container can be resumed later
 ```
 
 See [Persistence](persistence.md) for resume/destroy operations.
+
+## Port Mapping
+
+Expose container ports on the host:
+
+```python
+# Map host port 8080 to container port 80
+c = create_new_container(ports={8080: 80})
+
+# Multiple port mappings
+c = create_new_container(ports={8080: 80, 3000: 3000})
+```
+
+The dict key is the host port, the value is the container port. Port mappings are persisted in instance metadata and restored automatically on `resume_container()`.
 
 ## Volumes
 

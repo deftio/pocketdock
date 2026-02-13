@@ -80,9 +80,11 @@ pocketdock create [OPTIONS]
 | `--cpu-percent N` | CPU cap as percentage |
 | `--persist` | Make container persistent |
 | `--device DEVICE` | Device passthrough (can be repeated) |
+| `--port / -p HOST:CONTAINER` | Port mapping (can be repeated) |
 
 ```bash
 pocketdock create --name my-sandbox --profile dev --mem-limit 512m --persist
+pocketdock create --name web -p 8080:80 -p 3000:3000
 ```
 
 ### `run`

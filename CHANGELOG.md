@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [1.2.0] - 2026-02-13
 
+### Fixed
+
+- `detect_socket()` now handles `PermissionError` when checking system-level sockets (e.g. `/run/podman/podman.sock`) without read permission
+
 ### Added
 
 - Port mapping support: `ports` parameter on `create_new_container()` — maps host ports to container ports (e.g. `ports={8080: 80}`)

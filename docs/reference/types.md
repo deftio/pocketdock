@@ -57,6 +57,7 @@ info = c.info()
 | `pids` | `int` | `0` | Number of running processes |
 | `network` | `bool` | `False` | Whether networking is enabled |
 | `ip_address` | `str` | `""` | Container IP address |
+| `ports` | `dict[int, int]` | `{}` | Host-to-container port mappings |
 | `processes` | `tuple[dict[str, str], ...]` | `()` | Running processes |
 
 ## ContainerListItem
