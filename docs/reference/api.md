@@ -84,7 +84,7 @@ Return the package version string.
 
 #### `__version__: str`
 
-Package version (e.g., `"1.0.1"`).
+Package version (e.g., `"1.2.0"`).
 
 ---
 
