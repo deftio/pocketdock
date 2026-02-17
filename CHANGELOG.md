@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-02-17
+
+### Added
+
+- `pocketdock quickstart` CLI command — prints getting-started instructions
+- `minimal-node` profile — Node.js 22 sandbox (~60 MB)
+- `minimal-bun` profile — Bun runtime sandbox (~100 MB)
+- macOS socket detection — checks `~/.local/share/containers/podman/machine/.../podman.sock` and `~/.docker/run/docker.sock`
+- Platform-aware error hints — macOS users see `podman machine start` instead of `systemctl`
+- `[agent]` optional dependency extra (`litellm`, `python-dotenv`)
+- Shiv single-file builds (`.pyz`) attached to GitHub releases
+
+### Changed
+
+- Renamed `minimal` profile to `minimal-python` (image tag: `pocketdock/minimal-python`)
+- Renamed `images/minimal/` directory to `images/minimal-python/`
+- Default profile is now `minimal-python`
+
 ## [1.2.0] - 2026-02-13
 
 ### Fixed
