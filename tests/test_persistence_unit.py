@@ -48,7 +48,7 @@ def test_parse_full_data() -> None:
         "Id": "abc123def45678",
         "Names": ["pd-test"],
         "State": "running",
-        "Image": "pocketdock/minimal",
+        "Image": "pocketdock/minimal-python",
         "Labels": {
             "pocketdock.instance": "pd-test",
             "pocketdock.persist": "true",
@@ -59,7 +59,7 @@ def test_parse_full_data() -> None:
     assert item.id == "abc123def456"
     assert item.name == "pd-test"
     assert item.status == "running"
-    assert item.image == "pocketdock/minimal"
+    assert item.image == "pocketdock/minimal-python"
     assert item.persist is True
     assert item.created_at == "2026-02-09T00:00:00+00:00"
 
@@ -142,7 +142,7 @@ async def test_resume_stopped_container_starts_it() -> None:
     list_result = [{"Id": "abc123", "State": "exited"}]
     inspect_result = {
         "Config": {
-            "Image": "pocketdock/minimal",
+            "Image": "pocketdock/minimal-python",
             "Labels": {"pocketdock.persist": "true"},
         },
         "HostConfig": {"Memory": 0, "NanoCpus": 0},

@@ -14,7 +14,7 @@ Create and start a new container.
 from pocketdock import create_new_container
 
 c = create_new_container(
-    image="pocketdock/minimal",  # Container image tag
+    image="pocketdock/minimal-python",  # Container image tag
     name=None,                     # Auto-generated if None
     timeout=30,                    # Default exec timeout (seconds)
     mem_limit=None,                # Memory limit ("256m", "1g")

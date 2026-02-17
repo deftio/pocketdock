@@ -14,10 +14,24 @@ from pocketdock.profiles import (
 # --- resolve_profile ---
 
 
-def test_resolve_minimal() -> None:
-    info = resolve_profile("minimal")
-    assert info.name == "minimal"
-    assert info.image_tag == "pocketdock/minimal"
+def test_resolve_minimal_python() -> None:
+    info = resolve_profile("minimal-python")
+    assert info.name == "minimal-python"
+    assert info.image_tag == "pocketdock/minimal-python"
+
+
+def test_resolve_minimal_node() -> None:
+    info = resolve_profile("minimal-node")
+    assert info.name == "minimal-node"
+    assert info.image_tag == "pocketdock/minimal-node"
+    assert info.network_default is False
+
+
+def test_resolve_minimal_bun() -> None:
+    info = resolve_profile("minimal-bun")
+    assert info.name == "minimal-bun"
+    assert info.image_tag == "pocketdock/minimal-bun"
+    assert info.network_default is False
 
 
 def test_resolve_dev() -> None:
@@ -47,7 +61,9 @@ def test_resolve_unknown_raises_value_error() -> None:
 
 
 def test_resolve_unknown_lists_known_profiles() -> None:
-    with pytest.raises(ValueError, match=r"agent.*dev.*embedded.*minimal"):
+    with pytest.raises(
+        ValueError, match=r"agent.*dev.*embedded.*minimal-bun.*minimal-node.*minimal-python"
+    ):
         resolve_profile("bad")
 
 
@@ -56,7 +72,7 @@ def test_resolve_unknown_lists_known_profiles() -> None:
 
 def test_list_profiles_returns_all() -> None:
     profiles = list_profiles()
-    assert len(profiles) == 4
+    assert len(profiles) == 6
 
 
 def test_list_profiles_types() -> None:
@@ -66,14 +82,26 @@ def test_list_profiles_types() -> None:
 
 def test_list_profiles_names() -> None:
     names = {p.name for p in list_profiles()}
-    assert names == {"minimal", "dev", "agent", "embedded"}
+    assert names == {"minimal-python", "minimal-node", "minimal-bun", "dev", "agent", "embedded"}
 
 
 # --- get_dockerfile_path ---
 
 
-def test_get_dockerfile_path_minimal() -> None:
-    path = get_dockerfile_path("minimal")
+def test_get_dockerfile_path_minimal_python() -> None:
+    path = get_dockerfile_path("minimal-python")
+    assert path.is_dir()
+    assert (path / "Dockerfile").is_file()
+
+
+def test_get_dockerfile_path_minimal_node() -> None:
+    path = get_dockerfile_path("minimal-node")
+    assert path.is_dir()
+    assert (path / "Dockerfile").is_file()
+
+
+def test_get_dockerfile_path_minimal_bun() -> None:
+    path = get_dockerfile_path("minimal-bun")
     assert path.is_dir()
     assert (path / "Dockerfile").is_file()
 
@@ -104,12 +132,12 @@ def test_get_dockerfile_path_unknown_raises() -> None:
 # --- PROFILES dict ---
 
 
-def test_profiles_dict_has_four_entries() -> None:
-    assert len(PROFILES) == 4
+def test_profiles_dict_has_six_entries() -> None:
+    assert len(PROFILES) == 6
 
 
 def test_profile_info_frozen() -> None:
-    info = resolve_profile("minimal")
+    info = resolve_profile("minimal-python")
     with pytest.raises(AttributeError):
         info.name = "other"  # type: ignore[misc]
 

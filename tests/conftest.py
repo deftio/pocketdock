@@ -18,6 +18,8 @@ def _path_exists(path: pathlib.Path) -> bool:
 
 def _find_socket() -> str | None:
     """Detect an available container engine socket."""
+    import sys
+
     explicit = os.environ.get("POCKETDOCK_SOCKET")
     if explicit and _path_exists(pathlib.Path(explicit)):
         return explicit
@@ -28,6 +30,16 @@ def _find_socket() -> str | None:
         pathlib.Path("/run/podman/podman.sock"),
         pathlib.Path("/var/run/docker.sock"),
     ]
+
+    if sys.platform == "darwin":
+        home = pathlib.Path.home()
+        candidates.extend(
+            [
+                home / ".local/share/containers/podman/machine/podman-machine-default/podman.sock",
+                home / ".docker/run/docker.sock",
+            ]
+        )
+
     for candidate in candidates:
         if _path_exists(candidate):
             return str(candidate)

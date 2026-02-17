@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import sys
+
 
 class PocketDockError(Exception):
     """Base exception for all pocketdock errors."""
@@ -38,11 +40,11 @@ class PodmanNotRunning(SocketError):
     """No container engine socket found."""
 
     def __init__(self) -> None:
-        super().__init__(
-            "No container engine socket found. "
-            "Is Podman or Docker running? "
-            "Try: systemctl --user start podman.socket"
-        )
+        if sys.platform == "darwin":
+            hint = "Try: podman machine start  OR  open Docker Desktop"
+        else:
+            hint = "Try: systemctl --user start podman.socket"
+        super().__init__(f"No container engine socket found. Is Podman or Docker running? {hint}")
 
 
 class ContainerError(PocketDockError):

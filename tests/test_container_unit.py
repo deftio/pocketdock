@@ -1624,7 +1624,7 @@ async def test_async_create_volumes_with_resource_limits() -> None:
 
 async def test_reboot_fresh_includes_persist_labels() -> None:
     ac = AsyncContainer(
-        "cid", "/tmp/s.sock", name="pd-xx", image="pocketdock/minimal", persist=True
+        "cid", "/tmp/s.sock", name="pd-xx", image="pocketdock/minimal-python", persist=True
     )
 
     with (
@@ -1696,7 +1696,7 @@ async def test_async_reboot_fresh_preserves_project_labels() -> None:
         "cid",
         "/tmp/s.sock",
         name="pd-xx",
-        image="pocketdock/minimal",
+        image="pocketdock/minimal-python",
         persist=True,
         project="my-proj",
         data_path="/data/path",
@@ -1940,7 +1940,7 @@ async def test_async_create_profile_none_uses_default() -> None:
         await async_factory(name="pd-nopr")
 
     args = create.call_args
-    assert args[0][1] == "pocketdock/minimal"
+    assert args[0][1] == "pocketdock/minimal-python"
 
 
 async def test_async_create_profile_unknown_raises() -> None:
@@ -1956,7 +1956,9 @@ async def test_async_create_profile_unknown_raises() -> None:
 
 async def test_async_create_with_all_profiles() -> None:
     for profile_name, expected_tag in [
-        ("minimal", "pocketdock/minimal"),
+        ("minimal-python", "pocketdock/minimal-python"),
+        ("minimal-node", "pocketdock/minimal-node"),
+        ("minimal-bun", "pocketdock/minimal-bun"),
         ("dev", "pocketdock/dev"),
         ("agent", "pocketdock/agent"),
         ("embedded", "pocketdock/embedded"),
@@ -2138,7 +2140,7 @@ async def test_reboot_fresh_includes_ports() -> None:
         "cid",
         "/tmp/s.sock",
         name="pd-xx",
-        image="pocketdock/minimal",
+        image="pocketdock/minimal-python",
         ports={8080: 80},
     )
 

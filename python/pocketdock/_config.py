@@ -19,7 +19,7 @@ class PocketDockConfig:
     """Resolved pocketdock configuration."""
 
     project_name: str = ""
-    default_profile: str = "minimal"
+    default_profile: str = "minimal-python"
     default_persist: bool = False
     auto_log: bool = True
     max_log_size: str = "10MB"

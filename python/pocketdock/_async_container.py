@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
     from pocketdock.types import ContainerInfo, ExecResult
 
-_DEFAULT_IMAGE = "pocketdock/minimal"
+_DEFAULT_IMAGE = "pocketdock/minimal-python"
 _DEFAULT_TIMEOUT = 30
 _DEFAULT_MAX_OUTPUT = 10 * 1024 * 1024  # 10 MB
 

@@ -23,7 +23,7 @@ Managed sandbox platforms require API keys, cloud accounts, and an internet conn
 - **Port mapping** — expose container ports on the host (e.g., `ports={8080: 80}`)
 - **Container persistence** — stop/resume, snapshot to image, volume mounts
 - **Project management** — `.pocketdock/` project directories with config, logging, and health checks
-- **Image profiles** — four pre-baked Dockerfiles: minimal, dev, agent, embedded
+- **Image profiles** — six pre-baked Dockerfiles: minimal-python, minimal-node, minimal-bun, dev, agent, embedded
 - **Full CLI** — 21 commands for container lifecycle, file ops, and project management
 - **Async-first** — sync facade over async core; use either API style
 - **Callbacks** — register handlers for stdout, stderr, and exit events
@@ -49,8 +49,8 @@ pip install pocketdock[cli]     # SDK + CLI (click, rich)
 Requires [Podman](https://podman.io/getting-started/installation) (recommended) or [Docker](https://docs.docker.com/get-docker/).
 
 ```bash
-# Build the minimal image (~25MB, <500ms startup)
-pocketdock build minimal
+# Build the minimal-python image (~25MB, <500ms startup)
+pocketdock build minimal-python
 ```
 
 ## Documentation

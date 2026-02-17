@@ -50,7 +50,7 @@ The `pocketdock.yaml` file configures project defaults:
 
 ```yaml
 project_name: my-app
-default_profile: minimal
+default_profile: minimal-python
 default_persist: false
 auto_log: true
 max_log_size: 10MB
@@ -99,7 +99,7 @@ Each persistent container in a project gets its own instance directory:
 ```toml
 container_id = "abc123..."
 name = "my-sandbox"
-image = "pocketdock/minimal"
+image = "pocketdock/minimal-python"
 project = "my-app"
 created_at = "2026-01-15T10:30:00"
 persist = true

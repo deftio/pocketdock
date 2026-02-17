@@ -1,12 +1,14 @@
 # Image Profiles
 
-pocketdock ships four pre-baked Dockerfiles for common use cases.
+pocketdock ships six pre-baked Dockerfiles for common use cases.
 
 ## Available Profiles
 
 | Profile | Size | Base | Contents | Default Network |
 |---------|------|------|----------|-----------------|
-| **minimal** | ~25 MB | Alpine 3.21 | Python 3, pip, bash | Disabled |
+| **minimal-python** | ~25 MB | Alpine 3.21 | Python 3, pip, bash | Disabled |
+| **minimal-node** | ~60 MB | node:22-alpine | Node.js 22, npm, bash | Disabled |
+| **minimal-bun** | ~100 MB | oven/bun:1-alpine | Bun runtime, bash | Disabled |
 | **dev** | ~250 MB | python:3.12-slim | Git, curl, jq, vim, build tools, ipython | Enabled |
 | **agent** | ~350 MB | python:3.12-slim | requests, pandas, numpy, beautifulsoup4, pillow | Disabled |
 | **embedded** | ~450 MB | Alpine 3.21 | GCC, CMake, ARM cross-compiler, Arduino CLI, PlatformIO | Enabled |
@@ -43,14 +45,14 @@ with create_new_container(image="pocketdock/agent") as c:
 pocketdock build
 
 # Build a specific profile
-pocketdock build minimal
+pocketdock build minimal-python
 pocketdock build dev
 ```
 
 ### Via Container Engine
 
 ```bash
-docker build -t pocketdock/minimal images/minimal/
+docker build -t pocketdock/minimal-python images/minimal-python/
 docker build -t pocketdock/dev images/dev/
 docker build -t pocketdock/agent images/agent/
 docker build -t pocketdock/embedded images/embedded/
@@ -114,7 +116,7 @@ Each profile is represented as a `ProfileInfo` dataclass:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | `str` | Profile name (e.g., `"minimal"`) |
+| `name` | `str` | Profile name (e.g., `"minimal-python"`) |
 | `image_tag` | `str` | Docker/Podman image tag |
 | `dockerfile_dir` | `str` | Path to the Dockerfile directory |
 | `network_default` | `bool` | Whether networking is enabled by default |

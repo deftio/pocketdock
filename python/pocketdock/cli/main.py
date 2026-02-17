@@ -53,6 +53,7 @@ from pocketdock.cli._commands import (  # noqa: E402
     prune_cmd,
     pull_cmd,
     push_cmd,
+    quickstart_cmd,
     reboot_cmd,
     resume_cmd,
     run_cmd,
@@ -63,6 +64,7 @@ from pocketdock.cli._commands import (  # noqa: E402
     stop_cmd,
 )
 
+cli.add_command(quickstart_cmd)
 cli.add_command(init_cmd)
 cli.add_command(list_cmd)
 cli.add_command(info_cmd)

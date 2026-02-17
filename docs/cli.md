@@ -17,6 +17,16 @@ pip install pocketdock[cli]
 | `--version` | — | Show version and exit |
 | `--help` | — | Show help and exit |
 
+## Getting Started
+
+### `quickstart`
+
+Print getting-started instructions.
+
+```bash
+pocketdock quickstart
+```
+
 ## Project Commands
 
 ### `init`
@@ -73,9 +83,9 @@ pocketdock create [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `--image IMAGE` | Container image (default: `pocketdock/minimal`) |
+| `--image IMAGE` | Container image (default: `pocketdock/minimal-python`) |
 | `--name NAME` | Container name (auto-generated if omitted) |
-| `--profile PROFILE` | Image profile (`minimal`, `dev`, `agent`, `embedded`) |
+| `--profile PROFILE` | Image profile (`minimal-python`, `minimal-node`, `minimal-bun`, `dev`, `agent`, `embedded`) |
 | `--mem-limit LIMIT` | Memory limit (e.g., `256m`, `1g`) |
 | `--cpu-percent N` | CPU cap as percentage |
 | `--persist` | Make container persistent |
@@ -254,7 +264,7 @@ pocketdock build [PROFILE]
 
 ```bash
 pocketdock build           # Build all profiles
-pocketdock build minimal   # Build a specific profile
+pocketdock build minimal-python   # Build a specific profile
 ```
 
 ### `export`

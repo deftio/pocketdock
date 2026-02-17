@@ -90,6 +90,54 @@ def test_detect_socket_no_env_no_candidates() -> None:
         assert detect_socket() is None
 
 
+def test_detect_socket_darwin_podman_machine(tmp_path: pathlib.Path) -> None:
+    sock = tmp_path / ".local/share/containers/podman/machine/podman-machine-default/podman.sock"
+    sock.parent.mkdir(parents=True)
+    sock.touch()
+    xdg_dir = str(tmp_path / "xdg_no_exist")
+
+    original_path_exists = _path_exists
+
+    def _fake_path_exists(path: pathlib.Path) -> bool:
+        """Only allow paths under tmp_path to exist."""
+        if str(path).startswith(str(tmp_path)):
+            return original_path_exists(path)
+        return False
+
+    with (
+        patch.dict(os.environ, {"POCKETDOCK_SOCKET": "", "XDG_RUNTIME_DIR": xdg_dir}),
+        patch("pocketdock._socket_client.sys.platform", "darwin"),
+        patch("pocketdock._socket_client.pathlib.Path.home", return_value=tmp_path),
+        patch("pocketdock._socket_client._path_exists", side_effect=_fake_path_exists),
+    ):
+        result = detect_socket()
+    assert result == str(sock)
+
+
+def test_detect_socket_darwin_docker_desktop(tmp_path: pathlib.Path) -> None:
+    sock = tmp_path / ".docker/run/docker.sock"
+    sock.parent.mkdir(parents=True)
+    sock.touch()
+    xdg_dir = str(tmp_path / "xdg_no_exist")
+
+    original_path_exists = _path_exists
+
+    def _fake_path_exists(path: pathlib.Path) -> bool:
+        """Only allow paths under tmp_path to exist."""
+        if str(path).startswith(str(tmp_path)):
+            return original_path_exists(path)
+        return False
+
+    with (
+        patch.dict(os.environ, {"POCKETDOCK_SOCKET": "", "XDG_RUNTIME_DIR": xdg_dir}),
+        patch("pocketdock._socket_client.sys.platform", "darwin"),
+        patch("pocketdock._socket_client.pathlib.Path.home", return_value=tmp_path),
+        patch("pocketdock._socket_client._path_exists", side_effect=_fake_path_exists),
+    ):
+        result = detect_socket()
+    assert result == str(sock)
+
+
 # -- _read_status_line --
 
 
@@ -1156,7 +1204,7 @@ async def test_save_image_success() -> None:
         new_callable=AsyncMock,
         return_value=(200, fake_tar),
     ):
-        result = await save_image("/tmp/s.sock", "pocketdock/minimal")
+        result = await save_image("/tmp/s.sock", "pocketdock/minimal-python")
     assert result == fake_tar
 
 

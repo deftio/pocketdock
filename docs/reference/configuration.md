@@ -8,7 +8,7 @@ The primary configuration file, located at `.pocketdock/pocketdock.yaml` in your
 
 ```yaml
 project_name: my-app
-default_profile: minimal
+default_profile: minimal-python
 default_persist: false
 auto_log: true
 max_log_size: 10MB
@@ -23,7 +23,7 @@ log_level: info
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `project_name` | `str` | `""` | Human-readable project name |
-| `default_profile` | `str` | `"minimal"` | Default image profile for `create_new_container()` |
+| `default_profile` | `str` | `"minimal-python"` | Default image profile for `create_new_container()` |
 | `default_persist` | `bool` | `false` | Default persist setting for new containers |
 | `auto_log` | `bool` | `true` | Automatically log `run()` results and session I/O |
 | `max_log_size` | `str` | `"10MB"` | Maximum size per log file |
@@ -55,6 +55,8 @@ If no socket is specified, pocketdock searches in this order:
 2. Podman rootless: `$XDG_RUNTIME_DIR/podman/podman.sock`
 3. Podman system: `/run/podman/podman.sock`
 4. Docker: `/var/run/docker.sock`
+5. (macOS) Podman Machine: `~/.local/share/containers/podman/machine/podman-machine-default/podman.sock`
+6. (macOS) Docker Desktop: `~/.docker/run/docker.sock`
 
 ## Loading Config Programmatically
 
@@ -65,7 +67,7 @@ config = load_config()  # Auto-discovers project root
 config = load_config(project_root=Path("/path/to/project"))
 
 config.project_name      # "my-app"
-config.default_profile   # "minimal"
+config.default_profile   # "minimal-python"
 config.auto_log          # True
 ```
 
@@ -74,7 +76,7 @@ config.auto_log          # True
 | Field | Type | Default |
 |-------|------|---------|
 | `project_name` | `str` | `""` |
-| `default_profile` | `str` | `"minimal"` |
+| `default_profile` | `str` | `"minimal-python"` |
 | `default_persist` | `bool` | `False` |
 | `auto_log` | `bool` | `True` |
 | `max_log_size` | `str` | `"10MB"` |
@@ -94,7 +96,7 @@ Each persistent container in a project gets an `instance.toml` metadata file:
 ```toml
 container_id = "abc123def456..."
 name = "my-sandbox"
-image = "pocketdock/minimal"
+image = "pocketdock/minimal-python"
 project = "my-app"
 created_at = "2026-01-15T10:30:00"
 persist = true

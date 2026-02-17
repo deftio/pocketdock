@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 def test_default_config_values() -> None:
     cfg = PocketDockConfig()
     assert cfg.project_name == ""
-    assert cfg.default_profile == "minimal"
+    assert cfg.default_profile == "minimal-python"
     assert cfg.default_persist is False
     assert cfg.auto_log is True
     assert cfg.max_log_size == "10MB"

@@ -43,7 +43,7 @@ All tests are integration tests against a real Podman socket. No mocks.
 
 - Tests skip gracefully if no Podman socket is found locally
 - CI always has Podman available — all tests must pass there
-- Use the `minimal` profile (~25MB, <500ms startup) for tests
+- Use the `minimal-python` profile (~25MB, <500ms startup) for tests
 
 ## Git Workflow
 

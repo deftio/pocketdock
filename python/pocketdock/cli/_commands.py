@@ -24,6 +24,43 @@ from pocketdock.cli._output import (
 )
 
 
+@click.command("quickstart")
+def quickstart_cmd() -> None:
+    """Show getting-started instructions."""
+    from rich.console import Console  # noqa: PLC0415
+    from rich.panel import Panel  # noqa: PLC0415
+
+    text = (
+        "[bold]Prerequisites[/bold]\n"
+        "  Python 3.10+\n"
+        "  Podman (recommended) or Docker\n"
+        "\n"
+        "[bold]Install[/bold]\n"
+        "  pip install pocketdock[cli]\n"
+        "\n"
+        "[bold]Build an image[/bold]\n"
+        "  pocketdock build minimal-python\n"
+        "\n"
+        "[bold]Create a container[/bold]\n"
+        "  pocketdock create --name my-sandbox\n"
+        "\n"
+        "[bold]Run a command[/bold]\n"
+        "  pocketdock run my-sandbox echo hello\n"
+        "\n"
+        "[bold]Open a shell[/bold]\n"
+        "  pocketdock shell my-sandbox\n"
+        "\n"
+        "[bold]Clean up[/bold]\n"
+        "  pocketdock shutdown my-sandbox --yes\n"
+        "\n"
+        "[bold]See all profiles[/bold]\n"
+        "  pocketdock profiles\n"
+        "\n"
+        "[dim]Docs: https://deftio.github.io/pocketdock/[/dim]"
+    )
+    Console().print(Panel(text, title="pocketdock quickstart", expand=False))
+
+
 def _get_ctx(ctx: click.Context) -> CliContext:
     """Extract the CliContext from Click's context object."""
     return ctx.obj  # type: ignore[no-any-return]
@@ -330,7 +367,9 @@ def _build_create_kwargs(  # noqa: PLR0913, C901, PLR0912
 
 
 @click.command("create")
-@click.option("--image", default=None, help="Container image (default: pocketdock/minimal).")
+@click.option(
+    "--image", default=None, help="Container image (default: pocketdock/minimal-python)."
+)
 @click.option("--name", default=None, help="Container name.")
 @click.option("--timeout", type=int, default=30, help="Default exec timeout in seconds.")
 @click.option("--mem-limit", default=None, help="Memory limit (e.g. '256m', '1g').")
@@ -341,7 +380,7 @@ def _build_create_kwargs(  # noqa: PLR0913, C901, PLR0912
 @click.option(
     "--profile",
     default=None,
-    help="Image profile (minimal, dev, agent, embedded).",
+    help="Image profile (minimal-python, minimal-node, minimal-bun, dev, agent, embedded).",
 )
 @click.option(
     "--device", "-d", multiple=True, help="Host device to passthrough (e.g. /dev/ttyUSB0)."

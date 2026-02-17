@@ -18,6 +18,7 @@ import asyncio
 import json
 import os
 import pathlib
+import sys
 import time
 import urllib.parse
 from typing import TYPE_CHECKING, Any
@@ -64,6 +65,8 @@ def detect_socket() -> str | None:
     2. Podman rootless: ``$XDG_RUNTIME_DIR/podman/podman.sock``
     3. Podman system: ``/run/podman/podman.sock``
     4. Docker: ``/var/run/docker.sock``
+    5. (macOS) Podman Machine: ``~/.local/share/containers/podman/machine/…/podman.sock``
+    6. (macOS) Docker Desktop: ``~/.docker/run/docker.sock``
 
     Returns:
         The path to the first socket found, or ``None``.
@@ -79,6 +82,16 @@ def detect_socket() -> str | None:
         pathlib.Path("/run/podman/podman.sock"),
         pathlib.Path("/var/run/docker.sock"),
     ]
+
+    if sys.platform == "darwin":
+        home = pathlib.Path.home()
+        candidates.extend(
+            [
+                home / ".local/share/containers/podman/machine/podman-machine-default/podman.sock",
+                home / ".docker/run/docker.sock",
+            ]
+        )
+
     for candidate in candidates:
         if _path_exists(candidate):
             return str(candidate)

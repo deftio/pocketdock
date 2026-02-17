@@ -24,7 +24,7 @@ pocketdock is a Python SDK and CLI that talks directly to Podman or Docker over 
 | **Resource limits** | Memory caps and CPU throttling per container |
 | **Persistence** | Stop/resume containers, snapshot to images, volume mounts |
 | **Project management** | `.pocketdock/` directories with config, logging, health checks |
-| **Image profiles** | Four pre-baked Dockerfiles: minimal, dev, agent, embedded |
+| **Image profiles** | Six pre-baked Dockerfiles: minimal-python, minimal-node, minimal-bun, dev, agent, embedded |
 | **Full CLI** | 21 commands for lifecycle, file ops, and project management |
 | **Async-first** | Sync facade over async core — use either API |
 | **Callbacks** | Register handlers for stdout, stderr, and exit events |

@@ -35,7 +35,7 @@ from .conftest import requires_engine
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-IMAGE = "pocketdock/minimal"
+IMAGE = "pocketdock/minimal-python"
 LABEL_KEY = "pocketdock.test"
 LABEL_VALUE = "true"
 

@@ -3,8 +3,8 @@
 
 """Image profile registry and resolution.
 
-Provides a mapping from profile names (``"minimal"``, ``"dev"``, etc.) to
-image tags and metadata.  Used by :func:`create_new_container` to resolve
+Provides a mapping from profile names (``"minimal-python"``, ``"dev"``, etc.)
+to image tags and metadata.  Used by :func:`create_new_container` to resolve
 the ``profile`` parameter into an image name.
 """
 
@@ -27,13 +27,29 @@ class ProfileInfo:
 
 
 PROFILES: dict[str, ProfileInfo] = {
-    "minimal": ProfileInfo(
-        name="minimal",
-        image_tag="pocketdock/minimal",
-        dockerfile_dir="images/minimal",
+    "minimal-python": ProfileInfo(
+        name="minimal-python",
+        image_tag="pocketdock/minimal-python",
+        dockerfile_dir="images/minimal-python",
         network_default=False,
         description="Lightest sandbox — Python 3, bash, busybox (~25 MB)",
         size_estimate="~25MB",
+    ),
+    "minimal-node": ProfileInfo(
+        name="minimal-node",
+        image_tag="pocketdock/minimal-node",
+        dockerfile_dir="images/minimal-node",
+        network_default=False,
+        description="Node.js sandbox — Node 22, npm, bash (~60 MB)",
+        size_estimate="~60MB",
+    ),
+    "minimal-bun": ProfileInfo(
+        name="minimal-bun",
+        image_tag="pocketdock/minimal-bun",
+        dockerfile_dir="images/minimal-bun",
+        network_default=False,
+        description="Bun sandbox — Bun runtime, bash (~100 MB)",
+        size_estimate="~100MB",
     ),
     "dev": ProfileInfo(
         name="dev",
@@ -66,7 +82,8 @@ def resolve_profile(name: str) -> ProfileInfo:
     """Look up a profile by name.
 
     Args:
-        name: One of ``"minimal"``, ``"dev"``, ``"agent"``, ``"embedded"``.
+        name: One of ``"minimal-python"``, ``"minimal-node"``, ``"minimal-bun"``,
+              ``"dev"``, ``"agent"``, ``"embedded"``.
 
     Returns:
         The corresponding :class:`ProfileInfo`.

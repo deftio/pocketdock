@@ -49,6 +49,18 @@ def test_cli_context_defaults() -> None:
     assert ctx.json_output is False
 
 
+# --- quickstart command ---
+
+
+def test_quickstart_success() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["quickstart"])
+    assert result.exit_code == 0
+    assert "build" in result.output
+    assert "create" in result.output
+    assert "run" in result.output
+
+
 # --- init command ---
 
 
@@ -1401,7 +1413,7 @@ def test_build_single_profile(mock_detect: MagicMock, mock_build: AsyncMock) -> 
     mock_detect.return_value = "/tmp/s.sock"
     mock_build.return_value = '{"stream":"ok"}'
     runner = CliRunner()
-    result = runner.invoke(cli, ["build", "minimal"])
+    result = runner.invoke(cli, ["build", "minimal-python"])
     assert result.exit_code == 0
     assert "Built" in result.output
 
@@ -1414,7 +1426,7 @@ def test_build_all_profiles(mock_detect: MagicMock, mock_build: AsyncMock) -> No
     runner = CliRunner()
     result = runner.invoke(cli, ["build", "--all"])
     assert result.exit_code == 0
-    assert result.output.count("Built") == 4
+    assert result.output.count("Built") == 6
 
 
 @patch("pocketdock._socket_client.build_image", new_callable=AsyncMock)
@@ -1425,14 +1437,14 @@ def test_build_default_builds_all(mock_detect: MagicMock, mock_build: AsyncMock)
     runner = CliRunner()
     result = runner.invoke(cli, ["build"])
     assert result.exit_code == 0
-    assert result.output.count("Built") == 4
+    assert result.output.count("Built") == 6
 
 
 @patch("pocketdock._socket_client.detect_socket")
 def test_build_no_engine(mock_detect: MagicMock) -> None:
     mock_detect.return_value = None
     runner = CliRunner()
-    result = runner.invoke(cli, ["build", "minimal"])
+    result = runner.invoke(cli, ["build", "minimal-python"])
     assert result.exit_code == 1
 
 
@@ -1449,7 +1461,7 @@ def test_build_error(mock_detect: MagicMock, mock_build: MagicMock) -> None:
     mock_detect.return_value = "/tmp/s.sock"
     mock_build.side_effect = RuntimeError("build boom")
     runner = CliRunner()
-    result = runner.invoke(cli, ["build", "minimal"])
+    result = runner.invoke(cli, ["build", "minimal-python"])
     assert result.exit_code == 1
 
 
@@ -1459,7 +1471,7 @@ def test_build_pocketdock_error(mock_detect: MagicMock, mock_build: MagicMock) -
     mock_detect.return_value = "/tmp/s.sock"
     mock_build.side_effect = PodmanNotRunning()
     runner = CliRunner()
-    result = runner.invoke(cli, ["build", "minimal"])
+    result = runner.invoke(cli, ["build", "minimal-python"])
     assert result.exit_code == 1
 
 
@@ -1473,7 +1485,7 @@ def test_export_with_image(mock_detect: MagicMock, mock_save: AsyncMock, tmp_pat
     mock_save.return_value = b"tar-data"
     out = str(tmp_path / "out.tar")
     runner = CliRunner()
-    result = runner.invoke(cli, ["export", "--image", "pocketdock/minimal", "-o", out])
+    result = runner.invoke(cli, ["export", "--image", "pocketdock/minimal-python", "-o", out])
     assert result.exit_code == 0
     assert Path(out).read_bytes() == b"tar-data"
 
@@ -1641,7 +1653,7 @@ def test_profiles_list() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["profiles"])
     assert result.exit_code == 0
-    assert "minimal" in result.output
+    assert "minimal-python" in result.output
     assert "dev" in result.output
     assert "agent" in result.output
     assert "embedded" in result.output
@@ -1652,9 +1664,9 @@ def test_profiles_json() -> None:
     result = runner.invoke(cli, ["profiles", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.output)
-    assert len(data) == 4
+    assert len(data) == 6
     names = {p["name"] for p in data}
-    assert names == {"minimal", "dev", "agent", "embedded"}
+    assert names == {"minimal-python", "minimal-node", "minimal-bun", "dev", "agent", "embedded"}
 
 
 def test_profiles_help() -> None:

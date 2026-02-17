@@ -109,7 +109,22 @@ def test_socket_communication_error_without_detail() -> None:
 def test_podman_not_running_message() -> None:
     err = PodmanNotRunning()
     assert "Podman" in str(err)
+
+
+def test_podman_not_running_linux_hint() -> None:
+    from unittest.mock import patch
+
+    with patch("pocketdock.errors.sys.platform", "linux"):
+        err = PodmanNotRunning()
     assert "systemctl" in str(err)
+
+
+def test_podman_not_running_darwin_hint() -> None:
+    from unittest.mock import patch
+
+    with patch("pocketdock.errors.sys.platform", "darwin"):
+        err = PodmanNotRunning()
+    assert "podman machine start" in str(err)
 
 
 def test_container_error_stores_id() -> None:

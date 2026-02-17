@@ -83,7 +83,7 @@ def test_init_project_yaml_content(tmp_path: Path) -> None:
     content = (tmp_path / ".pocketdock" / "pocketdock.yaml").read_text()
     data = yaml.safe_load(content)
     assert data["project_name"] == "my-widget"
-    assert data["default_profile"] == "minimal"
+    assert data["default_profile"] == "minimal-python"
     assert data["default_persist"] is False
     assert data["logging"]["auto_log"] is True
 
@@ -187,7 +187,7 @@ def test_write_and_read_instance_metadata(tmp_path: Path) -> None:
         instance_dir,
         container_id="a1b2c3d4",
         name="pd-test1234",
-        image="pocketdock/minimal",
+        image="pocketdock/minimal-python",
         project="my-widget",
         created_at="2026-02-05T09:15:00Z",
         persist=True,
@@ -198,7 +198,7 @@ def test_write_and_read_instance_metadata(tmp_path: Path) -> None:
     metadata = read_instance_metadata(instance_dir)
     assert metadata["container"]["id"] == "a1b2c3d4"
     assert metadata["container"]["name"] == "pd-test1234"
-    assert metadata["container"]["image"] == "pocketdock/minimal"
+    assert metadata["container"]["image"] == "pocketdock/minimal-python"
     assert metadata["container"]["persist"] is True
     assert metadata["resources"]["mem_limit"] == "256m"
     assert metadata["resources"]["cpu_percent"] == 50

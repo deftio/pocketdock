@@ -40,7 +40,7 @@ def test_cli_profiles_lists_all() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["profiles"])
     assert result.exit_code == 0
-    assert "minimal" in result.output
+    assert "minimal-python" in result.output
     assert "dev" in result.output
     assert "agent" in result.output
     assert "embedded" in result.output
@@ -54,7 +54,7 @@ def test_cli_profiles_json() -> None:
     result = runner.invoke(cli, ["profiles", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.output)
-    assert len(data) == 4
+    assert len(data) == 6
 
 
 # --- create with profile ---
@@ -63,7 +63,9 @@ def test_cli_profiles_json() -> None:
 @requires_engine
 async def test_cli_create_with_profile() -> None:
     runner = CliRunner()
-    result = runner.invoke(cli, ["create", "--profile", "minimal", "--name", "pd-cli-int-profile"])
+    result = runner.invoke(
+        cli, ["create", "--profile", "minimal-python", "--name", "pd-cli-int-profile"]
+    )
     try:
         assert result.exit_code == 0
         assert "pd-cli-int-profile" in result.output
@@ -71,13 +73,13 @@ async def test_cli_create_with_profile() -> None:
         await _force_cleanup("pd-cli-int-profile")
 
 
-# --- build (minimal only — fast) ---
+# --- build (minimal-python only — fast) ---
 
 
 @requires_engine
-def test_cli_build_minimal() -> None:
+def test_cli_build_minimal_python() -> None:
     runner = CliRunner()
-    result = runner.invoke(cli, ["build", "minimal"])
+    result = runner.invoke(cli, ["build", "minimal-python"])
     assert result.exit_code == 0
     assert "Built" in result.output
 
@@ -87,10 +89,10 @@ def test_cli_build_minimal() -> None:
 
 @requires_engine
 def test_cli_export_import_roundtrip(tmp_path: pytest.TempPathFactory) -> None:
-    out = str(tmp_path / "minimal.tar")  # type: ignore[operator]
+    out = str(tmp_path / "minimal-python.tar")  # type: ignore[operator]
     runner = CliRunner()
     # Export
-    result = runner.invoke(cli, ["export", "--image", "pocketdock/minimal", "-o", out])
+    result = runner.invoke(cli, ["export", "--image", "pocketdock/minimal-python", "-o", out])
     assert result.exit_code == 0
     assert "Exported" in result.output
     # Import

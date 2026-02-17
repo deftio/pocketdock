@@ -16,20 +16,20 @@ pip install pocketdock[cli]     # SDK + CLI
 
 ## Build the Minimal Image
 
-pocketdock ships Dockerfiles for four image profiles. The `minimal` profile (~25MB, <500ms startup) is the default:
+pocketdock ships Dockerfiles for six image profiles. The `minimal-python` profile (~25MB, <500ms startup) is the default:
 
 ```bash
-pocketdock build minimal
+pocketdock build minimal-python
 ```
 
 Or build directly with your container engine:
 
 ```bash
 # Podman
-podman build -t pocketdock/minimal images/minimal/
+podman build -t pocketdock/minimal-python images/minimal-python/
 
 # Docker
-docker build -t pocketdock/minimal images/minimal/
+docker build -t pocketdock/minimal-python images/minimal-python/
 ```
 
 ## Run Your First Container

@@ -131,7 +131,7 @@ Metadata about an image profile.
 ```python
 from pocketdock import resolve_profile
 
-info = resolve_profile("minimal")
+info = resolve_profile("minimal-python")
 ```
 
 | Field | Type | Description |

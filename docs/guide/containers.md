@@ -24,7 +24,7 @@ with create_new_container() as c:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `image` | `str` | `"pocketdock/minimal"` | Container image tag |
+| `image` | `str` | `"pocketdock/minimal-python"` | Container image tag |
 | `name` | `str \| None` | `None` | Container name (auto-generated as `pd-{hex}` if `None`) |
 | `timeout` | `int` | `30` | Default exec timeout in seconds |
 | `mem_limit` | `str \| None` | `None` | Memory limit (e.g., `"256m"`, `"1g"`) |
@@ -32,7 +32,7 @@ with create_new_container() as c:
 | `persist` | `bool` | `False` | If `True`, `shutdown()` stops but doesn't remove |
 | `volumes` | `dict[str, str] \| None` | `None` | Host-to-container mounts |
 | `project` | `str \| None` | `None` | Project name (auto-detected from `.pocketdock/`) |
-| `profile` | `str \| None` | `None` | Image profile name (`"minimal"`, `"dev"`, `"agent"`, `"embedded"`) |
+| `profile` | `str \| None` | `None` | Image profile name (`"minimal-python"`, `"minimal-node"`, `"minimal-bun"`, `"dev"`, `"agent"`, `"embedded"`) |
 | `devices` | `list[str] \| None` | `None` | Host devices to passthrough (e.g., `["/dev/ttyUSB0"]`) |
 | `ports` | `dict[int, int] \| None` | `None` | Host-to-container port mappings (e.g., `{8080: 80}`) |
 
@@ -67,7 +67,7 @@ Get a live snapshot of the container's state:
 info = c.info()
 
 info.status          # "running"
-info.image           # "pocketdock/minimal"
+info.image           # "pocketdock/minimal-python"
 info.memory_usage    # "42.1 MB"
 info.memory_limit    # "256 MB"
 info.memory_percent  # 16.4

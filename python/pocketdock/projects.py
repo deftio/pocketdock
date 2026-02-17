@@ -21,7 +21,7 @@ _INSTANCES_DIR = "instances"
 _DEFAULT_YAML_TEMPLATE = """\
 # Project configuration for pocketdock
 project_name: {project_name}
-default_profile: minimal
+default_profile: minimal-python
 default_persist: false
 
 logging:

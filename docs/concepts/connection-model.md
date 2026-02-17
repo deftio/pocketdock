@@ -36,12 +36,14 @@ Connection-per-operation means:
 
 If no socket path is specified, pocketdock searches in this order:
 
-| Priority | Path | Engine |
-|----------|------|--------|
-| 1 | `$POCKETDOCK_SOCKET` env var | Any |
-| 2 | `$XDG_RUNTIME_DIR/podman/podman.sock` | Podman (rootless) |
-| 3 | `/run/podman/podman.sock` | Podman (system) |
-| 4 | `/var/run/docker.sock` | Docker |
+| Priority | Path | Engine | Platform |
+|----------|------|--------|----------|
+| 1 | `$POCKETDOCK_SOCKET` env var | Any | All |
+| 2 | `$XDG_RUNTIME_DIR/podman/podman.sock` | Podman (rootless) | Linux |
+| 3 | `/run/podman/podman.sock` | Podman (system) | Linux |
+| 4 | `/var/run/docker.sock` | Docker | All |
+| 5 | `~/.local/share/containers/podman/machine/.../podman.sock` | Podman Machine | macOS |
+| 6 | `~/.docker/run/docker.sock` | Docker Desktop | macOS |
 
 Detection checks that the socket file exists and is connectable. The first working socket wins.
 
