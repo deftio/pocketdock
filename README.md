@@ -24,7 +24,7 @@ Managed sandbox platforms require API keys, cloud accounts, and an internet conn
 - **Container persistence** — stop/resume, snapshot to image, volume mounts
 - **Project management** — `.pocketdock/` project directories with config, logging, and health checks
 - **Image profiles** — six pre-baked Dockerfiles: minimal-python, minimal-node, minimal-bun, dev, agent, embedded
-- **Full CLI** — 21 commands for container lifecycle, file ops, and project management
+- **Full CLI** — 22 commands for container lifecycle, file ops, and project management
 - **Async-first** — sync facade over async core; use either API style
 - **Callbacks** — register handlers for stdout, stderr, and exit events
 
@@ -44,7 +44,10 @@ with create_new_container() as c:
 ```bash
 pip install pocketdock          # SDK only (zero dependencies)
 pip install pocketdock[cli]     # SDK + CLI (click, rich)
+pip install pocketdock[agent]   # SDK + CLI + LLM agent (litellm)
 ```
+
+Single-file downloads (no pip required) are available from [GitHub Releases](https://github.com/deftio/pocketdock/releases).
 
 Requires [Podman](https://podman.io/getting-started/installation) (recommended) or [Docker](https://docs.docker.com/get-docker/).
 
@@ -59,7 +62,7 @@ Full documentation is available at **[deftio.github.io/pocketdock](https://defti
 
 - [Quickstart](https://deftio.github.io/pocketdock/quickstart/) — install, build, run your first container
 - [User Guide](https://deftio.github.io/pocketdock/guide/containers/) — containers, commands, files, sessions, persistence, profiles
-- [CLI Reference](https://deftio.github.io/pocketdock/cli/) — all 21 commands with examples
+- [CLI Reference](https://deftio.github.io/pocketdock/cli/) — all 22 commands with examples
 - [API Reference](https://deftio.github.io/pocketdock/reference/api/) — full SDK reference
 
 ## Architecture

@@ -25,7 +25,7 @@ pocketdock is a Python SDK and CLI that talks directly to Podman or Docker over 
 | **Persistence** | Stop/resume containers, snapshot to images, volume mounts |
 | **Project management** | `.pocketdock/` directories with config, logging, health checks |
 | **Image profiles** | Six pre-baked Dockerfiles: minimal-python, minimal-node, minimal-bun, dev, agent, embedded |
-| **Full CLI** | 21 commands for lifecycle, file ops, and project management |
+| **Full CLI** | 22 commands for lifecycle, file ops, and project management |
 | **Async-first** | Sync facade over async core — use either API |
 | **Callbacks** | Register handlers for stdout, stderr, and exit events |
 
@@ -64,11 +64,19 @@ with create_new_container() as c:
     pip install pocketdock[cli]
     ```
 
+=== "SDK + CLI + Agent"
+
+    ```bash
+    pip install pocketdock[agent]
+    ```
+
+Single-file downloads (no pip required) are available from [GitHub Releases](https://github.com/deftio/pocketdock/releases).
+
 Requires [Podman](https://podman.io/getting-started/installation) (recommended) or [Docker](https://docs.docker.com/get-docker/).
 
 ## What's Next?
 
 - **[Quickstart](quickstart.md)** — build an image and run your first container in under a minute
 - **[User Guide](guide/containers.md)** — deep dive into containers, commands, files, sessions, and more
-- **[CLI Reference](cli.md)** — all 21 commands with examples
+- **[CLI Reference](cli.md)** — all 22 commands with examples
 - **[API Reference](reference/api.md)** — full SDK reference with type signatures

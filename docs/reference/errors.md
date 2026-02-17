@@ -78,6 +78,11 @@ No container engine socket found.
 
 **When raised:** Auto-detection checked all known socket paths and none were available.
 
+The error message includes a platform-specific hint:
+
+- **Linux:** `Try: systemctl --user start podman.socket`
+- **macOS:** `Try: podman machine start  OR  open Docker Desktop`
+
 ## Container Errors
 
 Raised when there are issues with a specific container.

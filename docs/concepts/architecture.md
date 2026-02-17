@@ -48,7 +48,7 @@ python/pocketdock/
 ├── types.py                 # Data classes (ExecResult, ContainerInfo, etc.)
 └── cli/                     # Click + Rich CLI
     ├── main.py              # Entry point and global options
-    └── _commands.py         # All 21 commands
+    └── _commands.py         # All 22 commands
 ```
 
 ## Key Design Rules

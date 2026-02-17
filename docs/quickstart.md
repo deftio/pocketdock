@@ -12,6 +12,7 @@ Get a container running in under a minute.
 ```bash
 pip install pocketdock          # SDK only
 pip install pocketdock[cli]     # SDK + CLI
+pip install pocketdock[agent]   # SDK + CLI + LLM agent
 ```
 
 ## Build the Minimal Image
@@ -102,4 +103,4 @@ pocketdock shutdown my-sandbox --yes
 - **[Creating Containers](guide/containers.md)** — all parameters, resource limits, info, reboot
 - **[Running Commands](guide/commands.md)** — blocking, streaming, and detached modes
 - **[Sessions](guide/sessions.md)** — persistent shell sessions
-- **[CLI Reference](cli.md)** — all 21 commands
+- **[CLI Reference](cli.md)** — all 22 commands

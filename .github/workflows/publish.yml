@@ -28,6 +28,7 @@ jobs:
       - name: Build shiv executables
         run: |
           pip install shiv
+          mkdir -p dist
           shiv -e pocketdock.cli.main:cli -o dist/pocketdock.pyz ".[cli]"
           shiv -e pocketdock.cli.main:cli -o dist/pocketdock-agent.pyz ".[cli,agent]"
       - name: Upload to GitHub release

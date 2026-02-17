@@ -13,13 +13,13 @@ def test_version_attribute() -> None:
     import pocketdock
 
     assert isinstance(pocketdock.__version__, str)
-    assert pocketdock.__version__ == "1.2.0"
+    assert pocketdock.__version__ == "1.2.1"
 
 
 def test_get_version_function() -> None:
     from pocketdock import get_version
 
-    assert get_version() == "1.2.0"
+    assert get_version() == "1.2.1"
 
 
 def test_import_resume_container() -> None:
