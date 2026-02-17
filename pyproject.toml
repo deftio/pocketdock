@@ -34,6 +34,12 @@ cli = [
     "click",
     "rich",
 ]
+agent = [
+    "click",
+    "rich",
+    "litellm",
+    "python-dotenv",
+]
 
 [dependency-groups]
 dev = [
