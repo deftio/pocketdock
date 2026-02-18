@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (c) deftio llc
+
 """Minimal web server for the pocketdock demo."""
 
 import http.server
