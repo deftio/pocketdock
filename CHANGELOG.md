@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-02-18
+
+### Fixed
+
+- CLI entry point now shows a clear error when `click` is not installed instead of a raw `ModuleNotFoundError`
+- Removed non-functional `[cli]` extras marker from console script entry point (not supported by hatchling)
+- Fixed shiv build: `mkdir -p dist` before writing artifacts
+- Fixed hardcoded version strings in tests and docs
+- Updated command count from 21 to 22 across all documentation
+
+### Added
+
+- `[agent]` install option documented in README, index, and quickstart
+- Shiv single-file downloads mentioned in install sections
+- Platform-aware error hints documented in error reference
+
 ## [1.2.1] - 2026-02-17
 
 ### Added

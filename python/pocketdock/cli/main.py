@@ -6,8 +6,15 @@
 from __future__ import annotations
 
 import dataclasses
+import sys
 
-import click
+try:
+    import click
+except ImportError:
+    sys.stderr.write(
+        "pocketdock CLI requires click and rich.\nInstall with:  pip install pocketdock[cli]\n"
+    )
+    sys.exit(1)
 
 from pocketdock import __version__
 

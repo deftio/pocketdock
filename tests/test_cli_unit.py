@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import datetime
 import json
+import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from click.testing import CliRunner
 from pocketdock.cli.main import CliContext, cli
 from pocketdock.errors import ContainerNotFound, PodmanNotRunning, ProjectNotInitialized
@@ -22,11 +24,31 @@ def test_cli_help() -> None:
     assert "pocketdock" in result.output.lower() or "Usage" in result.output
 
 
+def test_cli_missing_click() -> None:
+    """Entry point prints a helpful error when click is not installed."""
+    import importlib
+
+    import pocketdock.cli.main as mod
+
+    original = sys.modules.get("click")
+    sys.modules["click"] = None  # type: ignore[assignment]
+    try:
+        with pytest.raises(SystemExit, match="1"):
+            importlib.reload(mod)
+    finally:
+        if original is not None:
+            sys.modules["click"] = original
+        else:
+            sys.modules.pop("click", None)
+        # Restore the module to a working state for other tests.
+        importlib.reload(mod)
+
+
 def test_cli_version() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert "1.2.1" in result.output
+    assert "1.2.2" in result.output
 
 
 def test_cli_socket_option() -> None:

@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pocketdock"
-version = "1.2.1"
+version = "1.2.2"
 description = "Portable, offline-first container sandboxes for LLM agents and dev workflows"
 readme = "README.md"
 license = "BSD-2-Clause"
@@ -58,7 +58,7 @@ dev = [
 ]
 
 [project.scripts]
-pocketdock = "pocketdock.cli.main:cli [cli]"
+pocketdock = "pocketdock.cli.main:cli"
 
 # ---------------------------------------------------------------------------
 # Tool configuration
