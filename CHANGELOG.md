@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-02-18
+
+### Added
+
+- Bundled `demo/` directory in `minimal-python` image with sample web page and server
+- Web server demo section in `pocketdock quickstart` CLI output
+- Web server demo section in quickstart docs showing port mapping with `-p 8080:8000`
+
 ## [1.2.4] - 2026-02-18
 
 ### Fixed
