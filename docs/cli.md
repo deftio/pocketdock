@@ -5,7 +5,7 @@ pocketdock includes a full CLI for managing containers from the terminal.
 ## Install
 
 ```bash
-pip install pocketdock[cli]
+pip install pocketdock
 ```
 
 ## Global Options

@@ -29,8 +29,8 @@ jobs:
         run: |
           pip install shiv
           mkdir -p dist
-          shiv -e pocketdock.cli.main:cli -o dist/pocketdock.pyz ".[cli]"
-          shiv -e pocketdock.cli.main:cli -o dist/pocketdock-agent.pyz ".[cli,agent]"
+          shiv -e pocketdock.cli.main:cli -o dist/pocketdock.pyz .
+          shiv -e pocketdock.cli.main:cli -o dist/pocketdock-agent.pyz ".[agent]"
       - name: Upload to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
