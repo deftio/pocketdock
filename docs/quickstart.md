@@ -97,6 +97,28 @@ pocketdock shell my-sandbox
 pocketdock shutdown my-sandbox --yes
 ```
 
+## Web Server Demo
+
+The `minimal-python` image includes a `demo/` directory with a simple web page and server. Try it with port mapping:
+
+```bash
+# Create a container with host port 8080 mapped to container port 8000
+pocketdock create --name my-web --profile minimal-python -p 8080:8000
+
+# Open a shell and start the server
+pocketdock shell my-web
+cd demo && python serve.py
+
+# Open http://localhost:8080 in your browser
+```
+
+The `-p 8080:8000` flag maps host port 8080 to container port 8000. Port mapping must be set at container creation time.
+
+```bash
+# Clean up when done
+pocketdock shutdown my-web --yes
+```
+
 ## Next Steps
 
 - **[Creating Containers](guide/containers.md)** — all parameters, resource limits, info, reboot

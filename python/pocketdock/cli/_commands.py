@@ -56,6 +56,12 @@ def quickstart_cmd() -> None:
         "[bold]See all profiles[/bold]\n"
         "  pocketdock profiles\n"
         "\n"
+        "[bold]Web server demo[/bold]\n"
+        "  pocketdock create --name my-web --profile minimal-python -p 8080:8000\n"
+        "  pocketdock shell my-web\n"
+        "  cd demo && python serve.py\n"
+        "  # then open http://localhost:8080 in your browser\n"
+        "\n"
         "[dim]Docs: https://deftio.github.io/pocketdock/[/dim]"
     )
     Console().print(Panel(text, title="pocketdock quickstart", expand=False))

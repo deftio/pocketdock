@@ -26,7 +26,7 @@ def test_cli_version() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert "1.2.4" in result.output
+    assert "1.2.5" in result.output
 
 
 def test_cli_socket_option() -> None:
@@ -59,6 +59,7 @@ def test_quickstart_success() -> None:
     assert "build" in result.output
     assert "create" in result.output
     assert "run" in result.output
+    assert "8080" in result.output
 
 
 # --- init command ---

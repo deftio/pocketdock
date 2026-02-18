@@ -145,6 +145,13 @@ def test_profile_info_frozen() -> None:
 # --- ProfileInfo fields ---
 
 
+def test_minimal_python_demo_files_bundled() -> None:
+    path = get_dockerfile_path("minimal-python")
+    assert (path / "demo" / "index.html").is_file()
+    assert (path / "demo" / "serve.py").is_file()
+    assert (path / "demo" / "README.md").is_file()
+
+
 def test_profile_info_fields() -> None:
     info = resolve_profile("dev")
     assert info.dockerfile_dir == "_images/dev"
