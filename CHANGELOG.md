@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-02-18
+
+### Fixed
+
+- `pocketdock build` now works when installed via pip/pipx — Dockerfiles are bundled inside the package
+- Moved `images/` Dockerfiles into `pocketdock/_images/` so they are included in the wheel
+- `get_dockerfile_path()` resolves relative to the installed package, not the repo root
+
 ## [1.2.3] - 2026-02-18
 
 ### Changed

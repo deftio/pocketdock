@@ -42,7 +42,7 @@ def quickstart_cmd() -> None:
         "  pocketdock build minimal-python\n"
         "\n"
         "[bold]Create a container[/bold]\n"
-        "  pocketdock create --name my-sandbox\n"
+        "  pocketdock create --name my-sandbox --profile minimal-python\n"
         "\n"
         "[bold]Run a command[/bold]\n"
         "  pocketdock run my-sandbox echo hello\n"
