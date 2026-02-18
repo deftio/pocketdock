@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+// Force one reload per version bump so stale GitHub Pages CDN caches are bypassed.
+(function () {
+  var defined = "{{ config.extra.version }}";
+  var key = "pdv";
+  var stored = localStorage.getItem(key);
+  localStorage.setItem(key, defined);
+  if (stored && stored !== defined && location.search.indexOf("_v=") === -1) {
+    location.replace(location.pathname + "?_v=" + defined + location.hash);
+  }
+})();
+</script>
+{% endblock %}

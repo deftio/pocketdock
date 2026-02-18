@@ -6,6 +6,7 @@ repo_name: deftio/pocketdock
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     - scheme: default
       primary: indigo
@@ -52,10 +53,10 @@ nav:
   - Changelog: changelog.md
 
 extra:
-  version: 1.2.5
+  version: 1.2.6
   generator: false
 
-copyright: "pocketdock v1.2.5 &mdash; BSD-2-Clause &copy; deftio llc"
+copyright: "pocketdock v1.2.6 &mdash; BSD-2-Clause &copy; deftio llc"
 
 markdown_extensions:
   - admonition

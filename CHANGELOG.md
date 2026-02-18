@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-02-18
+
+### Fixed
+
+- Docs site now forces a one-time reload on version change to bypass stale GitHub Pages CDN caches
+- Added cache-control meta tags and version footer to docs site
+
 ## [1.2.5] - 2026-02-18
 
 ### Added
