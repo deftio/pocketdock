@@ -52,19 +52,13 @@ with create_new_container() as c:
 
 ## Install
 
-=== "SDK only"
+=== "Standard"
 
     ```bash
     pip install pocketdock
     ```
 
-=== "SDK + CLI"
-
-    ```bash
-    pip install pocketdock[cli]
-    ```
-
-=== "SDK + CLI + Agent"
+=== "With LLM Agent"
 
     ```bash
     pip install pocketdock[agent]

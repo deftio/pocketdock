@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-02-18
+
+### Changed
+
+- `click` and `rich` are now core dependencies — `pip install pocketdock` includes the CLI out of the box
+- Removed `[cli]` optional extra (no longer needed)
+- `[agent]` extra now only adds `litellm` and `python-dotenv`
+
 ## [1.2.2] - 2026-02-18
 
 ### Fixed

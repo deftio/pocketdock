@@ -44,7 +44,7 @@ uv run pytest                                          # tests + coverage
 - [ ] `bandit` — zero findings
 - [ ] `pytest` — all tests pass
 - [ ] **100% line coverage** — no `# pragma: no cover`, no exclusions
-- [ ] No new dependencies added to the SDK (stdlib only). CLI deps go in `[project.optional-dependencies.cli]`.
+- [ ] No unnecessary dependencies added. Core deps: PyYAML, click, rich, tomli (3.10). Agent deps go in `[project.optional-dependencies.agent]`.
 
 ## Docs Sync (the step everyone skips — don't)
 

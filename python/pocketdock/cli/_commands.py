@@ -36,7 +36,7 @@ def quickstart_cmd() -> None:
         "  Podman (recommended) or Docker\n"
         "\n"
         "[bold]Install[/bold]\n"
-        "  pip install pocketdock[cli]\n"
+        "  pip install pocketdock\n"
         "\n"
         "[bold]Build an image[/bold]\n"
         "  pocketdock build minimal-python\n"

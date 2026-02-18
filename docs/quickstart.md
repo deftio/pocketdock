@@ -10,9 +10,8 @@ Get a container running in under a minute.
 ## Install
 
 ```bash
-pip install pocketdock          # SDK only
-pip install pocketdock[cli]     # SDK + CLI
-pip install pocketdock[agent]   # SDK + CLI + LLM agent
+pip install pocketdock          # SDK + CLI
+pip install pocketdock[agent]   # + LLM agent
 ```
 
 ## Build the Minimal Image

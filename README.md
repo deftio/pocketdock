@@ -42,9 +42,8 @@ with create_new_container() as c:
 ## Install
 
 ```bash
-pip install pocketdock          # SDK only (zero dependencies)
-pip install pocketdock[cli]     # SDK + CLI (click, rich)
-pip install pocketdock[agent]   # SDK + CLI + LLM agent (litellm)
+pip install pocketdock          # SDK + CLI (includes click, rich)
+pip install pocketdock[agent]   # + LLM agent (litellm, python-dotenv)
 ```
 
 Single-file downloads (no pip required) are available from [GitHub Releases](https://github.com/deftio/pocketdock/releases).
