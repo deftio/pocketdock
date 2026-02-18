@@ -84,8 +84,8 @@ with create_new_container() as c:
 ## Try the CLI
 
 ```bash
-# Create a persistent container
-pocketdock create --name my-sandbox
+# Create a container using the minimal-python profile
+pocketdock create --name my-sandbox --profile minimal-python
 
 # Run a command
 pocketdock run my-sandbox echo hello

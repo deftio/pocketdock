@@ -147,6 +147,6 @@ def test_profile_info_frozen() -> None:
 
 def test_profile_info_fields() -> None:
     info = resolve_profile("dev")
-    assert info.dockerfile_dir == "images/dev"
+    assert info.dockerfile_dir == "_images/dev"
     assert info.description
     assert info.size_estimate

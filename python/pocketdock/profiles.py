@@ -30,7 +30,7 @@ PROFILES: dict[str, ProfileInfo] = {
     "minimal-python": ProfileInfo(
         name="minimal-python",
         image_tag="pocketdock/minimal-python",
-        dockerfile_dir="images/minimal-python",
+        dockerfile_dir="_images/minimal-python",
         network_default=False,
         description="Lightest sandbox — Python 3, bash, busybox (~25 MB)",
         size_estimate="~25MB",
@@ -38,7 +38,7 @@ PROFILES: dict[str, ProfileInfo] = {
     "minimal-node": ProfileInfo(
         name="minimal-node",
         image_tag="pocketdock/minimal-node",
-        dockerfile_dir="images/minimal-node",
+        dockerfile_dir="_images/minimal-node",
         network_default=False,
         description="Node.js sandbox — Node 22, npm, bash (~60 MB)",
         size_estimate="~60MB",
@@ -46,7 +46,7 @@ PROFILES: dict[str, ProfileInfo] = {
     "minimal-bun": ProfileInfo(
         name="minimal-bun",
         image_tag="pocketdock/minimal-bun",
-        dockerfile_dir="images/minimal-bun",
+        dockerfile_dir="_images/minimal-bun",
         network_default=False,
         description="Bun sandbox — Bun runtime, bash (~100 MB)",
         size_estimate="~100MB",
@@ -54,7 +54,7 @@ PROFILES: dict[str, ProfileInfo] = {
     "dev": ProfileInfo(
         name="dev",
         image_tag="pocketdock/dev",
-        dockerfile_dir="images/dev",
+        dockerfile_dir="_images/dev",
         network_default=True,
         description="Interactive dev sandbox — git, curl, vim, build tools, ipython (~250 MB)",
         size_estimate="~250MB",
@@ -62,7 +62,7 @@ PROFILES: dict[str, ProfileInfo] = {
     "agent": ProfileInfo(
         name="agent",
         image_tag="pocketdock/agent",
-        dockerfile_dir="images/agent",
+        dockerfile_dir="_images/agent",
         network_default=False,
         description="Agent sandbox — requests, pandas, numpy, beautifulsoup4 (~350 MB)",
         size_estimate="~350MB",
@@ -70,7 +70,7 @@ PROFILES: dict[str, ProfileInfo] = {
     "embedded": ProfileInfo(
         name="embedded",
         image_tag="pocketdock/embedded",
-        dockerfile_dir="images/embedded",
+        dockerfile_dir="_images/embedded",
         network_default=True,
         description="C/C++ toolchain — GCC, CMake, ARM cross-compiler, Arduino CLI (~450 MB)",
         size_estimate="~450MB",
@@ -108,9 +108,8 @@ def list_profiles() -> list[ProfileInfo]:
 def get_dockerfile_path(name: str) -> pathlib.Path:
     """Return the absolute path to a profile's Dockerfile directory.
 
-    The path is resolved relative to the repository root, which is assumed
-    to be three levels above this source file
-    (``python/pocketdock/profiles.py`` → repo root).
+    The Dockerfiles are bundled inside the package at
+    ``pocketdock/_images/<profile>/``.
 
     Args:
         name: Profile name.
@@ -124,5 +123,6 @@ def get_dockerfile_path(name: str) -> pathlib.Path:
 
     """
     info = resolve_profile(name)
-    repo_root = pathlib.Path(__file__).resolve().parent.parent.parent
-    return repo_root / info.dockerfile_dir
+    # _images/ lives next to this file inside the installed package.
+    package_dir = pathlib.Path(__file__).resolve().parent
+    return package_dir / info.dockerfile_dir

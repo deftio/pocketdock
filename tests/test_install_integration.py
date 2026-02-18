@@ -68,3 +68,13 @@ def test_pip_install_bare_cli_works(tmp_path: Path) -> None:
         r = c.run(f"{pd} profiles")
         assert r.ok, f"pocketdock profiles failed: {r.stderr}"
         assert "minimal-python" in r.stdout
+
+        # get_dockerfile_path must resolve to a real directory with a Dockerfile.
+        r = c.run(
+            'python3 -c "from pocketdock.profiles import get_dockerfile_path; '
+            "p = get_dockerfile_path('minimal-python'); "
+            "print(p); "
+            "assert p.exists(), f'{p} does not exist'; "
+            "assert (p / 'Dockerfile').exists(), 'no Dockerfile'\""
+        )
+        assert r.ok, f"get_dockerfile_path failed: {r.stderr}{r.stdout}"
