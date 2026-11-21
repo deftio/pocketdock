@@ -89,8 +89,13 @@ def _augment_host_config(
     devices: list[str] | None = None,
     volumes: dict[str, str] | None = None,
     ports: dict[int, int] | None = None,
+    network: bool = True,
 ) -> dict[str, Any] | None:
-    """Add devices, volumes, and port bindings to an existing host config (or create one)."""
+    """Add devices, volumes, port bindings and network mode to a host config (or create one).
+
+    ``network=False`` sets ``NetworkMode`` to ``"none"`` (loopback only), which
+    both Docker and Podman honour at create time.
+    """
     if devices is not None:
         if host_config is None:
             host_config = {}
@@ -105,7 +110,38 @@ def _augment_host_config(
         if host_config is None:
             host_config = {}
         host_config["PortBindings"] = build_port_bindings(ports)
+    if not network:
+        if host_config is None:
+            host_config = {}
+        host_config["NetworkMode"] = "none"
     return host_config
+
+
+def _resolve_network(
+    *,
+    network: bool | None,
+    network_default: bool | None,
+    ports: dict[int, int] | None,
+) -> bool:
+    """Decide whether a new container gets network access.
+
+    Precedence: an explicit ``network`` argument, then the profile's
+    ``network_default``, then ``True`` (no profile).  Publishing ports needs a
+    network, so ``ports`` turn the network on when it was not set explicitly,
+    and combining ``ports`` with an explicit ``network=False`` is an error.
+
+    Raises:
+        ValueError: If ``ports`` are given together with ``network=False``.
+
+    """
+    if network is False and ports:
+        msg = "ports cannot be published when network=False (the container has no network)"
+        raise ValueError(msg)
+    if network is not None:
+        return network
+    if ports:
+        return True
+    return True if network_default is None else network_default
 
 
 class AsyncContainer:
@@ -129,6 +165,9 @@ class AsyncContainer:
         project: str = "",
         data_path: str = "",
         ports: dict[int, int] | None = None,
+        devices: list[str] | None = None,
+        volumes: dict[str, str] | None = None,
+        network: bool = True,
     ) -> None:
         self._container_id = container_id
         self._socket_path = socket_path
@@ -141,6 +180,9 @@ class AsyncContainer:
         self._project = project
         self._data_path = data_path
         self._ports = ports
+        self._devices = devices
+        self._volumes = volumes
+        self._network = network
         self._logger: InstanceLogger | None = None
         if data_path:
             self._logger = InstanceLogger(pathlib.Path(data_path))
@@ -336,7 +378,13 @@ class AsyncContainer:
             self._name, persist=self._persist, project=self._project, data_path=self._data_path
         )
         host_config = _build_host_config(self._mem_limit_bytes, self._nano_cpus)
-        host_config = _augment_host_config(host_config, ports=self._ports)
+        host_config = _augment_host_config(
+            host_config,
+            devices=self._devices,
+            volumes=self._volumes,
+            ports=self._ports,
+            network=self._network,
+        )
         exposed_ports = build_exposed_ports(self._ports) if self._ports else None
         self._container_id = await sc.create_container(
             self._socket_path,
@@ -586,6 +634,7 @@ async def create_new_container(  # noqa: PLR0913
     profile: str | None = None,
     devices: list[str] | None = None,
     ports: dict[int, int] | None = None,
+    network: bool | None = None,
 ) -> AsyncContainer:
     """Create and start a new container, returning an async handle.
 
@@ -599,13 +648,22 @@ async def create_new_container(  # noqa: PLR0913
         volumes: Host-to-container mount mappings (e.g. ``{"/host": "/container"}``).
         project: Project name. Auto-detected from ``.pocketdock/`` if ``None``.
         profile: Image profile name (e.g. ``"dev"``, ``"agent"``). Resolved to
-            an image tag via :func:`pocketdock.profiles.resolve_profile`. Ignored
-            when *image* is explicitly set to a non-default value.
+            an image tag via :func:`pocketdock.profiles.resolve_profile` (unless
+            *image* is explicitly set to a non-default value) and supplies the
+            default for *network* (the profile's ``network_default``).
         devices: Host device paths to passthrough (e.g. ``["/dev/ttyUSB0"]``).
-        ports: Host-to-container port mappings (e.g. ``{8080: 80}``).
+        ports: Host-to-container port mappings (e.g. ``{8080: 80}``). Publishing
+            ports turns the network on unless *network* is ``False``.
+        network: ``True`` for network access, ``False`` for no network
+            (``NetworkMode="none"``, loopback only). ``None`` (default) uses the
+            profile's ``network_default``, or ``True`` when no profile is given.
 
     Returns:
         A running :class:`AsyncContainer`.
+
+    Raises:
+        ValueError: If *profile* is unknown, or *ports* are combined with
+            ``network=False``.
 
     """
     from pocketdock.projects import (  # noqa: PLC0415
@@ -618,12 +676,19 @@ async def create_new_container(  # noqa: PLR0913
     if name is None:
         name = _generate_name()
 
-    # Resolve profile → image tag when image was not explicitly overridden
-    if profile is not None and image == _DEFAULT_IMAGE:
+    # Resolve profile: image tag (unless image was explicitly overridden) and
+    # the network default.
+    network_default: bool | None = None
+    if profile is not None:
         from pocketdock.profiles import resolve_profile  # noqa: PLC0415
 
         profile_info = resolve_profile(profile)
-        image = profile_info.image_tag
+        network_default = profile_info.network_default
+        if image == _DEFAULT_IMAGE:
+            image = profile_info.image_tag
+    network_enabled = _resolve_network(
+        network=network, network_default=network_default, ports=ports
+    )
 
     socket_path = sc.detect_socket()
     if socket_path is None:
@@ -653,11 +718,14 @@ async def create_new_container(  # noqa: PLR0913
                 mem_limit=mem_limit or "",
                 cpu_percent=cpu_percent or 0,
                 ports=ports,
+                network=network_enabled,
             )
 
     labels = _build_labels(name, persist=persist, project=resolved_project, data_path=data_path)
     host_config = _build_host_config(mem_limit_bytes, nano_cpus)
-    host_config = _augment_host_config(host_config, devices=devices, volumes=volumes, ports=ports)
+    host_config = _augment_host_config(
+        host_config, devices=devices, volumes=volumes, ports=ports, network=network_enabled
+    )
     exposed_ports = build_exposed_ports(ports) if ports else None
 
     container_id = await sc.create_container(
@@ -683,6 +751,7 @@ async def create_new_container(  # noqa: PLR0913
             mem_limit=mem_limit or "",
             cpu_percent=cpu_percent or 0,
             ports=ports,
+            network=network_enabled,
         )
 
     return AsyncContainer(
@@ -697,4 +766,7 @@ async def create_new_container(  # noqa: PLR0913
         project=resolved_project,
         data_path=data_path,
         ports=ports,
+        devices=devices,
+        volumes=volumes,
+        network=network_enabled,
     )

@@ -97,6 +97,11 @@ pocketdock shell my-sandbox
 pocketdock shutdown my-sandbox --yes
 ```
 
+The `minimal-python` profile has **no network access** by default, so code you
+run in `my-sandbox` cannot reach the internet. Add `--network` to `create` (or
+`network=True` in the SDK) when a task needs it. See
+[Network Access](guide/containers.md#network-access).
+
 ## Web Server Demo
 
 The `minimal-python` image includes a `demo/` directory with a simple web page and server. Try it with port mapping:
@@ -112,7 +117,7 @@ cd demo && python serve.py
 # Open http://localhost:8080 in your browser
 ```
 
-The `-p 8080:8000` flag maps host port 8080 to container port 8000. Port mapping must be set at container creation time.
+The `-p 8080:8000` flag maps host port 8080 to container port 8000. Port mapping must be set at container creation time, and it turns the network on for this container even though `minimal-python` defaults to no network.
 
 ```bash
 # Clean up when done

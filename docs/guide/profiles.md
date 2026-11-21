@@ -25,7 +25,17 @@ with create_new_container(profile="dev") as c:
     print(result.stdout)
 ```
 
-The `profile` parameter resolves to the profile's image tag (e.g., `pocketdock/dev`) and applies the profile's default network setting.
+The `profile` parameter resolves to the profile's image tag (e.g., `pocketdock/dev`) and applies the profile's default network setting (`network_default`, the **Default Network** column above). Profiles with networking disabled are created with `NetworkMode="none"`, so code in them cannot reach the network.
+
+Override the default with `network=`:
+
+```python
+# agent defaults to no network; opt in when the task needs it
+with create_new_container(profile="agent", network=True) as c:
+    c.run("python3 -c \"import requests; print(requests.get('https://example.com').status_code)\"")
+```
+
+Publishing ports (`ports=`) also turns the network on unless `network=False` is passed. See [Network Access](containers.md#network-access).
 
 ### With the `image` Parameter
 
@@ -35,6 +45,10 @@ You can also specify the image tag directly:
 with create_new_container(image="pocketdock/agent") as c:
     result = c.run("python -c 'import pandas; print(pandas.__version__)'", lang=None)
 ```
+
+The network default comes from the `profile` parameter, not the image: a
+container created with only `image=` has networking enabled. Pass
+`profile="agent"` (or `network=False`) to get the sandboxed default.
 
 ## Building Profiles
 

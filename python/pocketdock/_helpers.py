@@ -148,6 +148,45 @@ def parse_port_bindings(inspect: dict[str, object]) -> dict[int, int]:
     return result
 
 
+def parse_network_enabled(inspect: dict[str, object]) -> bool:
+    """Return ``False`` when inspect data shows ``HostConfig.NetworkMode == "none"``."""
+    host_config = _safe_dict(inspect, "HostConfig")
+    return host_config.get("NetworkMode") != "none"
+
+
+def parse_devices(inspect: dict[str, object]) -> list[str]:
+    """Extract passthrough device paths from inspect data's ``HostConfig.Devices``."""
+    host_config = _safe_dict(inspect, "HostConfig")
+    raw = host_config.get("Devices")
+    if not isinstance(raw, list):
+        return []
+    return [
+        d["PathOnHost"]
+        for d in raw
+        if isinstance(d, dict) and isinstance(d.get("PathOnHost"), str) and d["PathOnHost"]
+    ]
+
+
+def parse_binds(inspect: dict[str, object]) -> dict[str, str]:
+    """Extract volume mounts from inspect data's ``HostConfig.Binds``.
+
+    Returns ``{host_path: container_path}``.  Mount options such as ``:ro``
+    are dropped.
+    """
+    host_config = _safe_dict(inspect, "HostConfig")
+    raw = host_config.get("Binds")
+    if not isinstance(raw, list):
+        return {}
+    result: dict[str, str] = {}
+    for bind in raw:
+        if not isinstance(bind, str):
+            continue
+        parts = bind.split(":")
+        if len(parts) >= 2 and parts[0] and parts[1]:  # noqa: PLR2004
+            result[parts[0]] = parts[1]
+    return result
+
+
 def _extract_memory(stats: dict[str, object] | None) -> tuple[str, str, float]:
     """Return ``(usage_str, limit_str, percent)`` from stats."""
     if stats is None:
@@ -186,6 +225,25 @@ def _extract_processes(top: dict[str, object] | None) -> tuple[dict[str, str], .
     return tuple(result)
 
 
+def _extract_ip_address(net: dict[str, object]) -> str:
+    """Return the container IP from ``NetworkSettings``.
+
+    Uses the top-level ``IPAddress`` when present, else the first non-empty
+    ``Networks.<name>.IPAddress`` (Docker 29+ dropped the top-level field).
+    """
+    top_level = net.get("IPAddress")
+    if isinstance(top_level, str) and top_level:
+        return top_level
+    networks = net.get("Networks")
+    if isinstance(networks, dict):
+        for endpoint in networks.values():
+            if isinstance(endpoint, dict):
+                ip = endpoint.get("IPAddress")
+                if isinstance(ip, str) and ip:
+                    return ip
+    return ""
+
+
 def build_container_info(
     inspect: dict[str, object],
     stats: dict[str, object] | None,
@@ -209,7 +267,7 @@ def build_container_info(
             uptime = datetime.datetime.now(tz=datetime.timezone.utc) - started_at
 
     mem_usage, mem_limit, mem_pct = _extract_memory(stats)
-    ip_address = str(net.get("IPAddress", ""))
+    ip_address = _extract_ip_address(net)
     ports = parse_port_bindings(inspect)
 
     return ContainerInfo(

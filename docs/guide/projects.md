@@ -97,14 +97,27 @@ Each persistent container in a project gets its own instance directory:
 `instance.toml` contains container metadata:
 
 ```toml
-container_id = "abc123..."
+# Maintained by pocketdock. Do not edit.
+
+[container]
+id = "abc123def456..."
 name = "my-sandbox"
 image = "pocketdock/minimal-python"
 project = "my-app"
-created_at = "2026-01-15T10:30:00"
+created_at = "2026-01-15T10:30:00+00:00"
 persist = true
+network = true
+
+[resources]
 mem_limit = "256m"
 cpu_percent = 50
+
+[ports]
+8080 = 8000
+
+[provenance]
+created_by = "pocketdock create --name my-sandbox --persist -p 8080:8000"
+pid = 12345
 ```
 
 ### Command History

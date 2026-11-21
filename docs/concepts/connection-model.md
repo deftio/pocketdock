@@ -115,5 +115,16 @@ pocketdock supports both Podman and Docker. The socket client handles difference
 | Container name prefix | `/name` | `name` |
 | Default socket | `/var/run/docker.sock` | `$XDG_RUNTIME_DIR/podman/podman.sock` |
 | Rootless | No | Yes (default) |
+| Exec start (stream/detach/session) | `101 UPGRADED` hijack; stdin only read after upgrade | Accepts the same upgrade request |
+| Container IP in inspect | `NetworkSettings.Networks.<name>.IPAddress` (29+ dropped the top-level field) | Top-level and per-network |
 
 The API endpoints are compatible — both engines implement the same REST API for container operations.
+
+### Connection Upgrade for Exec
+
+`POST /exec/{id}/start` is the one request that does not send `Connection: close`.
+It sends `Connection: Upgrade` and `Upgrade: tcp`, asking the engine to hijack
+the socket into a raw bidirectional stream. Docker only reads stdin from the
+connection after this upgrade, which is what makes [sessions](../guide/sessions.md)
+work on Docker. The connection is still used for exactly one operation and
+closed when it ends.
