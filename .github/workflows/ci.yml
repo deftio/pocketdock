@@ -9,6 +9,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
@@ -26,16 +27,29 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+        engine: [podman, docker]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
       - run: uv python install ${{ matrix.python-version }}
       - run: uv sync --dev --all-extras --python ${{ matrix.python-version }}
-      - run: systemctl --user start podman.socket
-      - run: podman build -t pocketdock/minimal-python python/pocketdock/_images/minimal-python/
+      - name: Start Podman
+        if: matrix.engine == 'podman'
+        run: |
+          systemctl --user start podman.socket
+          echo "POCKETDOCK_SOCKET=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock" >> "$GITHUB_ENV"
+          podman build -t pocketdock/minimal-python python/pocketdock/_images/minimal-python/
+      - name: Use Docker Engine
+        if: matrix.engine == 'docker'
+        run: |
+          echo "POCKETDOCK_SOCKET=/var/run/docker.sock" >> "$GITHUB_ENV"
+          docker version
+          docker build -t pocketdock/minimal-python python/pocketdock/_images/minimal-python/
       - name: Run parallel-safe tests
         run: uv run pytest -n auto --ignore=tests/test_persistence_integration.py
       - name: Run serial tests (race-prone)
