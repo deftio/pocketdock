@@ -43,7 +43,7 @@ dev = [
     "pytest-cov",
     "pytest-asyncio",
     "pytest-xdist",
-    "ruff",
+    "ruff>=0.15,<0.16",  # select = ["ALL"]: new ruff releases add rules; bump deliberately
     "mypy",
     "types-PyYAML",
     "bandit[toml]",

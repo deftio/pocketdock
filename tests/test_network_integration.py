@@ -110,7 +110,11 @@ async def test_reboot_fresh_keeps_network_off() -> None:
 
 @requires_engine
 async def test_reboot_fresh_keeps_volume(tmp_path: Path) -> None:
-    (tmp_path / "marker.txt").write_text("kept")
+    # pytest's tmp_path is 0700; the container runs as a non-root user.
+    tmp_path.chmod(0o755)  # noqa: ASYNC240
+    marker = tmp_path / "marker.txt"
+    marker.write_text("kept")
+    marker.chmod(0o644)
     async with await create_new_container(volumes={str(tmp_path): "/mnt/host"}) as c:
         await c.reboot(fresh=True)
         result = await c.run("cat /mnt/host/marker.txt")
