@@ -794,6 +794,67 @@ async def test_exec_inspect_exit_code_error() -> None:
         await _exec_inspect_exit_code("/tmp/s.sock", "exec123")
 
 
+def _inspect_body(exit_code: int | None, *, running: bool) -> tuple[int, bytes]:
+    import json
+
+    return 200, json.dumps({"ExitCode": exit_code, "Running": running}).encode()
+
+
+async def test_exec_inspect_exit_code_finished() -> None:
+    with patch(
+        "pocketdock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=_inspect_body(3, running=False),
+    ) as req:
+        assert await _exec_inspect_exit_code("/tmp/s.sock", "exec123") == 3
+    req.assert_awaited_once()
+
+
+async def test_exec_inspect_exit_code_waits_while_running() -> None:
+    """Docker reports ExitCode=null while the exec is still running (e.g. after truncation)."""
+    with (
+        patch(
+            "pocketdock._socket_client._request",
+            new_callable=AsyncMock,
+            side_effect=[
+                _inspect_body(None, running=True),
+                _inspect_body(0, running=True),  # Podman reports 0 while running
+                _inspect_body(7, running=False),
+            ],
+        ) as req,
+        patch("pocketdock._socket_client.asyncio.sleep", new_callable=AsyncMock) as sleep,
+    ):
+        assert await _exec_inspect_exit_code("/tmp/s.sock", "exec123") == 7
+    assert req.await_count == 3
+    assert sleep.await_count == 2
+
+
+async def test_exec_inspect_exit_code_still_running_returns_minus_one() -> None:
+    with (
+        patch(
+            "pocketdock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=_inspect_body(None, running=True),
+        ),
+        patch("pocketdock._socket_client.asyncio.sleep", new_callable=AsyncMock),
+    ):
+        code = await _exec_inspect_exit_code("/tmp/s.sock", "exec123", wait=0)
+    assert code == -1
+
+
+async def test_exec_inspect_exit_code_null_but_not_running_returns_minus_one() -> None:
+    with (
+        patch(
+            "pocketdock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=_inspect_body(None, running=False),
+        ),
+        patch("pocketdock._socket_client.asyncio.sleep", new_callable=AsyncMock),
+    ):
+        code = await _exec_inspect_exit_code("/tmp/s.sock", "exec123", wait=0)
+    assert code == -1
+
+
 # --- push_archive ---
 
 

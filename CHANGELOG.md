@@ -20,13 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `pocketdock create --network / --no-network`
 - `ports=` turns the network on when `network` is not set; combining `ports` with `network=False` raises `ValueError` (CLI: usage error for `--no-network` with `--port`)
 - Instance metadata (`instance.toml`) records `network`
-- CI runs the full test matrix against both Podman and Docker Engine, with job timeouts
+- CI runs the full test matrix against both Podman and Docker Engine, with job timeouts; the test job is pinned to `ubuntu-24.04` and ruff to `<0.16`
 
 ### Fixed
 
 - `session()` never returned output on Docker Engine: exec start now requests a connection upgrade (`Connection: Upgrade`, `Upgrade: tcp`), so Docker hijacks the connection and forwards stdin to the shell. `run(stream=True)` and `run(detach=True)` use the same upgraded request ([#20](https://github.com/deftio/pocketdock/issues/20))
 - `reboot(fresh=True)` dropped `devices` and `volumes`; it now recreates the container with its full config, including the network setting
 - `resume_container()` now restores `devices`, `volumes` and the network setting from the engine, so a later `reboot(fresh=True)` keeps them
+- `run()` could crash with `TypeError` on Docker when output was truncated by `max_output`: Docker reports `ExitCode: null` while the exec is still running. The exit code is now polled briefly until the exec finishes (`-1` if it is still running after 2 s)
 - `info().network` and `info().ip_address` were always `False` / `""` on Docker 29+, which no longer reports the top-level `NetworkSettings.IPAddress`; the per-network address is now used as a fallback
 
 ## [1.2.6] - 2026-02-18

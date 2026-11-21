@@ -663,14 +663,36 @@ async def _demux_chunked_stream(
                 yield stream_type, payload
 
 
-async def _exec_inspect_exit_code(socket_path: str, exec_id: str) -> int:
-    """Inspect an exec instance and return its exit code."""
-    status, body = await _request(socket_path, "GET", f"/exec/{exec_id}/json")
-    if status >= 400:  # noqa: PLR2004
-        msg = f"exec inspect failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
-        raise SocketCommunicationError(msg)
-    data = json.loads(body)
-    return int(data["ExitCode"])
+_EXIT_POLL_INTERVAL = 0.05
+
+
+async def _exec_inspect_exit_code(
+    socket_path: str,
+    exec_id: str,
+    *,
+    wait: float = 2.0,
+) -> int:
+    """Inspect an exec instance and return its exit code.
+
+    The exec may still be running when its output stream ends early (for
+    example after ``max_output`` truncation closes the connection).  Docker then
+    reports ``ExitCode: null`` and Podman reports ``0``, so poll for up to
+    *wait* seconds until ``Running`` is false.  Returns ``-1`` if the exit code
+    is still unknown after that.
+    """
+    deadline = time.monotonic() + wait
+    while True:
+        status, body = await _request(socket_path, "GET", f"/exec/{exec_id}/json")
+        if status >= 400:  # noqa: PLR2004
+            msg = f"exec inspect failed: HTTP {status}: {body.decode('utf-8', errors='replace')}"
+            raise SocketCommunicationError(msg)
+        data = json.loads(body)
+        exit_code = data.get("ExitCode")
+        if exit_code is not None and not data.get("Running", False):
+            return int(exit_code)
+        if time.monotonic() >= deadline:
+            return -1
+        await asyncio.sleep(_EXIT_POLL_INTERVAL)
 
 
 # ---------------------------------------------------------------------------
