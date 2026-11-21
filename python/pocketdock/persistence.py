@@ -51,14 +51,14 @@ async def resume_container(
     if not containers:
         raise ContainerNotFound(name)
 
-    container_data = containers[0]
-    container_id: str = container_data["Id"]
+    container_id: str = containers[0]["Id"]
 
-    state = container_data.get("State", "").lower()
-    if state != "running":
-        await sc.start_container(socket_path, container_id)
-
+    # Decide from inspect, not the list's State: Docker's container list can
+    # briefly report a just-stopped container as "running".
     inspect_data = await sc.inspect_container(socket_path, container_id)
+    if not _is_running(inspect_data):
+        await sc.start_container(socket_path, container_id)
+        inspect_data = await sc.inspect_container(socket_path, container_id)
     config = inspect_data.get("Config", {})
     labels = config.get("Labels", {})
     image = config.get("Image", "")
@@ -190,11 +190,23 @@ async def prune(
     )
     count = 0
     for container in raw:
-        state = container.get("State", "").lower()
-        if state != "running":
-            await sc.remove_container(socket_path, container["Id"], force=True)
-            count += 1
+        container_id = container["Id"]
+        # Live state from inspect (the list's State can lag behind a stop).
+        try:
+            inspect_data = await sc.inspect_container(socket_path, container_id)
+        except ContainerNotFound:
+            continue  # removed by someone else since the list call
+        if _is_running(inspect_data):
+            continue
+        await sc.remove_container(socket_path, container_id, force=True)
+        count += 1
     return count
+
+
+def _is_running(inspect_data: dict[str, Any]) -> bool:
+    """Return ``State.Running`` from container inspect data."""
+    state = inspect_data.get("State")
+    return isinstance(state, dict) and bool(state.get("Running", False))
 
 
 async def stop_container(

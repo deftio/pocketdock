@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `reboot(fresh=True)` dropped `devices` and `volumes`; it now recreates the container with its full config, including the network setting
 - `resume_container()` now restores `devices`, `volumes` and the network setting from the engine, so a later `reboot(fresh=True)` keeps them
 - `run()` could crash with `TypeError` on Docker when output was truncated by `max_output`: Docker reports `ExitCode: null` while the exec is still running. The exit code is now polled briefly until the exec finishes (`-1` if it is still running after 2 s)
+- `resume_container()` and `prune()` now decide running/stopped from container inspect instead of the container list, which on Docker can briefly report a just-stopped container as `running` (resume skipped the start; prune skipped the container)
 - `info().network` and `info().ip_address` were always `False` / `""` on Docker 29+, which no longer reports the top-level `NetworkSettings.IPAddress`; the per-network address is now used as a fallback
 
 ## [1.2.6] - 2026-02-18

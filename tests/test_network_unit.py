@@ -334,6 +334,7 @@ async def _resume(inspect_result: dict[str, Any]) -> AsyncContainer:
 async def test_resume_restores_network_off_devices_volumes() -> None:
     c = await _resume(
         {
+            "State": {"Running": True},
             "Config": {"Image": "img", "Labels": {}},
             "HostConfig": {
                 "NetworkMode": "none",
@@ -350,6 +351,7 @@ async def test_resume_restores_network_off_devices_volumes() -> None:
 async def test_resume_network_on_and_no_devices_volumes() -> None:
     c = await _resume(
         {
+            "State": {"Running": True},
             "Config": {"Image": "img", "Labels": {}},
             "HostConfig": {"NetworkMode": "bridge", "Devices": [], "Binds": None},
         }
