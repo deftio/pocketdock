@@ -113,14 +113,21 @@ async def _open_connection(
         raise SocketConnectionError(socket_path, str(exc)) from exc
 
 
-async def _send_request(
+async def _send_request(  # noqa: PLR0913
     writer: asyncio.StreamWriter,
     method: str,
     path: str,
     body: bytes | None = None,
     content_type: str = "application/json",
+    *,
+    upgrade: bool = False,
 ) -> None:
-    """Write an HTTP/1.1 request to the writer."""
+    """Write an HTTP/1.1 request to the writer.
+
+    With ``upgrade=True`` the request asks the engine to hijack the connection
+    (``Connection: Upgrade`` / ``Upgrade: tcp``), which Docker requires before it
+    reads stdin from the socket.  Podman accepts the same headers.
+    """
     lines = [
         f"{method} {path} HTTP/1.1",
         "Host: localhost",
@@ -128,7 +135,11 @@ async def _send_request(
     if body is not None:
         lines.append(f"Content-Type: {content_type}")
         lines.append(f"Content-Length: {len(body)}")
-    lines.append("Connection: close")
+    if upgrade:
+        lines.append("Connection: Upgrade")
+        lines.append("Upgrade: tcp")
+    else:
+        lines.append("Connection: close")
     lines.append("")
     lines.append("")
 
@@ -253,15 +264,18 @@ async def _request_stream(
     method: str,
     path: str,
     body: dict[str, Any] | None = None,
+    *,
+    upgrade: bool = False,
 ) -> tuple[int, dict[str, str], asyncio.StreamReader, asyncio.StreamWriter]:
     """Make an HTTP request and return (status, headers, reader, writer) for streaming.
 
-    The caller is responsible for closing the writer.
+    The caller is responsible for closing the writer.  Pass ``upgrade=True`` to
+    request a hijacked, bidirectional connection (see :func:`_send_request`).
     """
     reader, writer = await _open_connection(socket_path)
     try:
         body_bytes = json.dumps(body).encode("utf-8") if body is not None else None
-        await _send_request(writer, method, path, body_bytes)
+        await _send_request(writer, method, path, body_bytes, upgrade=upgrade)
 
         status = await _read_status_line(reader)
         headers = await _read_headers(reader)
@@ -584,8 +598,11 @@ async def _exec_start_stream(
 ) -> tuple[AsyncGenerator[tuple[int, bytes], None], asyncio.StreamWriter]:
     """Start an exec and return a (frame_generator, writer) pair for streaming.
 
-    The caller must close the writer when done.  Handles both Docker (chunked
-    transfer encoding) and Podman (raw multiplexed stream).
+    The caller must close the writer when done.  The request asks for a
+    connection upgrade so the engine hijacks the socket: Docker answers
+    ``101 UPGRADED`` and only then reads stdin from the connection (needed by
+    sessions).  The response body is a raw multiplexed stream; a chunked body
+    (older engines that ignore the upgrade) is also handled.
     """
     payload = {"Detach": False, "Tty": False}
     status, headers, reader, writer = await _request_stream(
@@ -593,6 +610,7 @@ async def _exec_start_stream(
         "POST",
         f"/exec/{exec_id}/start",
         payload,
+        upgrade=True,
     )
     if status >= 400:  # noqa: PLR2004
         rest = await reader.read(65536)
