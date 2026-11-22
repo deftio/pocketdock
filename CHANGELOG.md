@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-21
+
+### Changed
+
+- **Profiles now apply their `network_default`.** Containers created with `profile="minimal-python"`, `"minimal-node"`, `"minimal-bun"` or `"agent"` have **no network access** by default (`NetworkMode="none"`, loopback only). Opt in with `network=True` (SDK) or `--network` (CLI). `dev` and `embedded` keep networking. Containers created without a profile are unchanged (network enabled) ([#21](https://github.com/deftio/pocketdock/issues/21))
+- The profile's `network_default` applies even when `image=` overrides the profile's image, and an unknown `profile` now raises `ValueError` in that case too (previously it was silently ignored)
+
+### Added
+
+- `network: bool | None = None` parameter on `create_new_container()` (sync and async). `None` uses the profile's `network_default`, or enabled when no profile is given
+- `pocketdock create --network / --no-network`
+- `ports=` turns the network on when `network` is not set; combining `ports` with `network=False` raises `ValueError` (CLI: usage error for `--no-network` with `--port`)
+- Instance metadata (`instance.toml`) records `network`
+- CI runs the full test matrix against both Podman and Docker Engine, with job timeouts; the test job is pinned to `ubuntu-24.04` and ruff to `<0.16`
+
+### Fixed
+
+- `session()` never returned output on Docker Engine: exec start now requests a connection upgrade (`Connection: Upgrade`, `Upgrade: tcp`), so Docker hijacks the connection and forwards stdin to the shell. `run(stream=True)` and `run(detach=True)` use the same upgraded request ([#20](https://github.com/deftio/pocketdock/issues/20))
+- `reboot(fresh=True)` dropped `devices` and `volumes`; it now recreates the container with its full config, including the network setting
+- `resume_container()` now restores `devices`, `volumes` and the network setting from the engine, so a later `reboot(fresh=True)` keeps them
+- `run()` could crash with `TypeError` on Docker when output was truncated by `max_output`: Docker reports `ExitCode: null` while the exec is still running. The exit code is now polled briefly until the exec finishes (`-1` if it is still running after 2 s)
+- `resume_container()` and `prune()` now decide running/stopped from container inspect instead of the container list, which on Docker can briefly report a just-stopped container as `running` (resume skipped the start; prune skipped the container)
+- `info().network` and `info().ip_address` were always `False` / `""` on Docker 29+, which no longer reports the top-level `NetworkSettings.IPAddress`; the per-network address is now used as a fallback
+
 ## [1.2.6] - 2026-02-18
 
 ### Fixed

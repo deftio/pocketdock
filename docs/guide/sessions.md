@@ -97,6 +97,13 @@ except SessionClosed:
 |----------|------|-------------|
 | `id` | `str` | Exec instance ID backing the session |
 
+## Engine Support
+
+Sessions work on both Podman and Docker. The exec start request asks the engine
+to upgrade (hijack) the connection, which Docker requires before it forwards
+stdin to the shell. pocketdock 1.2.6 and earlier did not do this, so sessions
+on Docker timed out with empty output.
+
 ## Sentinel Protocol
 
 pocketdock uses a sentinel protocol to reliably detect command boundaries and exit codes. After each `send_and_wait()` command, the session injects a sentinel marker (`__PD_{uuid}_${exit_code}__`) to determine where one command's output ends and the next begins. This is transparent to the user.

@@ -35,6 +35,7 @@ with create_new_container() as c:
 | `profile` | `str \| None` | `None` | Image profile name (`"minimal-python"`, `"minimal-node"`, `"minimal-bun"`, `"dev"`, `"agent"`, `"embedded"`) |
 | `devices` | `list[str] \| None` | `None` | Host devices to passthrough (e.g., `["/dev/ttyUSB0"]`) |
 | `ports` | `dict[int, int] \| None` | `None` | Host-to-container port mappings (e.g., `{8080: 80}`) |
+| `network` | `bool \| None` | `None` | Network access. `None` uses the profile's default (enabled when no profile is given). See [Network Access](#network-access) |
 
 ```python
 c = create_new_container(
@@ -112,6 +113,9 @@ Recreate from scratch with the same configuration (fresh filesystem):
 c.reboot(fresh=True)
 ```
 
+A fresh reboot keeps the full creation config: image, resource limits, ports,
+devices, volumes and the network setting.
+
 ## Snapshot
 
 Commit the container's current filesystem as a new image:
@@ -157,6 +161,44 @@ c = create_new_container(ports={8080: 80, 3000: 3000})
 ```
 
 The dict key is the host port, the value is the container port. Port mappings are persisted in instance metadata and restored automatically on `resume_container()`.
+
+Publishing ports needs a network, so `ports` turns the network on when `network`
+is not set, even for a no-network profile. Combining `ports` with
+`network=False` raises `ValueError`.
+
+## Network Access
+
+Each container either has normal network access or none at all
+(`NetworkMode="none"`: loopback only, no outbound or inbound traffic). Docker and
+Podman behave the same.
+
+```python
+# Profile default: minimal-python, minimal-node, minimal-bun and agent have no network
+with create_new_container(profile="agent") as c:
+    c.run("python3 -c \"import urllib.request; urllib.request.urlopen('http://example.com')\"")
+    # -> fails: no network
+
+# Opt in explicitly
+with create_new_container(profile="agent", network=True) as c:
+    ...
+
+# Turn it off without a profile
+with create_new_container(network=False) as c:
+    ...
+```
+
+How `network` is resolved:
+
+| `network` | Profile given | Result |
+|-----------|---------------|--------|
+| `True` / `False` | any | As given (explicit always wins) |
+| `None` | yes | The profile's `network_default` (on if `ports` are set) |
+| `None` | no | Enabled (default) |
+
+The profile's `network_default` applies even when `image` overrides the
+profile's image. The setting is preserved by `reboot(fresh=True)` and
+`resume_container()`, and recorded as `network` in the instance's
+`instance.toml`. Check it live with `c.info().network`.
 
 ## Volumes
 

@@ -25,10 +25,16 @@ c = create_new_container(
     profile=None,                  # Image profile name
     devices=None,                  # ["/dev/ttyUSB0"]
     ports=None,                    # {8080: 80}
+    network=None,                  # True/False; None = profile default (on without a profile)
 )
 ```
 
 All parameters are keyword-only.
+
+`network=False` (or a profile whose `network_default` is `False`) creates the
+container with `NetworkMode="none"`. `ports` turn the network on when `network`
+is `None`. Raises `ValueError` for an unknown `profile`, or for `ports` combined
+with `network=False`.
 
 ### Container Management
 
@@ -84,7 +90,7 @@ Return the package version string.
 
 #### `__version__: str`
 
-Package version (e.g., `"1.2.6"`).
+Package version (e.g., `"1.3.0"`).
 
 ---
 

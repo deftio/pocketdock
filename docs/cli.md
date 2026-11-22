@@ -91,11 +91,16 @@ pocketdock create [OPTIONS]
 | `--persist` | Make container persistent |
 | `--device DEVICE` | Device passthrough (can be repeated) |
 | `--port / -p HOST:CONTAINER` | Port mapping (can be repeated) |
+| `--network / --no-network` | Enable or disable network access (default: the profile's setting, else enabled) |
 
 ```bash
 pocketdock create --name my-sandbox --profile dev --mem-limit 512m --persist
 pocketdock create --name web -p 8080:80 -p 3000:3000
+pocketdock create --name agent-box --profile agent             # no network (profile default)
+pocketdock create --name agent-net --profile agent --network   # opt in
 ```
+
+`--no-network` cannot be combined with `--port`.
 
 ### `run`
 

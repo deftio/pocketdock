@@ -6,6 +6,7 @@ import datetime
 
 import pytest
 from pocketdock._helpers import (
+    _extract_ip_address,
     _extract_memory,
     _extract_pids,
     _extract_processes,
@@ -493,3 +494,45 @@ def test_build_container_info_with_ports() -> None:
     }
     info = build_container_info(inspect, None, None, "pd-ports")
     assert info.ports == {8080: 80}
+
+
+# --- _extract_ip_address (Docker 29+ only reports per-network IPs) ---
+
+
+@pytest.mark.parametrize(
+    ("net", "expected"),
+    [
+        ({"IPAddress": "172.17.0.2"}, "172.17.0.2"),
+        (
+            {"IPAddress": "10.0.0.1", "Networks": {"bridge": {"IPAddress": "172.17.0.9"}}},
+            "10.0.0.1",
+        ),
+        ({"Networks": {"bridge": {"IPAddress": "172.17.0.3"}}}, "172.17.0.3"),
+        (
+            {
+                "IPAddress": "",
+                "Networks": {"none": {"IPAddress": ""}, "b": {"IPAddress": "1.2.3.4"}},
+            },
+            "1.2.3.4",
+        ),
+        ({"IPAddress": "", "Networks": {"none": {"IPAddress": ""}}}, ""),
+        ({"Networks": {"x": "junk", "y": {"IPAddress": None}}}, ""),
+        ({"Networks": None}, ""),
+        ({"IPAddress": None}, ""),
+        ({}, ""),
+    ],
+)
+def test_extract_ip_address(net: dict[str, object], expected: str) -> None:
+    assert _extract_ip_address(net) == expected
+
+
+def test_build_container_info_uses_per_network_ip() -> None:
+    inspect: dict[str, object] = {
+        "Id": "abc",
+        "State": {"Status": "running"},
+        "Config": {"Image": "img"},
+        "NetworkSettings": {"Networks": {"bridge": {"IPAddress": "172.17.0.5"}}},
+    }
+    info = build_container_info(inspect, None, None, "pd-ip")
+    assert info.ip_address == "172.17.0.5"
+    assert info.network is True

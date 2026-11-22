@@ -336,9 +336,12 @@ def _build_create_kwargs(  # noqa: PLR0913, C901, PLR0912
     profile: str | None = None,
     device: tuple[str, ...] = (),
     port: tuple[str, ...] = (),
+    network: bool | None = None,
 ) -> dict[str, object]:
     """Build kwargs dict for create_new_container from CLI options."""
     kwargs: dict[str, object] = {"timeout": timeout, "persist": persist}
+    if network is not None:
+        kwargs["network"] = network
     if image:
         kwargs["image"] = image
     if name:
@@ -392,6 +395,11 @@ def _build_create_kwargs(  # noqa: PLR0913, C901, PLR0912
     "--device", "-d", multiple=True, help="Host device to passthrough (e.g. /dev/ttyUSB0)."
 )
 @click.option("--port", "-p", multiple=True, help="Port mapping HOST:CONTAINER.")
+@click.option(
+    "--network/--no-network",
+    default=None,
+    help="Enable or disable network access (default: the profile's setting, else enabled).",
+)
 @click.pass_context
 def create_cmd(  # noqa: PLR0913
     ctx: click.Context,
@@ -407,11 +415,16 @@ def create_cmd(  # noqa: PLR0913
     profile: str | None,
     device: tuple[str, ...],
     port: tuple[str, ...],
+    network: bool | None,
 ) -> None:
     """Create and start a new container."""
     import os  # noqa: PLC0415
 
     import pocketdock  # noqa: PLC0415
+
+    if network is False and port:
+        msg = "--no-network cannot be combined with --port (no network to publish on)"
+        raise click.UsageError(msg)
 
     cli_ctx = _get_ctx(ctx)
     kwargs = _build_create_kwargs(
@@ -426,6 +439,7 @@ def create_cmd(  # noqa: PLR0913
         profile=profile,
         device=device,
         port=port,
+        network=network,
     )
 
     old_env = os.environ.get("POCKETDOCK_SOCKET")
@@ -436,6 +450,8 @@ def create_cmd(  # noqa: PLR0913
     except pocketdock.PocketDockError as exc:
         format_error(exc)
         raise SystemExit(1) from exc
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
     finally:
         if cli_ctx.socket:
             if old_env is None:

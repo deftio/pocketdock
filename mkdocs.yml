@@ -53,10 +53,10 @@ nav:
   - Changelog: changelog.md
 
 extra:
-  version: 1.2.6
+  version: 1.3.0
   generator: false
 
-copyright: "pocketdock v1.2.6 &mdash; BSD-2-Clause &copy; deftio llc"
+copyright: "pocketdock v1.3.0 &mdash; BSD-2-Clause &copy; deftio llc"
 
 markdown_extensions:
   - admonition

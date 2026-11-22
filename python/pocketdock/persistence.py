@@ -11,7 +11,12 @@ from typing import Any
 
 from pocketdock import _socket_client as sc
 from pocketdock._async_container import AsyncContainer
-from pocketdock._helpers import parse_port_bindings
+from pocketdock._helpers import (
+    parse_binds,
+    parse_devices,
+    parse_network_enabled,
+    parse_port_bindings,
+)
 from pocketdock.errors import ContainerNotFound, PodmanNotRunning
 from pocketdock.types import ContainerListItem
 
@@ -46,14 +51,14 @@ async def resume_container(
     if not containers:
         raise ContainerNotFound(name)
 
-    container_data = containers[0]
-    container_id: str = container_data["Id"]
+    container_id: str = containers[0]["Id"]
 
-    state = container_data.get("State", "").lower()
-    if state != "running":
-        await sc.start_container(socket_path, container_id)
-
+    # Decide from inspect, not the list's State: Docker's container list can
+    # briefly report a just-stopped container as "running".
     inspect_data = await sc.inspect_container(socket_path, container_id)
+    if not _is_running(inspect_data):
+        await sc.start_container(socket_path, container_id)
+        inspect_data = await sc.inspect_container(socket_path, container_id)
     config = inspect_data.get("Config", {})
     labels = config.get("Labels", {})
     image = config.get("Image", "")
@@ -65,6 +70,8 @@ async def resume_container(
     project = labels.get("pocketdock.project", "")
     data_path = labels.get("pocketdock.data-path", "")
     ports = parse_port_bindings(inspect_data)
+    devices = parse_devices(inspect_data)
+    volumes = parse_binds(inspect_data)
 
     return AsyncContainer(
         container_id,
@@ -78,6 +85,9 @@ async def resume_container(
         project=project,
         data_path=data_path,
         ports=ports or None,
+        devices=devices or None,
+        volumes=volumes or None,
+        network=parse_network_enabled(inspect_data),
     )
 
 
@@ -180,11 +190,23 @@ async def prune(
     )
     count = 0
     for container in raw:
-        state = container.get("State", "").lower()
-        if state != "running":
-            await sc.remove_container(socket_path, container["Id"], force=True)
-            count += 1
+        container_id = container["Id"]
+        # Live state from inspect (the list's State can lag behind a stop).
+        try:
+            inspect_data = await sc.inspect_container(socket_path, container_id)
+        except ContainerNotFound:
+            continue  # removed by someone else since the list call
+        if _is_running(inspect_data):
+            continue
+        await sc.remove_container(socket_path, container_id, force=True)
+        count += 1
     return count
+
+
+def _is_running(inspect_data: dict[str, Any]) -> bool:
+    """Return ``State.Running`` from container inspect data."""
+    state = inspect_data.get("State")
+    return isinstance(state, dict) and bool(state.get("Running", False))
 
 
 async def stop_container(

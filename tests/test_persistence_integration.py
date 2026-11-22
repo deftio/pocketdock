@@ -64,6 +64,28 @@ async def test_persist_shutdown_resume_preserves_state() -> None:
         raise
 
 
+@requires_engine
+async def test_resume_keeps_network_off_through_fresh_reboot() -> None:
+    c = await create_new_container(persist=True, profile="minimal-python")
+    name = c.name
+    try:
+        await c.shutdown()
+
+        c2 = await resume_container(name)
+        try:
+            await c2.reboot(fresh=True)
+            data = await sc.inspect_container(c2.socket_path, c2.container_id)
+            assert data["HostConfig"]["NetworkMode"] == "none"
+            result = await c2.run("cat /proc/net/route")
+            assert result.stdout.splitlines()[1:] == []
+        finally:
+            await c2.shutdown()
+            await destroy_container(name)
+    except BaseException:
+        await _force_cleanup(name)
+        raise
+
+
 # --- snapshot ---
 
 

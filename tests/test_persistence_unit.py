@@ -172,6 +172,7 @@ async def test_resume_stopped_container_starts_it() -> None:
 async def test_resume_running_container_skips_start() -> None:
     list_result = [{"Id": "abc123", "State": "running"}]
     inspect_result = {
+        "State": {"Running": True},
         "Config": {"Image": "img", "Labels": {}},
         "HostConfig": {"Memory": 268435456, "NanoCpus": 500000000},
     }
@@ -333,6 +334,17 @@ async def test_prune_no_socket_raises() -> None:
         await prune()
 
 
+def _inspect_by_id(running: dict[str, bool]) -> AsyncMock:
+    """Mock inspect_container returning State.Running per container id."""
+
+    async def _inspect(_socket: str, container_id: str) -> dict[str, object]:
+        if container_id not in running:
+            raise ContainerNotFound(container_id)
+        return {"State": {"Running": running[container_id]}}
+
+    return AsyncMock(side_effect=_inspect)
+
+
 async def test_prune_removes_stopped_only() -> None:
     raw = [
         {"Id": "running1", "State": "running"},
@@ -346,6 +358,10 @@ async def test_prune_removes_stopped_only() -> None:
             new_callable=AsyncMock,
             return_value=raw,
         ),
+        patch(
+            "pocketdock.persistence.sc.inspect_container",
+            _inspect_by_id({"running1": True, "exited1": False, "exited2": False}),
+        ),
         patch("pocketdock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
     ):
         count = await prune()
@@ -358,6 +374,32 @@ async def test_prune_removes_stopped_only() -> None:
     assert "running1" not in removed_ids
 
 
+async def test_prune_uses_live_state_not_list_state() -> None:
+    """Docker's list can report a just-stopped container as running (and vice versa)."""
+    raw = [
+        {"Id": "stale-running", "State": "running"},  # actually stopped
+        {"Id": "stale-exited", "State": "exited"},  # actually running again
+        {"Id": "gone", "State": "exited"},  # removed between list and inspect
+    ]
+    with (
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch(
+            "pocketdock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=raw,
+        ),
+        patch(
+            "pocketdock.persistence.sc.inspect_container",
+            _inspect_by_id({"stale-running": False, "stale-exited": True}),
+        ),
+        patch("pocketdock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
+    ):
+        count = await prune()
+
+    assert count == 1
+    remove.assert_called_once_with("/tmp/s.sock", "stale-running", force=True)
+
+
 async def test_prune_no_stopped_returns_zero() -> None:
     raw = [{"Id": "running1", "State": "running"}]
     with (
@@ -367,12 +409,62 @@ async def test_prune_no_stopped_returns_zero() -> None:
             new_callable=AsyncMock,
             return_value=raw,
         ),
+        patch(
+            "pocketdock.persistence.sc.inspect_container",
+            _inspect_by_id({"running1": True}),
+        ),
         patch("pocketdock.persistence.sc.remove_container", new_callable=AsyncMock) as remove,
     ):
         count = await prune()
 
     assert count == 0
     remove.assert_not_called()
+
+
+async def test_resume_uses_live_state_not_list_state() -> None:
+    """List says running, inspect says stopped: resume must start it."""
+    stopped = {"State": {"Running": False}, "Config": {"Image": "img", "Labels": {}}}
+    running = {"State": {"Running": True}, "Config": {"Image": "img", "Labels": {}}}
+    with (
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch(
+            "pocketdock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=[{"Id": "abc123", "State": "running"}],
+        ),
+        patch("pocketdock.persistence.sc.start_container", new_callable=AsyncMock) as start,
+        patch(
+            "pocketdock.persistence.sc.inspect_container",
+            new_callable=AsyncMock,
+            side_effect=[stopped, running],
+        ) as inspect,
+    ):
+        c = await resume_container("pd-test")
+
+    start.assert_awaited_once_with("/tmp/s.sock", "abc123")
+    assert inspect.await_count == 2
+    assert c.container_id == "abc123"
+
+
+@pytest.mark.parametrize("state", [None, "weird", {}])
+async def test_resume_missing_state_starts(state: object) -> None:
+    data = {"State": state, "Config": {"Image": "img", "Labels": {}}}
+    with (
+        patch("pocketdock.persistence.sc.detect_socket", return_value="/tmp/s.sock"),
+        patch(
+            "pocketdock.persistence.sc.list_containers",
+            new_callable=AsyncMock,
+            return_value=[{"Id": "abc123"}],
+        ),
+        patch("pocketdock.persistence.sc.start_container", new_callable=AsyncMock) as start,
+        patch(
+            "pocketdock.persistence.sc.inspect_container",
+            new_callable=AsyncMock,
+            return_value=data,
+        ),
+    ):
+        await resume_container("pd-test")
+    start.assert_awaited_once()
 
 
 async def test_prune_empty_list_returns_zero() -> None:

@@ -107,6 +107,7 @@ def write_instance_metadata(  # noqa: PLR0913
     mem_limit: str = "",
     cpu_percent: int = 0,
     ports: dict[int, int] | None = None,
+    network: bool = True,
 ) -> None:
     """Write ``instance.toml`` with container metadata and provenance.
 
@@ -127,6 +128,7 @@ def write_instance_metadata(  # noqa: PLR0913
     if created_at:
         container_pairs.append(("created_at", created_at))
     container_pairs.append(("persist", persist))
+    container_pairs.append(("network", network))
 
     _emit_section(lines, "container", container_pairs)
 

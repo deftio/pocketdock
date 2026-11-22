@@ -114,6 +114,28 @@ def test_detect_socket_darwin_podman_machine(tmp_path: pathlib.Path) -> None:
     assert result == str(sock)
 
 
+def test_detect_socket_linux_skips_macos_paths(tmp_path: pathlib.Path) -> None:
+    """On Linux the macOS candidates (Podman Machine, Docker Desktop) are not probed."""
+    desktop = tmp_path / ".docker/run/docker.sock"
+    desktop.parent.mkdir(parents=True)
+    desktop.touch()
+    probed: list[str] = []
+
+    def _fake_path_exists(path: pathlib.Path) -> bool:
+        probed.append(str(path))
+        return False
+
+    with (
+        patch.dict(os.environ, {"POCKETDOCK_SOCKET": "", "XDG_RUNTIME_DIR": str(tmp_path)}),
+        patch("pocketdock._socket_client.sys.platform", "linux"),
+        patch("pocketdock._socket_client.pathlib.Path.home", return_value=tmp_path),
+        patch("pocketdock._socket_client._path_exists", side_effect=_fake_path_exists),
+    ):
+        assert detect_socket() is None
+    assert str(desktop) not in probed
+    assert probed[-1] == "/var/run/docker.sock"
+
+
 def test_detect_socket_darwin_docker_desktop(tmp_path: pathlib.Path) -> None:
     sock = tmp_path / ".docker/run/docker.sock"
     sock.parent.mkdir(parents=True)
@@ -289,6 +311,35 @@ async def test_send_request_without_body() -> None:
     assert b"Content-Length" not in written
 
 
+async def test_send_request_default_connection_close() -> None:
+    transport = _MockTransport()
+    loop = asyncio.get_running_loop()
+    protocol = asyncio.StreamReaderProtocol(asyncio.StreamReader())
+    writer = asyncio.StreamWriter(transport, protocol, reader=asyncio.StreamReader(), loop=loop)
+
+    await _send_request(writer, "GET", "/_ping")
+
+    written = transport.data
+    assert b"Connection: close\r\n" in written
+    assert b"Upgrade" not in written
+
+
+async def test_send_request_upgrade_headers() -> None:
+    """Upgrade requests ask the engine to hijack the connection (bidirectional stream)."""
+    transport = _MockTransport()
+    loop = asyncio.get_running_loop()
+    protocol = asyncio.StreamReaderProtocol(asyncio.StreamReader())
+    writer = asyncio.StreamWriter(transport, protocol, reader=asyncio.StreamReader(), loop=loop)
+
+    await _send_request(writer, "POST", "/exec/abc/start", b"{}", upgrade=True)
+
+    written = transport.data
+    assert b"Connection: Upgrade\r\n" in written
+    assert b"Upgrade: tcp\r\n" in written
+    assert b"Connection: close" not in written
+    assert written.endswith(b"\r\n\r\n{}")
+
+
 # -- _check_container_response --
 
 
@@ -449,6 +500,33 @@ async def test_request_stream_cleans_up_on_exception() -> None:
 
     mock_writer.close.assert_called_once()
     mock_writer.wait_closed.assert_awaited_once()
+
+
+@pytest.mark.parametrize("upgrade", [False, True])
+async def test_request_stream_passes_upgrade_flag(*, upgrade: bool) -> None:
+    mock_writer = _make_mock_writer()
+    reader = asyncio.StreamReader()
+    reader.feed_data(b"HTTP/1.1 101 UPGRADED\r\nContent-Type: x\r\n\r\n")
+    reader.feed_eof()
+
+    with (
+        patch(
+            "pocketdock._socket_client._open_connection",
+            new_callable=AsyncMock,
+            return_value=(reader, mock_writer),
+        ),
+        patch(
+            "pocketdock._socket_client._send_request",
+            new_callable=AsyncMock,
+        ) as send_mock,
+    ):
+        status, headers, _r, _w = await _request_stream(
+            "/tmp/s.sock", "POST", "/exec/x/start", {}, upgrade=upgrade
+        )
+
+    assert status == 101
+    assert headers == {"content-type": "x"}
+    assert send_mock.call_args.kwargs["upgrade"] is upgrade
 
 
 # --- _request_raw error handling ---
@@ -714,6 +792,67 @@ async def test_exec_inspect_exit_code_error() -> None:
         pytest.raises(SocketCommunicationError, match="exec inspect failed"),
     ):
         await _exec_inspect_exit_code("/tmp/s.sock", "exec123")
+
+
+def _inspect_body(exit_code: int | None, *, running: bool) -> tuple[int, bytes]:
+    import json
+
+    return 200, json.dumps({"ExitCode": exit_code, "Running": running}).encode()
+
+
+async def test_exec_inspect_exit_code_finished() -> None:
+    with patch(
+        "pocketdock._socket_client._request",
+        new_callable=AsyncMock,
+        return_value=_inspect_body(3, running=False),
+    ) as req:
+        assert await _exec_inspect_exit_code("/tmp/s.sock", "exec123") == 3
+    req.assert_awaited_once()
+
+
+async def test_exec_inspect_exit_code_waits_while_running() -> None:
+    """Docker reports ExitCode=null while the exec is still running (e.g. after truncation)."""
+    with (
+        patch(
+            "pocketdock._socket_client._request",
+            new_callable=AsyncMock,
+            side_effect=[
+                _inspect_body(None, running=True),
+                _inspect_body(0, running=True),  # Podman reports 0 while running
+                _inspect_body(7, running=False),
+            ],
+        ) as req,
+        patch("pocketdock._socket_client.asyncio.sleep", new_callable=AsyncMock) as sleep,
+    ):
+        assert await _exec_inspect_exit_code("/tmp/s.sock", "exec123") == 7
+    assert req.await_count == 3
+    assert sleep.await_count == 2
+
+
+async def test_exec_inspect_exit_code_still_running_returns_minus_one() -> None:
+    with (
+        patch(
+            "pocketdock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=_inspect_body(None, running=True),
+        ),
+        patch("pocketdock._socket_client.asyncio.sleep", new_callable=AsyncMock),
+    ):
+        code = await _exec_inspect_exit_code("/tmp/s.sock", "exec123", wait=0)
+    assert code == -1
+
+
+async def test_exec_inspect_exit_code_null_but_not_running_returns_minus_one() -> None:
+    with (
+        patch(
+            "pocketdock._socket_client._request",
+            new_callable=AsyncMock,
+            return_value=_inspect_body(None, running=False),
+        ),
+        patch("pocketdock._socket_client.asyncio.sleep", new_callable=AsyncMock),
+    ):
+        code = await _exec_inspect_exit_code("/tmp/s.sock", "exec123", wait=0)
+    assert code == -1
 
 
 # --- push_archive ---
@@ -1024,6 +1163,48 @@ async def test_exec_start_stream_podman_raw() -> None:
         frames = [(st, p) async for st, p in gen]
 
     assert frames == [(1, b"hello\n")]
+    assert writer is mock_writer
+
+
+async def test_exec_start_stream_requests_upgrade() -> None:
+    """Exec start must request a hijacked connection so stdin reaches the process."""
+    reader = asyncio.StreamReader()
+    reader.feed_eof()
+    mock_writer = MagicMock()
+
+    with patch(
+        "pocketdock._socket_client._request_stream",
+        new_callable=AsyncMock,
+        return_value=(200, {}, reader, mock_writer),
+    ) as mock:
+        await _exec_start_stream("/tmp/s.sock", "exec-id")
+
+    assert mock.call_args.args[2] == "/exec/exec-id/start"
+    assert mock.call_args.kwargs["upgrade"] is True
+
+
+async def test_exec_start_stream_docker_upgraded_101() -> None:
+    """Docker answers an upgrade with 101 and then sends the raw multiplexed stream."""
+    frame = _make_frame(1, b"hi\n") + _make_frame(2, b"oops\n")
+    reader = asyncio.StreamReader()
+    reader.feed_data(frame)
+    reader.feed_eof()
+    mock_writer = MagicMock()
+
+    with patch(
+        "pocketdock._socket_client._request_stream",
+        new_callable=AsyncMock,
+        return_value=(
+            101,
+            {"connection": "Upgrade", "upgrade": "tcp", "content-type": "x"},
+            reader,
+            mock_writer,
+        ),
+    ):
+        gen, writer = await _exec_start_stream("/tmp/s.sock", "exec-id")
+        frames = [(st, p) async for st, p in gen]
+
+    assert frames == [(1, b"hi\n"), (2, b"oops\n")]
     assert writer is mock_writer
 
 

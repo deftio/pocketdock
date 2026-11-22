@@ -7,10 +7,22 @@ import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from click.testing import CliRunner
 from pocketdock.cli.main import CliContext, cli
 from pocketdock.errors import ContainerNotFound, PodmanNotRunning, ProjectNotInitialized
 from pocketdock.types import ContainerInfo, ContainerListItem, DoctorReport
+
+
+@pytest.fixture(autouse=True)
+def _no_socket_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep these mocked CLI tests independent of the caller's POCKETDOCK_SOCKET.
+
+    ``--socket`` reads that env var, so a value exported for integration tests
+    (as CI does) would otherwise leak into the expected call arguments.
+    """
+    monkeypatch.delenv("POCKETDOCK_SOCKET", raising=False)
+
 
 # --- Scaffold tests ---
 
@@ -26,7 +38,7 @@ def test_cli_version() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert "1.2.6" in result.output
+    assert "1.3.0" in result.output
 
 
 def test_cli_socket_option() -> None:

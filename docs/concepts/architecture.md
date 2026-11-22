@@ -84,6 +84,7 @@ pocketdock never caches container state. Every `info()` call, every `is_running(
 The socket client (`_socket_client.py`) implements raw HTTP/1.1 over Unix domain sockets using Python's `asyncio` stream API. It handles:
 
 - Request serialization (method, path, headers, body)
+- Connection upgrade (`Connection: Upgrade`, `Upgrade: tcp`) for exec start, so stdin reaches the process
 - Response parsing (status, headers, body)
 - Chunked transfer encoding (for streaming)
 - Docker stream demultiplexing (8-byte header frames)

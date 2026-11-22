@@ -21,6 +21,7 @@ Managed sandbox platforms require API keys, cloud accounts, and an internet conn
 - **Persistent sessions** — long-lived shell sessions with state (cwd, env vars, history)
 - **Resource limits** — memory caps, CPU throttling, per-container isolation
 - **Port mapping** — expose container ports on the host (e.g., `ports={8080: 80}`)
+- **Network control** — `network=False` (or a no-network profile such as `agent`) gives a sandbox with no network access
 - **Container persistence** — stop/resume, snapshot to image, volume mounts
 - **Project management** — `.pocketdock/` project directories with config, logging, and health checks
 - **Image profiles** — six pre-baked Dockerfiles: minimal-python, minimal-node, minimal-bun, dev, agent, embedded

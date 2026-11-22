@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pocketdock"
-version = "1.2.6"
+version = "1.3.0"
 description = "Portable, offline-first container sandboxes for LLM agents and dev workflows"
 readme = "README.md"
 license = "BSD-2-Clause"
@@ -43,7 +43,7 @@ dev = [
     "pytest-cov",
     "pytest-asyncio",
     "pytest-xdist",
-    "ruff",
+    "ruff>=0.15,<0.16",  # select = ["ALL"]: new ruff releases add rules; bump deliberately
     "mypy",
     "types-PyYAML",
     "bandit[toml]",

@@ -55,8 +55,8 @@ info = c.info()
 | `memory_percent` | `float` | `0.0` | Memory usage as percentage |
 | `cpu_percent` | `float` | `0.0` | CPU usage as percentage |
 | `pids` | `int` | `0` | Number of running processes |
-| `network` | `bool` | `False` | Whether networking is enabled |
-| `ip_address` | `str` | `""` | Container IP address |
+| `network` | `bool` | `False` | Whether the container has an IP address (`False` for `network=False` / no-network profiles) |
+| `ip_address` | `str` | `""` | Container IP address (top-level or first per-network address) |
 | `ports` | `dict[int, int]` | `{}` | Host-to-container port mappings |
 | `processes` | `tuple[dict[str, str], ...]` | `()` | Running processes |
 
